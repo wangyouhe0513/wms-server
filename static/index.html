@@ -24,7 +24,8 @@
   input, select { border: 1px solid #dcdfe6; border-radius: 6px; padding: 8px 10px; font-size: 14px; max-width: 100%; }
   input:focus, select:focus { outline: none; border-color: #409eff; }
   .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; -webkit-transform: translateZ(0); margin: 0 -14px; padding: 0 14px; }
-  table { width: 100%; border-collapse: collapse; min-width: 600px; }
+  table { width: 100%; border-collapse: collapse; }
+  .wide-table { min-width: 600px; }
   th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #ebeef5; font-size: 14px; }
   th { background: #fafafa; color: #606266; font-weight: 600; white-space: nowrap; }
   tr:hover { background: #f5f7fa; }
@@ -562,13 +563,13 @@ createApp({
           h('input',{value:this.newSpec,onInput:e=>this.newSpec=e.target.value,placeholder:'新规格',style:{flex:1}}),
           h('button',{class:'btn-primary btn-sm',onClick:this.saveSpec},'添加'),
         ]),
-        h('table',h('tbody',this.specs.map(s=>h('tr',{key:s.id},[
-          h('td',s.name),
-          h('td',{style:{textAlign:'right'}},[
-            h('button',{class:'btn-sm',onClick:()=>this.editSpec(s)},'✏️'),
-            h('button',{class:'btn-danger btn-sm',onClick:()=>this.deleteSpec(s.id)},'🗑')
+        h('table',h('tbody',this.specs.map(s=>h('tr',{key:s.id},
+          h('td',[
+            s.name,
+            h('button',{class:'btn-sm',onClick:()=>this.editSpec(s),style:{marginLeft:'12px'}},'✏️'),
+            h('button',{class:'btn-danger btn-sm',onClick:()=>this.deleteSpec(s.id),style:{marginLeft:'4px'}},'🗑')
           ])
-        ]))))
+        ))))
       ]),
       // Colors
       h('div',{class:'card',style:{flex:1,minWidth:'300px'}},[
