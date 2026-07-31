@@ -578,13 +578,13 @@ createApp({
           h('input',{value:this.newColorCode,onInput:e=>this.newColorCode=e.target.value,placeholder:'代号',style:{width:'60px'}}),
           h('button',{class:'btn-primary btn-sm',onClick:this.saveColor},'添加'),
         ]),
-        h('table',h('tbody',this.colors.map(c=>h('tr',{key:c.id},[
-          h('td',[c.name,' ',h('small',{style:{color:'#909399'}},c.code)]),
-          h('td',{style:{textAlign:'right'}},[
-            h('button',{class:'btn-sm',onClick:()=>this.editColor(c)},'✏️'),
-            h('button',{class:'btn-danger btn-sm',onClick:()=>this.deleteColor(c.id)},'🗑')
+        h('table',h('tbody',this.colors.map(c=>h('tr',{key:c.id},
+          h('td',[
+            c.name,' ',h('small',{style:{color:'#909399'}},c.code),
+            h('button',{class:'btn-sm',onClick:()=>this.editColor(c),style:{marginLeft:'8px'}},'✏️'),
+            h('button',{class:'btn-danger btn-sm',onClick:()=>this.deleteColor(c.id),style:{marginLeft:'4px'}},'🗑')
           ])
-        ]))))
+        ))))
       ]),
       // Salespersons
       h('div',{class:'card',style:{flex:1,minWidth:'300px'}},[
@@ -595,10 +595,12 @@ createApp({
             [h('option','员工'),h('option','渠道'),h('option','电商')]),
           h('button',{class:'btn-primary btn-sm',onClick:this.saveSP},'添加'),
         ]),
-        h('table',h('tbody',this.salespersons.map(s=>h('tr',{key:s.id},[
-          h('td',[s.name,' ',h('span',{class:'tag',style:{fontSize:'11px'}},s.type)]),
-          h('td',{style:{textAlign:'right'}},h('button',{class:'btn-danger btn-sm',onClick:()=>this.deleteSP(s.id)},'🗑'))
-        ]))))
+        h('table',h('tbody',this.salespersons.map(s=>h('tr',{key:s.id},
+          h('td',[
+            s.name,' ',h('span',{class:'tag',style:{fontSize:'11px'}},s.type),
+            h('button',{class:'btn-danger btn-sm',onClick:()=>this.deleteSP(s.id),style:{marginLeft:'8px'}},'🗑')
+          ])
+        ))))
       ]),
       // Import
       h('div',{class:'card',style:{width:'100%',marginTop:'0'}},[
@@ -694,7 +696,7 @@ createApp({
         h('div',{style:{display:'flex',overflowX:'auto',flex:1,'-webkit-overflow-scrolling':'touch','scrollbar-width':'none','-ms-overflow-style':'none',justifyContent:'center'}},
           tabs.map(tab=>h('button',{key:tab.key,
             onClick:()=>this.currentTab=tab.key,
-            style:{background:'none',border:'none',borderRadius:0,padding:'18px 10px',fontWeight:600,fontSize:'14px',flexShrink:0,whiteSpace:'nowrap',
+            style:{background:'none',border:'none',borderRadius:0,padding:'18px 10px',fontWeight:600,fontSize:'18px',flexShrink:0,whiteSpace:'nowrap',
               color:this.currentTab===tab.key?'#409eff':'#606266',
               borderBottom:this.currentTab===tab.key?'3px solid #409eff':'3px solid transparent',
               cursor:'pointer'}
