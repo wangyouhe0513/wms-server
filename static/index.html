@@ -2,34 +2,56 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+<meta name="format-detection" content="telephone=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+<meta name="x5-orientation" content="portrait">
+<meta name="x5-fullscreen" content="true">
+<meta name="x5-page-mode" content="app">
 <title>工厂进销存管理系统</title>
 <style>
-  body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #f5f7fa; margin:0; }
-  .card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  *, *::before, *::after { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif; background: #f5f7fa; margin:0; -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; }
+  .card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); margin-bottom: 16px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .tab-active { color: #409eff; border-bottom: 2px solid #409eff; }
-  .stat-card { color: #fff; border-radius: 12px; padding: 20px; }
+  .stat-card { color: #fff; border-radius: 12px; padding: 20px; margin-bottom: 12px; }
   .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
   .tag-out { background: #fef0f0; color: #f56c6c; }
   .tag-in { background: #f0f9eb; color: #67c23a; }
   .low-stock { color: #f56c6c; font-weight: bold; }
-  input, select { border: 1px solid #dcdfe6; border-radius: 6px; padding: 6px 10px; font-size: 14px; }
+  input, select { border: 1px solid #dcdfe6; border-radius: 6px; padding: 8px 10px; font-size: 14px; max-width: 100%; }
   input:focus, select:focus { outline: none; border-color: #409eff; }
-  table { width: 100%; border-collapse: collapse; }
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; -webkit-transform: translateZ(0); margin: 0 -14px; padding: 0 14px; }
+  table { width: 100%; border-collapse: collapse; min-width: 600px; }
   th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #ebeef5; font-size: 14px; }
-  th { background: #fafafa; color: #606266; font-weight: 600; }
+  th { background: #fafafa; color: #606266; font-weight: 600; white-space: nowrap; }
   tr:hover { background: #f5f7fa; }
-  button { padding: 8px 18px; border-radius: 6px; font-size: 14px; cursor: pointer; border: none; transition: all 0.2s; }
+  button { padding: 8px 18px; border-radius: 6px; font-size: 14px; cursor: pointer; border: none; transition: all 0.2s; -webkit-tap-highlight-color: transparent; touch-action: manipulation; white-space: nowrap; }
   .btn-primary { background: #409eff; color: #fff; }
   .btn-primary:hover { background: #337ecc; }
   .btn-success { background: #67c23a; color: #fff; }
   .btn-danger { background: #f56c6c; color: #fff; }
   .btn-warning { background: #e6a23c; color: #fff; }
-  .btn-sm { padding: 4px 10px; font-size: 12px; }
-  .login-box { max-width: 400px; margin: 100px auto; background: #fff; border-radius: 16px; padding: 40px; box-shadow: 0 4px 24px rgba(0,0,0,0.1); text-align: center; }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+  .login-box { max-width: 400px; margin: 60px 16px; background: #fff; border-radius: 16px; padding: 32px 24px; box-shadow: 0 4px 24px rgba(0,0,0,0.1); text-align: center; }
   .login-box input { width: 100%; padding: 12px; margin-bottom: 16px; font-size: 15px; box-sizing: border-box; }
-  .login-box h2 { margin-bottom: 24px; color: #303133; }
+  .login-box h2 { margin-bottom: 24px; color: #303133; font-size: 22px; }
   .error-msg { background: #fef0f0; color: #f56c6c; padding: 10px; border-radius: 6px; margin-bottom: 16px; font-size: 14px; }
+  @media (max-width: 768px) {
+    body { font-size: 14px; }
+    .card { padding: 14px; border-radius: 8px; }
+    .stat-card { padding: 14px; }
+    th, td { padding: 8px 10px; font-size: 13px; }
+    button { padding: 10px 16px; font-size: 13px; min-height: 36px; }
+    .btn-sm { padding: 6px 10px; font-size: 11px; min-height: 30px; }
+    .login-box { margin: 40px 12px; padding: 28px 16px; }
+    .login-box h2 { font-size: 20px; }
+  }
+  @media (min-width: 769px) {
+    .login-box { margin: 100px auto; }
+  }
 </style>
 </head>
 <body>
@@ -652,27 +674,25 @@ createApp({
     return h('div',[
       renderChangePwd(),
       // Header
-      h('div',{style:{background:'#fff',borderBottom:'1px solid #e4e7ed',padding:'0 24px',display:'flex',alignItems:'center',justifyContent:'space-between',height:'56px'}},[
-        h('div',{style:{display:'flex',alignItems:'center',gap:'8px'}},
-          h('span',{style:{fontSize:'20px',fontWeight:700,color:'#303133'}},'🏭 进销存管理系统')),
-        h('div',{style:{display:'flex'}},
+      h('div',{style:{background:'#fff',borderBottom:'1px solid #e4e7ed',padding:'0 8px',display:'flex',alignItems:'center',height:'56px',gap:'0'}},[
+        h('span',{style:{fontSize:'16px',fontWeight:700,color:'#303133',flexShrink:0,padding:'0 4px'}},'🏭 进销存'),
+        h('div',{style:{display:'flex',overflowX:'auto',flex:1,'-webkit-overflow-scrolling':'touch','scrollbar-width':'none','-ms-overflow-style':'none',justifyContent:'center'}},
           tabs.map(tab=>h('button',{key:tab.key,
             onClick:()=>this.currentTab=tab.key,
-            style:{background:'none',border:'none',borderRadius:0,padding:'16px 20px',fontWeight:500,
+            style:{background:'none',border:'none',borderRadius:0,padding:'16px 8px',fontWeight:500,fontSize:'12px',flexShrink:0,whiteSpace:'nowrap',
               color:this.currentTab===tab.key?'#409eff':'#606266',
               borderBottom:this.currentTab===tab.key?'2px solid #409eff':'2px solid transparent',
               cursor:'pointer'}
           },tab.label))
         ),
-        h('div',{style:{display:'flex',alignItems:'center',gap:'16px',fontSize:'13px'}},[
-          h('span',{style:{color:'#606266'}},this.authUser?.username||''),
-          h('span',{style:{color:'#909399'}},this.today),
-          h('button',{class:'btn-sm',style:{background:'#f5f7fa'},onClick:()=>this.showChangePwd=true},'改密'),
-          h('button',{class:'btn-danger btn-sm',onClick:this.doLogout},'退出'),
+        h('div',{style:{display:'flex',alignItems:'center',gap:'6px',fontSize:'11px',flexShrink:0}},[
+          h('span',{style:{color:'#606266',display:'none'}},this.authUser?.username||''),
+          h('button',{class:'btn-sm',style:{background:'#f5f7fa',padding:'4px 8px',fontSize:'11px'},onClick:()=>this.showChangePwd=true},'改密'),
+          h('button',{class:'btn-danger btn-sm',style:{padding:'4px 8px',fontSize:'11px'},onClick:this.doLogout},'退出'),
         ]),
       ]),
       // Body
-      h('div',{style:{maxWidth:'1400px',margin:'20px auto',padding:'0 24px'}},[
+      h('div',{style:{maxWidth:'1400px',margin:'12px auto',padding:'0 8px'}},[
         this.currentTab === 'dashboard' ? renderDashboard() :
         this.currentTab === 'entry' ? renderEntry() :
         this.currentTab === 'inventory' ? renderInventory() :
