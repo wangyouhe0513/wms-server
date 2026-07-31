@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>测试页</title>
+<style>body{font-family:sans-serif;padding:40px}h1{color:#409eff}.ok{color:green}.err{color:red}</style>
+</head>
+<body>
+<div id="app">
+  <h1>{{ msg }}</h1>
+  <p>Vue 版本: <b>{{ version }}</b></p>
+  <p :class="apiOK ? 'ok' : 'err'">{{ apiMsg }}</p>
+</div>
+
+<script src="/static/vue.global.prod.js"></script>
+<script>
+console.log('Vue loaded:', typeof Vue);
+if (typeof Vue === 'undefined') {
+  document.getElementById('app').innerHTML = '<h1 style=color:red>Vue.js 加载失败</h1>';
+  throw new Error('Vue not loaded');
+}
+const { createApp } = Vue;
+
+createApp({
+  data() {
+    return { msg: '测试中...', version: Vue.version || '?', apiOK: false, apiMsg: 'API 测试中...' }
+  },
+  async mounted() {
+    this.msg = 'Vue 加载成功！';
+    try {
+      const res = await fetch('/api/specs');
+      const data = await res.json();
+      this.apiOK = true;
+      this.apiMsg = 'API 连接 OK - ' + data.length + ' 个规格';
+    } catch(e) {
+      this.apiMsg = 'API 连接失败: ' + e.message;
+    }
+  }
+}).mount('#app');
+</script>
+</body>
+</html>

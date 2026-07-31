@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Database backups
+*.db-backup
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# PDFs / large binaries
+*.pdf
+
+# Claude
+.claude/
+
+# Temp
+/tmp/
+*.tar.gz
+
+# Excel data files (sensitive)
+*.xlsx
+!sample*.xlsx
+
+# PHP legacy
+admin/
+api/
+includes/
+*.php
+config.php
+init.php
+.htaccess

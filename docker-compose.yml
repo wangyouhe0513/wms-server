@@ -1,0 +1,13 @@
+version: "3.8"
+services:
+  wms:
+    build: .
+    container_name: factory-wms
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./imports:/app/imports
+    environment:
+      - DATABASE_URL=sqlite:////app/data/factory.db
+    restart: unless-stopped

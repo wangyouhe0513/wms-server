@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>工厂进销存管理系统</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #f5f7fa; margin:0; }
+  .card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  .tab-active { color: #409eff; border-bottom: 2px solid #409eff; }
+  .stat-card { color: #fff; border-radius: 12px; padding: 20px; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+  .tag-out { background: #fef0f0; color: #f56c6c; }
+  .tag-in { background: #f0f9eb; color: #67c23a; }
+  .low-stock { color: #f56c6c; font-weight: bold; }
+  input, select { border: 1px solid #dcdfe6; border-radius: 6px; padding: 6px 10px; font-size: 14px; }
+  input:focus, select:focus { outline: none; border-color: #409eff; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #ebeef5; font-size: 14px; }
+  th { background: #fafafa; color: #606266; font-weight: 600; }
+  tr:hover { background: #f5f7fa; }
+  button { padding: 8px 18px; border-radius: 6px; font-size: 14px; cursor: pointer; border: none; transition: all 0.2s; }
+  .btn-primary { background: #409eff; color: #fff; }
+  .btn-primary:hover { background: #337ecc; }
+  .btn-success { background: #67c23a; color: #fff; }
+  .btn-danger { background: #f56c6c; color: #fff; }
+  .btn-warning { background: #e6a23c; color: #fff; }
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+  .login-box { max-width: 400px; margin: 100px auto; background: #fff; border-radius: 16px; padding: 40px; box-shadow: 0 4px 24px rgba(0,0,0,0.1); text-align: center; }
+  .login-box input { width: 100%; padding: 12px; margin-bottom: 16px; font-size: 15px; box-sizing: border-box; }
+  .login-box h2 { margin-bottom: 24px; color: #303133; }
+  .error-msg { background: #fef0f0; color: #f56c6c; padding: 10px; border-radius: 6px; margin-bottom: 16px; font-size: 14px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script src="/static/vue.global.prod.js"></script>
+<script>
+const { createApp, ref, computed, onMounted, h } = Vue;
+
+createApp({
+  setup() {
+    // === Auth ===
+    const token = ref(localStorage.getItem('wms_token') || '');
+    const authUser = ref(JSON.parse(localStorage.getItem('wms_user') || 'null'));
+    const loginUsername = ref('');
+    const loginPassword = ref('');
+    const loginError = ref('');
+    const loginLoading = ref(false);
+
+    const doLogin = async () => {
+      loginError.value = ''; loginLoading.value = true;
+      try {
+        const res = await fetch('/api/auth/login', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({username: loginUsername.value, password: loginPassword.value})
+        });
+        if (!res.ok) { const e = await res.json(); throw new Error(e.detail); }
+        const data = await res.json();
+        token.value = data.token;
+        authUser.value = {username: data.username, role: data.role};
+        localStorage.setItem('wms_token', data.token);
+        localStorage.setItem('wms_user', JSON.stringify(authUser.value));
+      } catch(e) { loginError.value = e.message; }
+      loginLoading.value = false;
+    };
+
+    const doLogout = async () => {
+      try { await api('/api/auth/logout', {method:'POST'}); } catch(e) {}
+      token.value = ''; authUser.value = null;
+      localStorage.removeItem('wms_token'); localStorage.removeItem('wms_user');
+    };
+
+    // === Main app state ===
+    const currentTab = ref('dashboard');
+    const today = new Date().toISOString().slice(0, 10);
+    const showLogs = ref(false);  // toggle for operation log modal
+
+    // Dashboard
+    const dash = ref({today_out_amount:0,today_in_qty:0,month_total:0,low_stock_count:0,total_specs:0,total_colors:0});
+
+    // Entry
+    const entryDate = ref(today);
+    const entryRows = ref([]);
+    const submitting = ref(false);
+    const msg = ref('');
+    const msgType = ref('ok');
+
+    // Base data
+    const specs = ref([]);
+    const colors = ref([]);
+    const salespersons = ref([]);
+
+    // Inventory
+    const invData = ref({});
+    const invFilter = ref('');
+    const invLowStock = ref([]);
+
+    // Bill
+    const billSP = ref('');
+    const billYear = ref(new Date().getFullYear());
+    const billMonth = ref(new Date().getMonth()+1);
+    const billData = ref(null);
+
+    // Summary
+    const sumYear = ref(new Date().getFullYear());
+    const sumMonth = ref(0);
+    const summary = ref(null);
+
+    // Settings
+    const newSpec = ref('');
+    const newColor = ref('');
+    const newColorCode = ref('');
+    const newSP = ref('');
+    const newSPType = ref('员工');
+    const importResult = ref(null);
+
+    const api = async (url, opts={}) => {
+      const headers = {'Content-Type':'application/json', ...opts.headers};
+      if (token.value) headers['Authorization'] = 'Bearer ' + token.value;
+      const res = await fetch(url, {headers, ...opts, ...(opts.body?{body:opts.body}:{})});
+      if (!res.ok) {
+        const e = await res.json().catch(()=>({detail:'Request failed'}));
+        if (res.status === 401) { doLogout(); throw new Error('登录已过期'); }
+        throw new Error(e.detail||'Error');
+      }
+      return res.json();
+    };
+
+    const refreshAll = async () => {
+      [dash.value, specs.value, colors.value, salespersons.value] = await Promise.all([
+        api('/api/dashboard'), api('/api/specs'), api('/api/colors'), api('/api/salespersons')
+      ]);
+      const inv = await api('/api/inventory');
+      invData.value = inv.inventory;
+      invLowStock.value = inv.low_stock;
+      if (authUser.value?.role === 'superadmin') loadAdmins();
+    };
+
+    onMounted(refreshAll);
+
+    const addEntryRow = (type) => entryRows.value.push({type,spec:'',color:'',qty:1,price:0,sp:'',remark:''});
+
+    const submitEntries = async () => {
+      const items = entryRows.value.map(r => ({
+        trans_date: entryDate.value, trans_type: r.type,
+        spec_name: r.spec.trim(), color_name: r.color.trim(),
+        quantity: r.qty||0, unit_price: r.type==='出库'?(r.price||0):0,
+        salesperson_name: r.type==='出库'?r.sp.trim():null, remark: r.remark
+      }));
+      const inv = items.find(i => !i.spec_name||!i.color_name||!i.quantity);
+      if (inv) { msg.value='请填写完整信息'; msgType.value='err'; return; }
+      submitting.value = true;
+      try {
+        await api('/api/transactions/batch', {method:'POST',body:JSON.stringify({items})});
+        entryRows.value = []; msg.value=`录入成功!`; msgType.value='ok'; refreshAll();
+      } catch(e) { msg.value=e.message; msgType.value='err'; }
+      submitting.value = false;
+    };
+
+    const loadBill = async () => {
+      if (!billSP.value) return alert('请选择人员');
+      billData.value = await api(`/api/bills/personal?salesperson=${encodeURIComponent(billSP.value)}&year=${billYear.value}&month=${billMonth.value}`);
+    };
+
+    const exportBill = () => {
+      if (!billData.value) return;
+      let csv='日期,规格,颜色,数量,单价,金额\n';
+      billData.value.items.forEach(i => csv+=`${i.date},${i.spec},${i.color},${i.quantity},${i.unit_price},${i.amount}\n`);
+      csv+=`\n合计,,,${billData.value.total_qty},,${billData.value.total_amount}`;
+      const b=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+      const a=document.createElement('a'); a.href=URL.createObjectURL(b);
+      a.download=`${billData.value.salesperson}_${billData.value.year}年${billData.value.month}月.csv`; a.click();
+    };
+
+    const loadSummary = async () => {
+      summary.value = await api(`/api/reports/sales-summary?year=${sumYear.value}&month=${sumMonth.value}`);
+    };
+
+    const loadInventory = async () => {
+      const d = await api('/api/inventory');
+      invData.value = d.inventory; invLowStock.value = d.low_stock;
+    };
+
+    const saveSpec = async () => {
+      if(!newSpec.value.trim()) return;
+      await api(`/api/specs?name=${encodeURIComponent(newSpec.value.trim())}`,{method:'POST'});
+      newSpec.value=''; specs.value=await api('/api/specs');
+    };
+    const deleteSpec = async (id) => { if(confirm('确定删除?')){await api(`/api/specs/${id}`,{method:'DELETE'}); specs.value=await api('/api/specs');}};
+    const editSpec = async (s) => { const n=prompt('修改:',s.name); if(n){await api(`/api/specs/${s.id}?name=${encodeURIComponent(n)}`,{method:'PUT'}); specs.value=await api('/api/specs');}};
+
+    const saveColor = async () => {
+      if(!newColor.value.trim()) return;
+      await api(`/api/colors?name=${encodeURIComponent(newColor.value.trim())}&code=${newColorCode.value.trim()}`,{method:'POST'});
+      newColor.value=''; newColorCode.value=''; colors.value=await api('/api/colors');
+    };
+    const deleteColor = async (id) => { if(confirm('确定删除?')){await api(`/api/colors/${id}`,{method:'DELETE'}); colors.value=await api('/api/colors');}};
+    const editColor = async (c) => { const n=prompt('修改:',c.name); if(n){await api(`/api/colors/${c.id}?name=${encodeURIComponent(n)}&code=${c.code||''}`,{method:'PUT'}); colors.value=await api('/api/colors');}};
+
+    const saveSP = async () => {
+      if(!newSP.value.trim()) return;
+      await api(`/api/salespersons?name=${encodeURIComponent(newSP.value.trim())}&sp_type=${newSPType.value}`,{method:'POST'});
+      newSP.value=''; salespersons.value=await api('/api/salespersons');
+    };
+    const deleteSP = async (id) => { if(confirm('确定删除?')){await api(`/api/salespersons/${id}`,{method:'DELETE'}); salespersons.value=await api('/api/salespersons');}};
+
+    const importStock = async (e) => {
+      const f=e.target.files[0]; if(!f) return;
+      const fd=new FormData(); fd.append('file',f);
+      importResult.value=await (await fetch('/api/import/stock',{method:'POST',body:fd})).json();
+      if(importResult.value.ok) loadInventory();
+    };
+
+    // === Admin management ===
+    const admins = ref([]);
+    const newAdminUser = ref('');
+    const newAdminPass = ref('');
+    const showChangePwd = ref(false);
+    const oldPwd = ref('');
+    const newPwd = ref('');
+
+    const loadAdmins = async () => {
+      if (authUser.value?.role !== 'superadmin') return;
+      try { admins.value = await api('/api/admins'); } catch(e) {}
+    };
+
+    const saveAdmin = async () => {
+      if (!newAdminUser.value.trim() || !newAdminPass.value.trim()) return;
+      await api('/api/admins', {method:'POST', body:JSON.stringify({username:newAdminUser.value.trim(),password:newAdminPass.value})});
+      newAdminUser.value=''; newAdminPass.value=''; loadAdmins();
+    };
+
+    const resetAdminPwd = async (id, username) => {
+      const pwd = prompt(`重置 ${username} 的密码：`);
+      if (!pwd) return;
+      await api(`/api/admins/${id}/password`, {method:'PUT', body:JSON.stringify({password:pwd})});
+    };
+
+    const deleteAdmin = async (id, username) => {
+      if (!confirm(`确定删除管理员 ${username}？`)) return;
+      await api(`/api/admins/${id}`, {method:'DELETE'}); loadAdmins();
+    };
+
+    const changePwd = async () => {
+      if (!oldPwd.value || !newPwd.value) return;
+      await api(`/api/auth/change-password?old_password=${encodeURIComponent(oldPwd.value)}&new_password=${encodeURIComponent(newPwd.value)}`, {method:'PUT'});
+      showChangePwd.value=false; oldPwd.value=''; newPwd.value='';
+      alert('密码修改成功');
+    };
+
+    // === Operation logs ===
+    const logs = ref([]);
+    const loadLogs = async () => {
+      try { logs.value = await api('/api/logs?limit=200'); } catch(e) {}
+    };
+
+    const fmt = v => (v||0).toLocaleString('zh-CN',{minimumFractionDigits:2});
+
+    const entryOutTotal = computed(() => entryRows.value.filter(r=>r.type==='出库').reduce((s,r)=>s+(r.qty||0)*(r.price||0),0));
+    const entryInTotal = computed(() => entryRows.value.filter(r=>r.type==='入库').reduce((s,r)=>s+(r.qty||0),0));
+    const filteredInventory = computed(() => {
+      const d={};
+      for(const [spec,items] of Object.entries(invData.value)){
+        if(!invFilter.value||spec.includes(invFilter.value)) d[spec]=items;
+      }
+      return d;
+    });
+
+    return {
+      // Auth
+      token, authUser, loginUsername, loginPassword, loginError, loginLoading,
+      doLogin, doLogout, showChangePwd, oldPwd, newPwd, changePwd,
+      // Main
+      currentTab, today, dash, entryDate, entryRows, submitting, msg, msgType,
+      specs, colors, salespersons, invData, invFilter, invLowStock,
+      billSP, billYear, billMonth, billData,
+      sumYear, sumMonth, summary,
+      newSpec, newColor, newColorCode, newSP, newSPType, importResult,
+      addEntryRow, submitEntries, loadBill, exportBill, loadSummary, loadInventory,
+      saveSpec, deleteSpec, editSpec, saveColor, deleteColor, editColor,
+      saveSP, deleteSP, importStock, fmt, entryOutTotal, entryInTotal, filteredInventory,
+      // Admin + Logs
+      admins, newAdminUser, newAdminPass, saveAdmin, resetAdminPwd, deleteAdmin, loadAdmins,
+      logs, loadLogs, showLogs,
+    };
+  },
+
+  // ===== TEMPLATE using render function (no Vue template compiler needed) =====
+  render() {
+    // ===== LOGIN PAGE (when not authenticated) =====
+    if (!this.token) {
+      return h('div',{class:'login-box'},[
+        h('h2','🏭 工厂进销存管理系统'),
+        h('p',{style:{color:'#909399',marginBottom:'24px',fontSize:'14px'}},'请登录后使用'),
+        this.loginError ? h('div',{class:'error-msg'},this.loginError) : null,
+        h('input',{type:'text',value:this.loginUsername,onInput:e=>this.loginUsername=e.target.value,placeholder:'用户名',onKeyup:e=>e.key==='Enter'&&this.doLogin()}),
+        h('input',{type:'password',value:this.loginPassword,onInput:e=>this.loginPassword=e.target.value,placeholder:'密码',onKeyup:e=>e.key==='Enter'&&this.doLogin()}),
+        h('button',{class:'btn-primary',onClick:this.doLogin,disabled:this.loginLoading,style:{width:'100%',padding:'12px',fontSize:'16px'}},
+          this.loginLoading?'登录中...':'登 录'),
+      ]);
+    }
+
+    const tabs = [
+      {key:'dashboard', label:'🏠 首页'},
+      {key:'entry', label:'📝 每日录入'},
+      {key:'inventory', label:'📦 实时库存'},
+      {key:'bill', label:'🧾 个人账单'},
+      {key:'summary', label:'📊 销售汇总'},
+      {key:'settings', label:'⚙️ 基础数据'},
+    ];
+
+    // --- Dashboard ---
+    const renderDashboard = () => h('div',{style:{display:'flex',flexDirection:'column',gap:'20px'}},[
+      h('div',{style:{display:'flex',gap:'16px',flexWrap:'wrap'}},[
+        h('div',{class:'stat-card',style:{flex:1,minWidth:'200px',background:'linear-gradient(135deg,#409eff,#337ecc)'}},
+          [h('div',{style:{fontSize:'13px',opacity:'.9'}},'今日出库金额'),
+           h('div',{style:{fontSize:'28px',fontWeight:700,marginTop:'8px'}},'¥'+this.fmt(this.dash.today_out_amount))]),
+        h('div',{class:'stat-card',style:{flex:1,minWidth:'200px',background:'linear-gradient(135deg,#67c23a,#529b2e)'}},
+          [h('div',{style:{fontSize:'13px',opacity:'.9'}},'今日入库数量'),
+           h('div',{style:{fontSize:'28px',fontWeight:700,marginTop:'8px'}},String(this.dash.today_in_qty))]),
+        h('div',{class:'stat-card',style:{flex:1,minWidth:'200px',background:'linear-gradient(135deg,#e6a23c,#d4880f)'}},
+          [h('div',{style:{fontSize:'13px',opacity:'.9'}},'本月累计销售额'),
+           h('div',{style:{fontSize:'28px',fontWeight:700,marginTop:'8px'}},'¥'+this.fmt(this.dash.month_total))]),
+        h('div',{class:'stat-card',style:{flex:1,minWidth:'200px',background:'linear-gradient(135deg,#f56c6c,#c0392b)'}},
+          [h('div',{style:{fontSize:'13px',opacity:'.9'}},'低库存预警'),
+           h('div',{style:{fontSize:'28px',fontWeight:700,marginTop:'8px'}},String(this.dash.low_stock_count)+' SKU')]),
+      ]),
+      h('div',{class:'card'},[
+        h('div',{style:{fontWeight:600,marginBottom:'12px'}},'📊 系统概况'),
+        h('div',{style:{display:'flex',gap:'40px',color:'#606266'}},[
+          h('div',['规格数：',h('b',String(this.dash.total_specs))]),
+          h('div',['颜色数：',h('b',String(this.dash.total_colors))]),
+          h('div',['今日：',h('b',this.today)]),
+        ])
+      ])
+    ]);
+
+    // --- Entry ---
+    const renderEntry = () => h('div',{class:'card'},[
+      h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'16px'}},[
+        h('div',{style:{display:'flex',alignItems:'center',gap:'12px'}},[
+          h('span',{style:{fontWeight:600,fontSize:'16px'}},'📝 每日录入'),
+          h('input',{type:'date',value:this.entryDate,onInput:e=>this.entryDate=e.target.value,style:{width:'160px'}})
+        ]),
+        h('div',{style:{display:'flex',gap:'8px'}},[
+          h('button',{class:'btn-primary',onClick:()=>this.addEntryRow('出库')},'+ 出库行'),
+          h('button',{class:'btn-success',onClick:()=>this.addEntryRow('入库')},'+ 入库行'),
+        ])
+      ]),
+      h('table',[
+        h('thead',h('tr',[
+          h('th',{style:{width:'50px'}},'#'),
+          h('th',{style:{width:'70px'}},'类型'),
+          h('th',{style:{width:'140px'}},'规格'),
+          h('th',{style:{width:'120px'}},'颜色'),
+          h('th',{style:{width:'80px'}},'数量'),
+          h('th',{style:{width:'80px'}},'单价'),
+          h('th',{style:{width:'100px'}},'金额'),
+          h('th',{style:{width:'120px'}},'销售人'),
+          h('th',{style:{width:'80px'}},'备注'),
+          h('th',{style:{width:'60px'}},''),
+        ])),
+        h('tbody',
+          this.entryRows.length === 0
+          ? [h('tr',{key:'empty'},h('td',{colSpan:10,style:{textAlign:'center',color:'#909399',padding:'40px'}},'点击上方按钮添加记录'))]
+          : this.entryRows.map((row,idx) => h('tr',{key:idx},[
+            h('td',String(idx+1)),
+            h('td',h('span',{class:row.type==='出库'?'tag tag-out':'tag tag-in'},row.type)),
+            h('td',h('input',{value:row.spec,onInput:e=>row.spec=e.target.value,style:{width:'130px'},list:'speclist',placeholder:'规格'})),
+            h('td',h('input',{value:row.color,onInput:e=>row.color=e.target.value,style:{width:'110px'},list:'colorlist',placeholder:'颜色'})),
+            h('td',h('input',{type:'number',value:row.qty,onInput:e=>row.qty=parseInt(e.target.value)||0,min:1,style:{width:'70px'}})),
+            h('td',row.type==='入库'
+              ? h('span',{style:{color:'#909399'}},'—')
+              : h('input',{type:'number',step:'0.01',value:row.price,onInput:e=>row.price=parseFloat(e.target.value)||0,style:{width:'70px'}})),
+            h('td',{style:{fontWeight:500}},row.type==='出库'?((row.qty||0)*(row.price||0)).toFixed(2):'—'),
+            h('td',row.type==='入库'
+              ? h('span',{style:{color:'#909399'}},'—')
+              : h('input',{value:row.sp,onInput:e=>row.sp=e.target.value,style:{width:'110px'},list:'splist',placeholder:'人员'})),
+            h('td',h('input',{value:row.remark,onInput:e=>row.remark=e.target.value,style:{width:'70px'}})),
+            h('td',h('button',{class:'btn-danger btn-sm',onClick:()=>this.entryRows.splice(idx,1)},'✕')),
+          ]))
+        )
+      ]),
+      // Datalists
+      h('datalist',{id:'speclist'},this.specs.map(s=>h('option',{value:s.name}))),
+      h('datalist',{id:'colorlist'},this.colors.map(c=>h('option',{value:c.name}))),
+      h('datalist',{id:'splist'},this.salespersons.map(s=>h('option',{value:s.name}))),
+      // Totals
+      this.entryRows.length > 0 ? h('div',{style:{marginTop:'16px',display:'flex',justifyContent:'space-between',alignItems:'center'}},[
+        h('span',{style:{color:'#606266'}},[
+          '共 ',h('b',String(this.entryRows.length)),' 条 | ',
+          '出库金额：',h('b',{style:{color:'#f56c6c'}},'¥'+this.entryOutTotal.toFixed(2)),' | ',
+          '入库数量：',h('b',{style:{color:'#67c23a'}},String(this.entryInTotal)),
+        ]),
+        h('button',{class:'btn-primary',onClick:this.submitEntries,disabled:this.submitting,style:{padding:'10px 32px',fontSize:'15px'}},
+          this.submitting?'提交中...':'✔ 提交录入'),
+      ]) : null,
+      this.msg ? h('div',{style:{color:this.msgType==='ok'?'#67c23a':'#f56c6c',marginTop:'12px'}},this.msg) : null,
+    ]);
+
+    // --- Inventory ---
+    const setThreshold = async (skuId, current) => {
+      const t = prompt('设置低库存阈值（低于此值将预警）：', String(current||50));
+      if (t === null) return;
+      const v = parseInt(t);
+      if (isNaN(v) || v < 0) return alert('请输入有效数字');
+      await api(`/api/skus/${skuId}/threshold?threshold=${v}`, {method:'PUT'});
+      loadInventory();
+    };
+
+    const renderInventory = () => h('div',{class:'card'},[
+      h('div',{style:{display:'flex',gap:'12px',alignItems:'center',marginBottom:'16px',flexWrap:'wrap'}},[
+        h('span',{style:{fontWeight:600,fontSize:'16px'}},'📦 实时库存'),
+        h('input',{value:this.invFilter,onInput:e=>this.invFilter=e.target.value,placeholder:'搜索规格...',style:{width:'200px'}}),
+        h('button',{class:'btn-warning btn-sm',onClick:()=>window.open('/api/inventory/snapshot','_blank')},'📥 下载快照'),
+      ]),
+      this.invLowStock.length ? h('div',{style:{background:'#fef0f0',padding:'10px 16px',borderRadius:'8px',marginBottom:'16px'}},[
+        '🔴 ',h('b','低库存预警：'),
+        ...this.invLowStock.map(ls=>h('span',{class:'low-stock',style:{marginLeft:'12px'}},ls))
+      ]) : null,
+      ...Object.entries(this.filteredInventory).map(([spec,items]) => h('div',{key:spec,style:{marginBottom:'20px'}},[
+        h('div',{style:{fontWeight:600,color:'#303133',marginBottom:'8px',borderBottom:'2px solid #409eff',paddingBottom:'4px',display:'inline-block'}},spec),
+        h('div',{style:{display:'flex',flexWrap:'wrap',gap:'10px'}},
+          items.map(item => {
+            const threshold = item.threshold || 50;
+            const isLow = item.stock < threshold;
+            return h('div',{key:item.sku_id,style:{padding:'8px 14px',borderRadius:'8px',minWidth:'100px',textAlign:'center',background:isLow?'#fef0f0':'#f5f7fa'}},
+            [
+              h('div',{style:{fontSize:'12px',color:'#909399'}},item.color),
+              h('div',{class:isLow?'low-stock':'',style:{fontSize:'18px',fontWeight:700,cursor:'pointer'},
+                onClick:async()=>{
+                  const logs=await this.api('/api/inventory/'+item.sku_id+'/history?limit=20');
+                  let msg=item.color+' 最近变动:\n';
+                  logs.forEach(l=>msg+=`${l.time} ${l.change_qty>0?'+':''}${l.change_qty} (${l.before_stock}->${l.after_stock})\n`);
+                  msg+=`\n低库存阈值: ${threshold}`;
+                  alert(msg);
+                }
+              },String(item.stock)),
+              h('div',{style:{fontSize:'10px',color:'#909399',cursor:'pointer',marginTop:'2px'},
+                onClick:e=>{e.stopPropagation();setThreshold(item.sku_id,threshold);}
+              },`阈值:${threshold}`),
+            ]);
+          })
+        )
+      ]))
+    ]);
+
+    // --- Bill ---
+    const years = [2024,2025,2026,2027,2028];
+    const renderBill = () => h('div',{class:'card'},[
+      h('div',{style:{display:'flex',gap:'12px',alignItems:'center',marginBottom:'16px',flexWrap:'wrap'}},[
+        h('span',{style:{fontWeight:600,fontSize:'16px'}},'🧾 个人出库账单'),
+        h('select',{value:this.billSP,onChange:e=>this.billSP=e.target.value,style:{width:'140px'}},[
+          h('option',{value:''},'选择人员'),
+          ...this.salespersons.map(s=>h('option',{value:s.name},s.name))
+        ]),
+        h('select',{value:this.billYear,onChange:e=>this.billYear=parseInt(e.target.value),style:{width:'100px'}},
+          years.map(y=>h('option',{value:y},String(y)))),
+        h('span','年'),
+        h('select',{value:this.billMonth,onChange:e=>this.billMonth=parseInt(e.target.value),style:{width:'80px'}},
+          Array.from({length:12},(_,i)=>h('option',{value:i+1},String(i+1)))),
+        h('span','月'),
+        h('button',{class:'btn-primary',onClick:this.loadBill},'查询'),
+        h('button',{class:'btn-warning',onClick:this.exportBill,disabled:!this.billData},'导出 Excel'),
+      ]),
+      this.billData ? [
+        h('h3',{style:{marginBottom:'12px'}},`${this.billData.salesperson} — ${this.billData.year}年${this.billData.month}月`),
+        h('table',[
+          h('thead',h('tr',[h('th','日期'),h('th','规格'),h('th','颜色'),h('th','数量'),h('th','单价'),h('th','金额')])),
+          h('tbody',this.billData.items.map(i=>h('tr',{key:i.date+i.spec+i.color},[
+            h('td',i.date),h('td',i.spec),h('td',i.color),
+            h('td',String(i.quantity)),h('td',String(i.unit_price)),h('td',i.amount.toFixed(2))
+          ])))
+        ]),
+        h('div',{style:{marginTop:'16px',fontSize:'16px',fontWeight:600,color:'#303133'}},[
+          '合计：',h('b',String(this.billData.total_qty)),' 件 | 金额：',h('b',{style:{color:'#f56c6c'}},'¥'+this.billData.total_amount.toFixed(2))
+        ])
+      ] : null
+    ]);
+
+    // --- Summary ---
+    const renderSummary = () => h('div',{class:'card'},[
+      h('div',{style:{display:'flex',gap:'12px',alignItems:'center',marginBottom:'16px',flexWrap:'wrap'}},[
+        h('span',{style:{fontWeight:600,fontSize:'16px'}},'📊 销售额汇总'),
+        h('select',{value:this.sumYear,onChange:e=>this.sumYear=parseInt(e.target.value),style:{width:'100px'}},
+          years.map(y=>h('option',{value:y},String(y)))),
+        h('span','年'),
+        h('select',{value:this.sumMonth,onChange:e=>this.sumMonth=parseInt(e.target.value),style:{width:'80px'}},[
+          h('option',{value:0},'全部'),
+          ...Array.from({length:12},(_,i)=>h('option',{value:i+1},String(i+1)+'月'))
+        ]),
+        h('button',{class:'btn-primary',onClick:this.loadSummary},'查询'),
+      ]),
+      this.summary ? [
+        h('div',{style:{display:'flex',gap:'20px',flexWrap:'wrap'}},[
+          h('div',{style:{flex:1,minWidth:'300px'}},[
+            h('h4',{style:{marginBottom:'8px'}},'👤 按销售人员'),
+            h('table',[
+              h('thead',h('tr',[h('th','人员'),h('th','销售额')])),
+              h('tbody',Object.entries(this.summary.by_salesperson).map(([name,amt])=>
+                h('tr',{key:name},[h('td',name),h('td',{style:{fontWeight:600}},'¥'+amt.toFixed(2))])))
+            ])
+          ]),
+          h('div',{style:{flex:1,minWidth:'300px'}},[
+            h('h4',{style:{marginBottom:'8px'}},'📦 按品类'),
+            h('table',[
+              h('thead',h('tr',[h('th','品类'),h('th','销售额')])),
+              h('tbody',Object.entries(this.summary.by_spec).map(([name,amt])=>
+                h('tr',{key:name},[h('td',name),h('td',{style:{fontWeight:600}},'¥'+amt.toFixed(2))])))
+            ])
+          ]),
+        ]),
+        h('div',{style:{marginTop:'20px'}},[
+          h('h4',{style:{marginBottom:'8px'}},'📅 月度趋势'),
+          h('div',{style:{display:'flex',gap:'8px',alignItems:'flex-end',height:'200px'}},
+            Object.entries(this.summary.by_month).map(([m,amt])=>{
+              const maxAmt = Math.max(1,...Object.values(this.summary.by_month));
+              return h('div',{key:m,style:{textAlign:'center'}},[
+                h('div',{style:{height:(amt/maxAmt*160)+'px',width:'40px',background:'#409eff',borderRadius:'4px 4px 0 0',margin:'0 auto'}}),
+                h('small',m),h('br'),
+                h('small','¥'+(amt/10000).toFixed(1)+'万')
+              ]);
+            })
+          )
+        ])
+      ] : null
+    ]);
+
+    // --- Settings ---
+    const renderSettings = () => h('div',{style:{display:'flex',gap:'20px',flexWrap:'wrap'}},[
+      // Specs
+      h('div',{class:'card',style:{flex:1,minWidth:'300px'}},[
+        h('div',{style:{fontWeight:600,marginBottom:'12px'}},'📋 规格管理'),
+        h('div',{style:{display:'flex',gap:'8px',marginBottom:'12px'}},[
+          h('input',{value:this.newSpec,onInput:e=>this.newSpec=e.target.value,placeholder:'新规格',style:{flex:1}}),
+          h('button',{class:'btn-primary btn-sm',onClick:this.saveSpec},'添加'),
+        ]),
+        h('table',h('tbody',this.specs.map(s=>h('tr',{key:s.id},[
+          h('td',s.name),
+          h('td',{style:{textAlign:'right'}},[
+            h('button',{class:'btn-sm',onClick:()=>this.editSpec(s)},'✏️'),
+            h('button',{class:'btn-danger btn-sm',onClick:()=>this.deleteSpec(s.id)},'🗑')
+          ])
+        ]))))
+      ]),
+      // Colors
+      h('div',{class:'card',style:{flex:1,minWidth:'300px'}},[
+        h('div',{style:{fontWeight:600,marginBottom:'12px'}},'🎨 颜色管理'),
+        h('div',{style:{display:'flex',gap:'8px',marginBottom:'12px'}},[
+          h('input',{value:this.newColor,onInput:e=>this.newColor=e.target.value,placeholder:'新颜色',style:{flex:1}}),
+          h('input',{value:this.newColorCode,onInput:e=>this.newColorCode=e.target.value,placeholder:'代号',style:{width:'60px'}}),
+          h('button',{class:'btn-primary btn-sm',onClick:this.saveColor},'添加'),
+        ]),
+        h('table',h('tbody',this.colors.map(c=>h('tr',{key:c.id},[
+          h('td',[c.name,' ',h('small',{style:{color:'#909399'}},c.code)]),
+          h('td',{style:{textAlign:'right'}},[
+            h('button',{class:'btn-sm',onClick:()=>this.editColor(c)},'✏️'),
+            h('button',{class:'btn-danger btn-sm',onClick:()=>this.deleteColor(c.id)},'🗑')
+          ])
+        ]))))
+      ]),
+      // Salespersons
+      h('div',{class:'card',style:{flex:1,minWidth:'300px'}},[
+        h('div',{style:{fontWeight:600,marginBottom:'12px'}},'👥 销售人员'),
+        h('div',{style:{display:'flex',gap:'8px',marginBottom:'12px'}},[
+          h('input',{value:this.newSP,onInput:e=>this.newSP=e.target.value,placeholder:'新人员',style:{flex:1}}),
+          h('select',{value:this.newSPType,onChange:e=>this.newSPType=e.target.value,style:{width:'80px'}},
+            [h('option','员工'),h('option','渠道'),h('option','电商')]),
+          h('button',{class:'btn-primary btn-sm',onClick:this.saveSP},'添加'),
+        ]),
+        h('table',h('tbody',this.salespersons.map(s=>h('tr',{key:s.id},[
+          h('td',[s.name,' ',h('span',{class:'tag',style:{fontSize:'11px'}},s.type)]),
+          h('td',{style:{textAlign:'right'}},h('button',{class:'btn-danger btn-sm',onClick:()=>this.deleteSP(s.id)},'🗑'))
+        ]))))
+      ]),
+      // Import
+      h('div',{class:'card',style:{width:'100%',marginTop:'0'}},[
+        h('div',{style:{fontWeight:600,marginBottom:'12px'}},'📥 一次性库存导入（Excel）'),
+        h('p',{style:{color:'#909399',fontSize:'13px',marginBottom:'12px'}},'上传库存 Excel 文件。系统读取最后一个 Sheet 的合计行数据并覆盖当前库存。'),
+        h('input',{type:'file',accept:'.xlsx',onChange:this.importStock,style:{marginBottom:'8px'}}),
+        this.importResult ? h('div',{style:{color:this.importResult.ok?'#67c23a':'#f56c6c'}},
+          this.importResult.ok ? `✅ 成功导入 ${this.importResult.imported_skus} 个 SKU` : '❌ 导入失败') : null
+      ]),
+
+      // Admin Management (superadmin only)
+      this.authUser?.role === 'superadmin' ? h('div',{class:'card',style:{width:'100%'}},[
+        h('div',{style:{fontWeight:600,marginBottom:'12px',display:'flex',justifyContent:'space-between',alignItems:'center'}},[
+          h('span','👑 管理员管理'),
+          h('button',{class:'btn-primary btn-sm',onClick:()=>{this.showLogs=!this.showLogs;if(this.showLogs)this.loadLogs();}},'📋 操作日志'),
+        ]),
+        h('div',{style:{display:'flex',gap:'8px',marginBottom:'12px'}},[
+          h('input',{value:this.newAdminUser,onInput:e=>this.newAdminUser=e.target.value,placeholder:'用户名',style:{flex:1}}),
+          h('input',{type:'password',value:this.newAdminPass,onInput:e=>this.newAdminPass=e.target.value,placeholder:'密码',style:{flex:1}}),
+          h('button',{class:'btn-primary btn-sm',onClick:this.saveAdmin},'添加管理员'),
+        ]),
+        h('table',h('thead',h('tr',[h('th','用户名'),h('th','角色'),h('th','最后登录'),h('th','操作')])),
+          h('tbody',this.admins.map(a=>h('tr',{key:a.id},[
+            h('td',a.username),
+            h('td',h('span',{class:'tag',style:{background:a.role==='superadmin'?'#fdf6ec':'#f0f9eb',color:a.role==='superadmin'?'#e6a23c':'#67c23a'}},a.role)),
+            h('td',{style:{fontSize:'12px',color:'#909399'}},a.last_login||'—'),
+            h('td',[
+              h('button',{class:'btn-sm',style:{marginRight:'8px'},onClick:()=>this.resetAdminPwd(a.id,a.username)},'🔑'),
+              h('button',{class:'btn-danger btn-sm',onClick:()=>this.deleteAdmin(a.id,a.username)},'✕')
+            ])
+          ])))
+        )
+      ]) : null,
+
+      // Operation logs (toggle)
+      this.showLogs ? h('div',{class:'card',style:{width:'100%'}},[
+        h('div',{style:{fontWeight:600,marginBottom:'12px',display:'flex',justifyContent:'space-between'}},[
+          h('span','📋 操作日志（最近 200 条）'),
+          h('button',{class:'btn-sm',onClick:()=>this.showLogs=false},'关闭'),
+        ]),
+        h('div',{style:{maxHeight:'400px',overflowY:'auto'}},
+          h('table',[
+            h('thead',h('tr',[h('th',{style:{width:'150px'}},'时间'),h('th',{style:{width:'80px'}},'操作人'),h('th',{style:{width:'80px'}},'类型'),h('th','详情')])),
+            h('tbody',this.logs.map(l=>h('tr',{key:l.id},[
+              h('td',{style:{fontSize:'12px',color:'#909399'}},l.created_at?.replace('T',' ').slice(0,19)),
+              h('td',l.admin_name),
+              h('td',h('span',{class:'tag'},l.action)),
+              h('td',{style:{fontSize:'13px'}},l.detail||`${l.action} ${l.target}`),
+            ])))
+          ])
+        )
+      ]) : null,
+    ]);
+
+    // ===== CHANGE PASSWORD MODAL =====
+    const renderChangePwd = () => {
+      if (!this.showChangePwd) return null;
+      return h('div',{style:{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000},
+        onClick:()=>this.showChangePwd=false
+      },[
+        h('div',{style:{background:'#fff',borderRadius:'12px',padding:'32px',width:'360px',textAlign:'center'},
+          onClick:e=>e.stopPropagation()
+        },[
+          h('h3',{style:{marginBottom:'20px'}},'修改密码'),
+          h('input',{type:'password',value:this.oldPwd,onInput:e=>this.oldPwd=e.target.value,placeholder:'原密码',style:{width:'100%',padding:'10px',marginBottom:'12px',boxSizing:'border-box'}}),
+          h('input',{type:'password',value:this.newPwd,onInput:e=>this.newPwd=e.target.value,placeholder:'新密码',style:{width:'100%',padding:'10px',marginBottom:'20px',boxSizing:'border-box'}}),
+          h('div',{style:{display:'flex',gap:'12px'}},[
+            h('button',{class:'btn-primary',onClick:this.changePwd,style:{flex:1}},'确定'),
+            h('button',{style:{flex:1,background:'#f5f7fa',border:'none',borderRadius:'6px',cursor:'pointer'},onClick:()=>this.showChangePwd=false},'取消'),
+          ])
+        ])
+      ]);
+    };
+
+    // ===== MAIN RENDER =====
+    return h('div',[
+      renderChangePwd(),
+      // Header
+      h('div',{style:{background:'#fff',borderBottom:'1px solid #e4e7ed',padding:'0 24px',display:'flex',alignItems:'center',justifyContent:'space-between',height:'56px'}},[
+        h('div',{style:{display:'flex',alignItems:'center',gap:'8px'}},
+          h('span',{style:{fontSize:'20px',fontWeight:700,color:'#303133'}},'🏭 进销存管理系统')),
+        h('div',{style:{display:'flex'}},
+          tabs.map(tab=>h('button',{key:tab.key,
+            onClick:()=>this.currentTab=tab.key,
+            style:{background:'none',border:'none',borderRadius:0,padding:'16px 20px',fontWeight:500,
+              color:this.currentTab===tab.key?'#409eff':'#606266',
+              borderBottom:this.currentTab===tab.key?'2px solid #409eff':'2px solid transparent',
+              cursor:'pointer'}
+          },tab.label))
+        ),
+        h('div',{style:{display:'flex',alignItems:'center',gap:'16px',fontSize:'13px'}},[
+          h('span',{style:{color:'#606266'}},this.authUser?.username||''),
+          h('span',{style:{color:'#909399'}},this.today),
+          h('button',{class:'btn-sm',style:{background:'#f5f7fa'},onClick:()=>this.showChangePwd=true},'改密'),
+          h('button',{class:'btn-danger btn-sm',onClick:this.doLogout},'退出'),
+        ]),
+      ]),
+      // Body
+      h('div',{style:{maxWidth:'1400px',margin:'20px auto',padding:'0 24px'}},[
+        this.currentTab === 'dashboard' ? renderDashboard() :
+        this.currentTab === 'entry' ? renderEntry() :
+        this.currentTab === 'inventory' ? renderInventory() :
+        this.currentTab === 'bill' ? renderBill() :
+        this.currentTab === 'summary' ? renderSummary() :
+        this.currentTab === 'settings' ? renderSettings() : null
+      ])
+    ]);
+  }
+}).mount('#app');
+</script>
+</body>
+</html>
