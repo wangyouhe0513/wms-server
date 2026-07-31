@@ -6,7 +6,7 @@ import secrets
 import io
 from datetime import date, datetime, timedelta
 from decimal import Decimal
-from typing import Optional
+from typing import List, Optional
 
 import openpyxl
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Query, Header
@@ -409,7 +409,7 @@ class TransactionItem(BaseModel):
 
 
 class TransactionBatch(BaseModel):
-    items: list[TransactionItem]
+    items: List[TransactionItem]
 
 
 @app.post("/api/transactions/batch")
