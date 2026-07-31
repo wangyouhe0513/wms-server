@@ -598,7 +598,7 @@ def set_threshold(sku_id: int, threshold: int, admin: Admin = Depends(get_curren
 
 
 @app.get("/api/inventory/snapshot")
-def inventory_snapshot_download(db: Session = Depends(get_db)):
+def inventory_snapshot_download(admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
     """生成带水印的库存快照 HTML，浏览器可直接打印为 PDF"""
     from datetime import date as dt_date
     today_str = dt_date.today().strftime("%Y-%m-%d")
@@ -636,6 +636,13 @@ def inventory_snapshot_download(db: Session = Depends(get_db)):
             )
         rows_html += f'<tr><td style="padding:6px 10px;font-weight:600;white-space:nowrap">{spec}</td>{items_html}</tr>'
 
+    # 生成铺满的水印网格
+    watermark_text = f"{admin.username} ｜ 淼伊库服饰有限公司 ｜ {today_str}"
+    cells = ""
+    for r in range(8):
+        for c in range(5):
+            cells += f'<span style="font-size:28px;color:#000;transform:rotate(-25deg);white-space:nowrap;padding:40px 30px;">{watermark_text}</span>'
+
     html = f"""<!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="UTF-8">
 <title>库存快照 {today_str}</title>
@@ -644,18 +651,17 @@ def inventory_snapshot_download(db: Session = Depends(get_db)):
 body {{ font-family: 'PingFang SC','Microsoft YaHei',sans-serif; margin:0; padding:20px; }}
 h1 {{ text-align:center; color:#333; margin-bottom:5px; }}
 .date {{ text-align:center; color:#999; font-size:13px; margin-bottom:20px; }}
-table {{ width:100%; border-collapse:collapse; font-size:12px; }}
+table {{ width:100%; border-collapse:collapse; font-size:12px; position:relative; z-index:1; background:rgba(255,255,255,0.85); }}
 th {{ background:#f5f5f5; padding:8px 10px; border:1px solid #ddd; }}
 td {{ border:1px solid #ddd; }}
-.watermark {{ position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:9999;
-  display:flex; align-items:center; justify-content:center; opacity:0.06; }}
-.watermark span {{ font-size:80px; color:#000; transform:rotate(-30deg); white-space:nowrap; }}
+.watermark {{ position:fixed; top:-20px; left:-20px; width:calc(100% + 40px); height:calc(100% + 40px); pointer-events:none; z-index:0;
+  display:flex; flex-wrap:wrap; align-items:center; justify-content:center; align-content:center; opacity:0.06; }}
 @media print {{ .watermark {{ display:flex; }} }}
 </style></head>
 <body>
-<div class="watermark"><span>王又河 ｜ {today_str}</span></div>
+<div class="watermark">{cells}</div>
 <h1>📦 库存快照</h1>
-<div class="date">下载日期：{today_str}</div>
+<div class="date">下载人：{admin.username} ｜ 下载日期：{today_str}</div>
 <table><thead><tr><th>规格</th>"""
     # 表头：取最大颜色数列
     max_colors = max(len(items) for items in groups.values()) if groups else 1
