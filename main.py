@@ -404,7 +404,7 @@ class TransactionItem(BaseModel):
     quantity: int
     unit_price: float = 0
     amount: float = 0
-    salesperson_name: Optional[str] = None
+    salesperson_name: str
     remark: Optional[str] = None
 
 
@@ -422,9 +422,9 @@ def create_transactions(batch: TransactionBatch, admin: Admin = Depends(get_curr
             # 获取或创建 SKU
             sku = get_or_create_sku(db, item.spec_name, item.color_name)
 
-            # 获取销售人员（仅出库）
+            # 获取销售人员（出库/入库都必填）
             sp_id = None
-            if item.salesperson_name and item.trans_type == "出库":
+            if item.salesperson_name:
                 sp = db.query(Salesperson).filter(
                     Salesperson.name == item.salesperson_name,
                     Salesperson.is_active == 1
