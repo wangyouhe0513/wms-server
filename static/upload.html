@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>库存更新</title>
+<style>
+body { font-family: -apple-system, sans-serif; background: #f5f7fa; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+.card { background: #fff; border-radius: 12px; padding: 32px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); width: 400px; }
+h2 { text-align: center; color: #303133; margin-bottom: 24px; }
+input, button { width: 100%; padding: 12px; margin-bottom: 16px; border-radius: 8px; border: 1px solid #dcdfe6; font-size: 14px; box-sizing: border-box; }
+button { background: #409eff; color: #fff; border: none; cursor: pointer; font-size: 16px; }
+button:hover { background: #337ecc; }
+.msg { padding: 10px; border-radius: 6px; margin-bottom: 16px; text-align: center; }
+.ok { background: #f0f9eb; color: #67c23a; }
+.err { background: #fef0f0; color: #f56c6c; }
+</style>
+</head>
+<body>
+<div class="card">
+<h2>📦 库存数据更新</h2>
+<div id="msg"></div>
+<input type="password" id="secret" placeholder="请输入密钥">
+<input type="text" id="admin_name" placeholder="操作人姓名（可选）">
+<input type="file" id="file" accept=".xlsx">
+<button onclick="upload()">上传并更新库存</button>
+</div>
+<script>
+async function upload() {
+  const secret = document.getElementById('secret').value;
+  const admin = document.getElementById('admin_name').value;
+  const file = document.getElementById('file').files[0];
+  const msg = document.getElementById('msg');
+
+  if (!secret || !file) {
+    msg.className = 'msg err';
+    msg.textContent = '请填写密钥并选择文件';
+    return;
+  }
+
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('secret', secret);
+  fd.append('admin_name', admin);
+
+  try {
+    const res = await fetch('/api/import/stock-secret', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (res.ok) {
+      msg.className = 'msg ok';
+      msg.textContent = `✅ 成功更新 ${data.updated_skus} 个 SKU（${data.source_sheet}）`;
+    } else {
+      msg.className = 'msg err';
+      msg.textContent = '❌ ' + (data.detail || '更新失败');
+    }
+  } catch (e) {
+    msg.className = 'msg err';
+    msg.textContent = '❌ 网络错误';
+  }
+}
+</script>
+</body>
+</html>

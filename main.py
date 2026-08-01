@@ -9,7 +9,7 @@ from decimal import Decimal
 from typing import List, Optional
 
 import openpyxl
-from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Query, Header
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, Query, Header
 from fastapi.responses import StreamingResponse, FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session, joinedload
@@ -1103,6 +1103,84 @@ def import_stock(file: UploadFile = File(...), admin: Admin = Depends(get_curren
         "source_file": file.filename,
         "source_sheet": last_sheet_name,
         "total_skus_in_db": total_skus,
+    }
+
+
+@app.post("/api/import/stock-secret")
+async def import_stock_secret(file: UploadFile = File(...), secret: str = Form(""), admin_name: str = Form(""),
+                               db: Session = Depends(get_db)):
+    """隐形库存更新接口，密钥验证，无需登录"""
+    if secret != "上山打老虎":
+        raise HTTPException(403, "密钥错误")
+
+    if not file.filename.endswith(".xlsx"):
+        raise HTTPException(400, "只支持 .xlsx 文件")
+
+    content = file.file.read()
+    wb = openpyxl.load_workbook(io.BytesIO(content), data_only=True)
+    last_sheet_name = wb.sheetnames[-1]
+    ws = wb[last_sheet_name]
+
+    # 解析：Row 1 规格名 / Row 2 颜色名 / 最后合计行库存
+    spec_positions = []
+    prev_spec = None
+    for col_idx in range(1, ws.max_column + 1):
+        val = ws.cell(row=1, column=col_idx).value
+        if val and str(val).strip():
+            name = str(val).strip()
+            if name != prev_spec:
+                spec_positions.append((col_idx, name))
+                prev_spec = name
+        else:
+            prev_spec = None
+
+    # 最后合计行
+    last_row = 3
+    for r in range(1, ws.max_row + 1):
+        for c in range(1, ws.max_column + 1):
+            if str(ws.cell(row=r, column=c).value or '').strip() == '合计':
+                last_row = r
+                break
+
+    def _norm_color(name):
+        if name in ('黑CP', 'hcp'): return '黑cp'
+        return name
+
+    updated = 0
+    errors = []
+    for idx, (spec_col, spec_name) in enumerate(spec_positions):
+        next_col = spec_positions[idx + 1][0] if idx + 1 < len(spec_positions) else ws.max_column + 1
+        for c in range(spec_col, next_col):
+            color_name = str(ws.cell(row=2, column=c).value or '').strip()
+            if not color_name or color_name in ('日期', '入', '出', ''):
+                continue
+            color_name = _norm_color(color_name)
+            stock_val = ws.cell(row=last_row, column=c).value
+            try:
+                stock = int(stock_val) if stock_val is not None else 0
+            except:
+                continue
+            try:
+                sku = get_or_create_sku(db, spec_name, color_name)
+                sku.current_stock = stock
+                updated += 1
+            except Exception as e:
+                errors.append(f"{spec_name}-{color_name}: {e}")
+
+    log = OperationLog(
+        admin_name=admin_name or "secret_upload",
+        action="import",
+        target="stock",
+        detail=f"密钥上传库存: {file.filename} (Sheet: {last_sheet_name}), 更新 {updated} SKU",
+    )
+    db.add(log)
+    db.commit()
+    return {
+        "ok": True,
+        "updated_skus": updated,
+        "source_file": file.filename,
+        "source_sheet": last_sheet_name,
+        "errors": errors,
     }
 
 
