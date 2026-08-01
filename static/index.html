@@ -109,6 +109,7 @@ createApp({
     const submitting = ref(false);
     const msg = ref('');
     const msgType = ref('ok');
+    const todayRecords = ref({outbound:[], inbound:[]});
 
     // Base data
     const specs = ref([]);
@@ -168,6 +169,7 @@ createApp({
       invLowStock.value = inv.low_stock;
       try { globalSettings.value = await api('/api/settings'); } catch(e) {}
       try { skuThresholds.value = await api('/api/skus'); } catch(e) {}
+      try { loadTodayRecords(); } catch(e) {}
       if (authUser.value?.role === 'superadmin') loadAdmins();
     };
 
@@ -189,7 +191,23 @@ createApp({
         await api('/api/transactions/batch', {method:'POST',body:JSON.stringify({items})});
         entryRows.value = []; msg.value=`录入成功!`; msgType.value='ok'; refreshAll();
       } catch(e) { msg.value=e.message; msgType.value='err'; }
+      loadTodayRecords();
       submitting.value = false;
+    };
+
+    const loadTodayRecords = async () => {
+      try {
+        todayRecords.value = await api(`/api/reports/daily?trans_date=${entryDate.value}`);
+      } catch(e) {}
+    };
+
+    const deleteTransaction = async (id) => {
+      if (!confirm('确定撤销这条记录？库存会自动恢复。')) return;
+      try {
+        await api(`/api/transactions/${id}`, {method:'DELETE'});
+        loadTodayRecords();
+        refreshAll();
+      } catch(e) { alert(e.message); }
     };
 
     const loadOutbound = async () => {
@@ -341,13 +359,13 @@ createApp({
       token, authUser, loginUsername, loginPassword, loginError, loginLoading,
       doLogin, doLogout, showChangePwd, oldPwd, newPwd, changePwd,
       // Main
-      currentTab, today, dash, entryDate, entryRows, submitting, msg, msgType,
+      currentTab, today, dash, entryDate, entryRows, submitting, msg, msgType, todayRecords,
       specs, colors, salespersons, invData, invFilter, invLowStock,
       obSP, obYear, obMonth, obData,
       inYear, inMonth, inData,
       sumYear, sumMonth, summary,
       newSpec, newColor, newColorCode, newSP, newSPType, importResult,
-      addEntryRow, submitEntries, loadOutbound, exportOutbound, loadInbound, exportInbound, loadSummary, loadInventory,
+      addEntryRow, submitEntries, loadTodayRecords, deleteTransaction, loadOutbound, exportOutbound, loadInbound, exportInbound, loadSummary, loadInventory,
       saveSpec, deleteSpec, editSpec, saveColor, deleteColor, editColor,
       saveSP, deleteSP, importStock, fmt, entryOutTotal, entryInTotal, filteredInventory,
       globalSettings, saveGlobalSettings, skuThresholds, loadSkuThresholds, saveSkuThreshold,
@@ -502,6 +520,34 @@ createApp({
           this.submitting?'提交中...':'✔ 提交录入'),
       ]) : null,
       this.msg ? h('div',{style:{color:this.msgType==='ok'?'#67c23a':'#f56c6c',marginTop:'12px'}},this.msg) : null,
+
+      // Today's submitted records
+      (this.todayRecords.outbound.length > 0 || this.todayRecords.inbound.length > 0) ? h('div',{style:{marginTop:'24px',borderTop:'2px solid #ebeef5',paddingTop:'16px'}},[
+        h('div',{style:{fontWeight:600,fontSize:'15px',marginBottom:'12px'}},'📋 今日已录入（可撤销）'),
+        h('div',{style:{overflowX:'auto'}},h('table',[
+          h('thead',h('tr',[
+            h('th','类型'),h('th','规格'),h('th','颜色'),h('th','数量'),h('th','单价'),h('th','金额'),h('th','录入人'),h('th','操作'),
+          ])),
+          h('tbody',[
+            ...this.todayRecords.outbound.map(r=>h('tr',{key:'out'+r.id},[
+              h('td',h('span',{class:'tag tag-out'},'出库')),
+              h('td',r.spec),h('td',r.color),
+              h('td',String(r.quantity)),h('td',String(r.unit_price)),
+              h('td',{style:{fontWeight:500}},'¥'+r.amount.toFixed(2)),
+              h('td',r.salesperson),
+              h('td',h('button',{class:'btn-danger btn-sm',onClick:()=>this.deleteTransaction(r.id)},'✕ 撤销')),
+            ])),
+            ...this.todayRecords.inbound.map(r=>h('tr',{key:'in'+r.id},[
+              h('td',h('span',{class:'tag tag-in'},'入库')),
+              h('td',r.spec),h('td',r.color),
+              h('td',{style:{fontWeight:600,color:'#67c23a'}},String(r.quantity)),
+              h('td','—'),h('td','—'),
+              h('td',r.salesperson),
+              h('td',h('button',{class:'btn-danger btn-sm',onClick:()=>this.deleteTransaction(r.id)},'✕ 撤销')),
+            ])),
+          ])
+        ])),
+      ]) : null,
     ]);
 
     // --- Inventory ---

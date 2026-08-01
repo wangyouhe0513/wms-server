@@ -568,6 +568,38 @@ def daily_report(
     }
 
 
+@app.delete("/api/transactions/{txn_id}")
+def delete_transaction(txn_id: int, admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
+    """撤销一笔出入库记录，恢复库存"""
+    txn = db.query(Transaction).filter(Transaction.id == txn_id).first()
+    if not txn:
+        raise HTTPException(404, "记录不存在")
+
+    sku = db.query(ProductSku).filter(ProductSku.id == txn.sku_id).first()
+    spec = db.query(ProductSpec).filter(ProductSpec.id == sku.spec_id).first()
+    color = db.query(Color).filter(Color.id == sku.color_id).first()
+    label = f"{spec.name}-{color.name}" if spec and color else "未知"
+
+    # 1. 撤销库存变动
+    if txn.trans_type == "出库":
+        sku.current_stock += txn.quantity
+    else:
+        sku.current_stock -= txn.quantity
+
+    # 2. 删除关联的库存流水
+    db.query(InventoryLog).filter(InventoryLog.transaction_id == txn_id).delete()
+
+    # 3. 删除交易记录
+    db.delete(txn)
+
+    # 4. 记录操作日志
+    log_operation(db, admin.id, admin.username, "delete", "transaction",
+                  f"撤销 {txn.trans_type} 记录: {label} x{txn.quantity}")
+
+    db.commit()
+    return {"ok": True, "deleted_id": txn_id}
+
+
 # ============================================================
 # 实时库存
 # ============================================================
