@@ -120,11 +120,16 @@ createApp({
     const invFilter = ref('');
     const invLowStock = ref([]);
 
-    // Bill
-    const billSP = ref('');
-    const billYear = ref(new Date().getFullYear());
-    const billMonth = ref(new Date().getMonth()+1);
-    const billData = ref(null);
+    // Outbound
+    const obSP = ref('');
+    const obYear = ref(new Date().getFullYear());
+    const obMonth = ref(new Date().getMonth()+1);
+    const obData = ref(null);
+
+    // Inbound
+    const inYear = ref(new Date().getFullYear());
+    const inMonth = ref(new Date().getMonth()+1);
+    const inData = ref(null);
 
     // Summary
     const sumYear = ref(new Date().getFullYear());
@@ -187,19 +192,33 @@ createApp({
       submitting.value = false;
     };
 
-    const loadBill = async () => {
-      if (!billSP.value) return alert('请选择人员');
-      billData.value = await api(`/api/bills/personal?salesperson=${encodeURIComponent(billSP.value)}&year=${billYear.value}&month=${billMonth.value}`);
+    const loadOutbound = async () => {
+      if (!obSP.value) return alert('请选择人员');
+      obData.value = await api(`/api/bills/personal?salesperson=${encodeURIComponent(obSP.value)}&year=${obYear.value}&month=${obMonth.value}`);
     };
 
-    const exportBill = () => {
-      if (!billData.value) return;
+    const exportOutbound = () => {
+      if (!obData.value) return;
       let csv='日期,规格,颜色,数量,单价,金额\n';
-      billData.value.items.forEach(i => csv+=`${i.date},${i.spec},${i.color},${i.quantity},${i.unit_price},${i.amount}\n`);
-      csv+=`\n合计,,,${billData.value.total_qty},,${billData.value.total_amount}`;
+      obData.value.items.forEach(i => csv+=`${i.date},${i.spec},${i.color},${i.quantity},${i.unit_price},${i.amount}\n`);
+      csv+=`\n合计,,,${obData.value.total_qty},,${obData.value.total_amount}`;
       const b=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
       const a=document.createElement('a'); a.href=URL.createObjectURL(b);
-      a.download=`${billData.value.salesperson}_${billData.value.year}年${billData.value.month}月.csv`; a.click();
+      a.download=`${obData.value.salesperson}_${obData.value.year}年${obData.value.month}月_出库.csv`; a.click();
+    };
+
+    const loadInbound = async () => {
+      inData.value = await api(`/api/bills/inbound?year=${inYear.value}&month=${inMonth.value}`);
+    };
+
+    const exportInbound = () => {
+      if (!inData.value) return;
+      let csv='日期,规格,颜色,数量,人员,备注\n';
+      inData.value.items.forEach(i => csv+=`${i.date},${i.spec},${i.color},${i.quantity},${i.salesperson},${i.remark}\n`);
+      csv+=`\n合计,,,${inData.value.total_qty}`;
+      const b=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+      const a=document.createElement('a'); a.href=URL.createObjectURL(b);
+      a.download=`入库记录_${inData.value.year}年${inData.value.month}月.csv`; a.click();
     };
 
     const loadSummary = async () => {
@@ -324,10 +343,11 @@ createApp({
       // Main
       currentTab, today, dash, entryDate, entryRows, submitting, msg, msgType,
       specs, colors, salespersons, invData, invFilter, invLowStock,
-      billSP, billYear, billMonth, billData,
+      obSP, obYear, obMonth, obData,
+      inYear, inMonth, inData,
       sumYear, sumMonth, summary,
       newSpec, newColor, newColorCode, newSP, newSPType, importResult,
-      addEntryRow, submitEntries, loadBill, exportBill, loadSummary, loadInventory,
+      addEntryRow, submitEntries, loadOutbound, exportOutbound, loadInbound, exportInbound, loadSummary, loadInventory,
       saveSpec, deleteSpec, editSpec, saveColor, deleteColor, editColor,
       saveSP, deleteSP, importStock, fmt, entryOutTotal, entryInTotal, filteredInventory,
       globalSettings, saveGlobalSettings, skuThresholds, loadSkuThresholds, saveSkuThreshold,
@@ -361,7 +381,8 @@ createApp({
       {key:'dashboard', label:'🏠 首页'},
       {key:'entry', label:'📝 每日录入'},
       {key:'inventory', label:'📦 实时库存'},
-      {key:'bill', label:'🧾 个人账单'},
+      {key:'outbound', label:'📤 出库记录'},
+      {key:'inbound', label:'📥 入库记录'},
       {key:'summary', label:'📊 销售汇总'},
       {key:'thresholds', label:'⚠️ 预警阈值'},
       {key:'settings', label:'⚙️ 基础数据'},
@@ -369,28 +390,58 @@ createApp({
 
     // --- Dashboard ---
     const renderDashboard = () => h('div',{style:{display:'flex',flexDirection:'column',gap:'20px'}},[
-      h('div',{style:{display:'flex',gap:'16px',flexWrap:'wrap'}},[
-        h('div',{class:'stat-card',style:{flex:1,minWidth:'200px',background:'linear-gradient(135deg,#409eff,#337ecc)'}},
-          [h('div',{style:{fontSize:'13px',opacity:'.9'}},'今日出库金额'),
-           h('div',{style:{fontSize:'28px',fontWeight:700,marginTop:'8px'}},'¥'+this.fmt(this.dash.today_out_amount))]),
-        h('div',{class:'stat-card',style:{flex:1,minWidth:'200px',background:'linear-gradient(135deg,#67c23a,#529b2e)'}},
-          [h('div',{style:{fontSize:'13px',opacity:'.9'}},'今日入库数量'),
-           h('div',{style:{fontSize:'28px',fontWeight:700,marginTop:'8px'}},String(this.dash.today_in_qty))]),
-        h('div',{class:'stat-card',style:{flex:1,minWidth:'200px',background:'linear-gradient(135deg,#e6a23c,#d4880f)'}},
-          [h('div',{style:{fontSize:'13px',opacity:'.9'}},'本月累计销售额'),
-           h('div',{style:{fontSize:'28px',fontWeight:700,marginTop:'8px'}},'¥'+this.fmt(this.dash.month_total))]),
-        h('div',{class:'stat-card',style:{flex:1,minWidth:'200px',background:'linear-gradient(135deg,#f56c6c,#c0392b)'}},
-          [h('div',{style:{fontSize:'13px',opacity:'.9'}},'低库存预警'),
-           h('div',{style:{fontSize:'28px',fontWeight:700,marginTop:'8px'}},String(this.dash.low_stock_count)+' SKU')]),
+      // Summary stats row
+      h('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:'16px'}},[
+        h('div',{class:'stat-card',style:{background:'linear-gradient(135deg,#409eff,#337ecc)',cursor:'pointer'},
+          onClick:()=>this.currentTab='outbound'},[
+          h('div',{style:{fontSize:'13px',opacity:'.85'}},'📤 今日出库金额'),
+          h('div',{style:{fontSize:'32px',fontWeight:800,marginTop:'10px'}},'¥'+this.fmt(this.dash.today_out_amount)),
+        ]),
+        h('div',{class:'stat-card',style:{background:'linear-gradient(135deg,#67c23a,#529b2e)',cursor:'pointer'},
+          onClick:()=>this.currentTab='inbound'},[
+          h('div',{style:{fontSize:'13px',opacity:'.85'}},'📥 今日入库数量'),
+          h('div',{style:{fontSize:'32px',fontWeight:800,marginTop:'10px'}},String(this.dash.today_in_qty)+' 件'),
+        ]),
+        h('div',{class:'stat-card',style:{background:'linear-gradient(135deg,#e6a23c,#d4880f)',cursor:'pointer'},
+          onClick:()=>this.currentTab='summary'},[
+          h('div',{style:{fontSize:'13px',opacity:'.85'}},'💰 本月销售额'),
+          h('div',{style:{fontSize:'32px',fontWeight:800,marginTop:'10px'}},'¥'+this.fmt(this.dash.month_total)),
+        ]),
+        h('div',{class:'stat-card',style:{background:'linear-gradient(135deg,#f56c6c,#c0392b)',cursor:'pointer'},
+          onClick:()=>this.currentTab='thresholds'},[
+          h('div',{style:{fontSize:'13px',opacity:'.85'}},'🔴 低库存预警'),
+          h('div',{style:{fontSize:'32px',fontWeight:800,marginTop:'10px'}},String(this.dash.low_stock_count)+' SKU'),
+        ]),
       ]),
-      h('div',{class:'card'},[
-        h('div',{style:{fontWeight:600,marginBottom:'12px'}},'📊 系统概况'),
-        h('div',{style:{display:'flex',gap:'40px',color:'#606266'}},[
-          h('div',['规格数：',h('b',String(this.dash.total_specs))]),
-          h('div',['颜色数：',h('b',String(this.dash.total_colors))]),
-          h('div',['今日：',h('b',this.today)]),
-        ])
-      ])
+
+      // Quick actions + Info row
+      h('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))',gap:'16px'}},[
+        // Quick actions
+        h('div',{class:'card',style:{textAlign:'center'}},[
+          h('div',{style:{fontWeight:600,fontSize:'15px',marginBottom:'16px'}},'⚡ 快捷操作'),
+          h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px'}},[
+            h('button',{class:'btn-primary',onClick:()=>this.currentTab='entry',style:{padding:'12px',fontSize:'14px'}},'📝 每日录入'),
+            h('button',{class:'btn-success',onClick:()=>this.currentTab='inventory',style:{padding:'12px',fontSize:'14px'}},'📦 实时库存'),
+            h('button',{class:'btn-warning',onClick:()=>this.currentTab='outbound',style:{padding:'12px',fontSize:'14px'}},'📤 出库记录'),
+            h('button',{style:{padding:'12px',fontSize:'14px',background:'#909399',color:'#fff',border:'none',borderRadius:'6px',cursor:'pointer'},
+              onClick:()=>window.open('/api/inventory/snapshot','_blank')},'📥 库存快照'),
+          ]),
+        ]),
+        // System info
+        h('div',{class:'card'},[
+          h('div',{style:{fontWeight:600,fontSize:'15px',marginBottom:'16px'}},'📊 系统概况'),
+          h('div',{style:{display:'flex',flexDirection:'column',gap:'12px',color:'#606266',fontSize:'15px'}},[
+            h('div',{style:{display:'flex',justifyContent:'space-between',padding:'8px 0',borderBottom:'1px solid #ebeef5'}},
+              [h('span','📋 规格数量'),h('b',String(this.dash.total_specs))]),
+            h('div',{style:{display:'flex',justifyContent:'space-between',padding:'8px 0',borderBottom:'1px solid #ebeef5'}},
+              [h('span','🎨 颜色种类'),h('b',String(this.dash.total_colors))]),
+            h('div',{style:{display:'flex',justifyContent:'space-between',padding:'8px 0',borderBottom:'1px solid #ebeef5'}},
+              [h('span','📦 SKU 总数'),h('b',String(this.dash.total_specs * this.dash.total_colors||'—'))]),
+            h('div',{style:{display:'flex',justifyContent:'space-between',padding:'8px 0'}},
+              [h('span','📅 今日日期'),h('b',this.today)]),
+          ]),
+        ]),
+      ]),
     ]);
 
     // --- Entry ---
@@ -502,37 +553,68 @@ createApp({
       ]))
     ]);
 
-    // --- Bill ---
+    // --- Outbound ---
     const years = [2024,2025,2026,2027,2028];
-    const renderBill = () => h('div',{class:'card'},[
+    const renderOutbound = () => h('div',{class:'card'},[
       h('div',{style:{display:'flex',gap:'12px',alignItems:'center',marginBottom:'16px',flexWrap:'wrap'}},[
-        h('span',{style:{fontWeight:600,fontSize:'16px'}},'🧾 个人出库账单'),
-        h('select',{value:this.billSP,onChange:e=>this.billSP=e.target.value,style:{width:'140px'}},[
+        h('span',{style:{fontWeight:600,fontSize:'16px'}},'📤 出库记录'),
+        h('select',{value:this.obSP,onChange:e=>this.obSP=e.target.value,style:{width:'140px'}},[
           h('option',{value:''},'选择人员'),
           ...this.salespersons.map(s=>h('option',{value:s.name},s.name))
         ]),
-        h('select',{value:this.billYear,onChange:e=>this.billYear=parseInt(e.target.value),style:{width:'100px'}},
+        h('select',{value:this.obYear,onChange:e=>this.obYear=parseInt(e.target.value),style:{width:'100px'}},
           years.map(y=>h('option',{value:y},String(y)))),
         h('span','年'),
-        h('select',{value:this.billMonth,onChange:e=>this.billMonth=parseInt(e.target.value),style:{width:'80px'}},
+        h('select',{value:this.obMonth,onChange:e=>this.obMonth=parseInt(e.target.value),style:{width:'80px'}},
           Array.from({length:12},(_,i)=>h('option',{value:i+1},String(i+1)))),
         h('span','月'),
-        h('button',{class:'btn-primary',onClick:this.loadBill},'查询'),
-        h('button',{class:'btn-warning',onClick:this.exportBill,disabled:!this.billData},'导出 Excel'),
+        h('button',{class:'btn-primary',onClick:this.loadOutbound},'查询'),
+        h('button',{class:'btn-warning',onClick:this.exportOutbound,disabled:!this.obData},'📥 导出 Excel'),
       ]),
-      this.billData ? [
-        h('h3',{style:{marginBottom:'12px'}},`${this.billData.salesperson} — ${this.billData.year}年${this.billData.month}月`),
-        h('table',[
+      this.obData ? [
+        h('h3',{style:{marginBottom:'12px'}},`${this.obData.salesperson} — ${this.obData.year}年${this.obData.month}月`),
+        h('div',{class:'table-wrap'},h('table',[
           h('thead',h('tr',[h('th','日期'),h('th','规格'),h('th','颜色'),h('th','数量'),h('th','单价'),h('th','金额')])),
-          h('tbody',this.billData.items.map(i=>h('tr',{key:i.date+i.spec+i.color},[
+          h('tbody',this.obData.items.map(i=>h('tr',{key:i.date+i.spec+i.color},[
             h('td',i.date),h('td',i.spec),h('td',i.color),
             h('td',String(i.quantity)),h('td',String(i.unit_price)),h('td',i.amount.toFixed(2))
           ])))
-        ]),
+        ])),
         h('div',{style:{marginTop:'16px',fontSize:'16px',fontWeight:600,color:'#303133'}},[
-          '合计：',h('b',String(this.billData.total_qty)),' 件 | 金额：',h('b',{style:{color:'#f56c6c'}},'¥'+this.billData.total_amount.toFixed(2))
+          '合计：',h('b',String(this.obData.total_qty)),' 件 | 金额：',h('b',{style:{color:'#f56c6c'}},'¥'+this.obData.total_amount.toFixed(2))
         ])
-      ] : null
+      ] : h('div',{style:{textAlign:'center',color:'#909399',padding:'40px'}},'请选择人员并点击查询')
+    ]);
+
+    // --- Inbound ---
+    const renderInbound = () => h('div',{class:'card'},[
+      h('div',{style:{display:'flex',gap:'12px',alignItems:'center',marginBottom:'16px',flexWrap:'wrap'}},[
+        h('span',{style:{fontWeight:600,fontSize:'16px'}},'📥 入库记录'),
+        h('select',{value:this.inYear,onChange:e=>this.inYear=parseInt(e.target.value),style:{width:'100px'}},
+          years.map(y=>h('option',{value:y},String(y)))),
+        h('span','年'),
+        h('select',{value:this.inMonth,onChange:e=>this.inMonth=parseInt(e.target.value),style:{width:'80px'}},
+          Array.from({length:12},(_,i)=>h('option',{value:i+1},String(i+1)))),
+        h('span','月'),
+        h('button',{class:'btn-primary',onClick:this.loadInbound},'查询'),
+        h('button',{class:'btn-warning',onClick:this.exportInbound,disabled:!this.inData},'📥 导出 Excel'),
+      ]),
+      this.inData ? [
+        h('h3',{style:{marginBottom:'12px'}},`${this.inData.year}年${this.inData.month}月 入库明细`),
+        h('div',{class:'table-wrap'},h('table',[
+          h('thead',h('tr',[h('th','日期'),h('th','规格'),h('th','颜色'),h('th','数量'),h('th','人员'),h('th','备注')])),
+          h('tbody',this.inData.items.length===0
+            ? [h('tr',h('td',{colSpan:6,style:{textAlign:'center',color:'#909399',padding:'24px'}},'暂无入库记录'))]
+            : this.inData.items.map(i=>h('tr',{key:i.date+i.spec+i.color},[
+              h('td',i.date),h('td',i.spec),h('td',i.color),
+              h('td',{style:{fontWeight:600,color:'#67c23a'}},String(i.quantity)),
+              h('td',i.salesperson),h('td',{style:{fontSize:'12px',color:'#909399'}},i.remark)
+            ]))
+        ])),
+        h('div',{style:{marginTop:'16px',fontSize:'16px',fontWeight:600,color:'#303133'}},[
+          '合计入库：',h('b',{style:{color:'#67c23a'}},String(this.inData.total_qty)),' 件'
+        ])
+      ] : h('div',{style:{textAlign:'center',color:'#909399',padding:'40px'}},'请选择年月并点击查询')
     ]);
 
     // --- Summary ---
@@ -801,7 +883,8 @@ createApp({
         this.currentTab === 'dashboard' ? renderDashboard() :
         this.currentTab === 'entry' ? renderEntry() :
         this.currentTab === 'inventory' ? renderInventory() :
-        this.currentTab === 'bill' ? renderBill() :
+        this.currentTab === 'outbound' ? renderOutbound() :
+        this.currentTab === 'inbound' ? renderInbound() :
         this.currentTab === 'summary' ? renderSummary() :
         this.currentTab === 'thresholds' ? renderThresholds() :
         this.currentTab === 'settings' ? renderSettings() : null

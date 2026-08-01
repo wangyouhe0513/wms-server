@@ -800,6 +800,49 @@ def personal_bill(
     }
 
 
+@app.get("/api/bills/inbound")
+def inbound_records(
+    year: int,
+    month: int,
+    db: Session = Depends(get_db),
+):
+    """入库记录列表，可按年月筛选"""
+    rows = (
+        db.query(Transaction)
+        .filter(
+            Transaction.trans_type == "入库",
+            extract("year", Transaction.trans_date) == year,
+            extract("month", Transaction.trans_date) == month,
+        )
+        .order_by(Transaction.trans_date, Transaction.id)
+        .all()
+    )
+
+    items = []
+    total_qty = 0
+    for t in rows:
+        sku = db.query(ProductSku).filter(ProductSku.id == t.sku_id).first()
+        spec = db.query(ProductSpec).filter(ProductSpec.id == sku.spec_id).first()
+        color = db.query(Color).filter(Color.id == sku.color_id).first()
+        sp = db.query(Salesperson).filter(Salesperson.id == t.salesperson_id).first() if t.salesperson_id else None
+        items.append({
+            "date": t.trans_date.strftime("%Y-%m-%d"),
+            "spec": spec.name if spec else "",
+            "color": color.name if color else "",
+            "quantity": t.quantity,
+            "salesperson": sp.name if sp else "",
+            "remark": t.remark,
+        })
+        total_qty += t.quantity
+
+    return {
+        "year": year,
+        "month": month,
+        "items": items,
+        "total_qty": total_qty,
+    }
+
+
 # ============================================================
 # 销售额汇总
 # ============================================================
