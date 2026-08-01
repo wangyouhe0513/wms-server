@@ -594,7 +594,19 @@ createApp({
               h('td',{style:{color:'#909399',fontSize:'13px'}},r.entry_person||''),
               h('td',h('button',{class:'btn-danger btn-sm',onClick:()=>this.deleteTransaction(r.id)},'✕ 撤销')),
             ])),
-          ])
+          ]),
+          (() => {
+            const outQty = this.todayRecords.outbound.reduce((s,r)=>s+r.quantity,0);
+            const outAmt = this.todayRecords.outbound.reduce((s,r)=>s+r.amount,0);
+            const inQty = this.todayRecords.inbound.reduce((s,r)=>s+r.quantity,0);
+            return h('tfoot',h('tr',{style:{background:'#fafafa',fontWeight:700,borderTop:'2px solid #409eff'}},[
+              h('td',{colSpan:3},'合计'),
+              h('td',{style:{color:'#f56c6c'}},'出 '+outQty+' / 入 '+inQty),
+              h('td',''),
+              h('td',{style:{color:'#f56c6c'}},'¥'+outAmt.toFixed(2)),
+              h('td',''),h('td',''),h('td',''),
+            ]));
+          })()
         ])),
       ]) : null,
     ]);
