@@ -277,6 +277,21 @@ def delete_spec(spec_id: int, admin: Admin = Depends(get_current_admin), db: Ses
     spec = db.query(ProductSpec).filter(ProductSpec.id == spec_id).first()
     if not spec:
         raise HTTPException(404, "规格不存在")
+
+    # 检查是否有库存或交易记录的 SKU
+    has_stock = db.query(ProductSku).filter(
+        ProductSku.spec_id == spec_id,
+        ProductSku.current_stock > 0
+    ).first()
+    if has_stock:
+        raise HTTPException(400, f"规格「{spec.name}」下还有库存，不能删除")
+
+    has_txn = db.query(Transaction).join(ProductSku).filter(
+        ProductSku.spec_id == spec_id
+    ).first()
+    if has_txn:
+        raise HTTPException(400, f"规格「{spec.name}」下有交易记录，不能删除")
+
     spec.is_active = 0
     log_operation(db, admin.id, admin.username, "delete", "spec", f"删除规格: {spec.name}")
     db.commit()
@@ -328,6 +343,21 @@ def delete_color(color_id: int, admin: Admin = Depends(get_current_admin), db: S
     color = db.query(Color).filter(Color.id == color_id).first()
     if not color:
         raise HTTPException(404, "颜色不存在")
+
+    # 检查是否有库存或交易记录的 SKU
+    has_stock = db.query(ProductSku).filter(
+        ProductSku.color_id == color_id,
+        ProductSku.current_stock > 0
+    ).first()
+    if has_stock:
+        raise HTTPException(400, f"颜色「{color.name}」下还有库存，不能删除")
+
+    has_txn = db.query(Transaction).join(ProductSku).filter(
+        ProductSku.color_id == color_id
+    ).first()
+    if has_txn:
+        raise HTTPException(400, f"颜色「{color.name}」下有交易记录，不能删除")
+
     color.is_active = 0
     log_operation(db, admin.id, admin.username, "delete", "color", f"删除颜色: {color.name}")
     db.commit()
@@ -616,6 +646,7 @@ def inventory_list(spec_name: str = "", db: Session = Depends(get_db)):
         .options(joinedload(ProductSku.spec), joinedload(ProductSku.color))
         .join(ProductSpec)
         .join(Color)
+        .filter(ProductSpec.is_active == 1, Color.is_active == 1)
     )
     if spec_name:
         query = query.filter(ProductSpec.name == spec_name)
@@ -658,6 +689,7 @@ def list_skus(db: Session = Depends(get_db)):
         db.query(ProductSku)
         .options(joinedload(ProductSku.spec), joinedload(ProductSku.color))
         .join(ProductSpec).join(Color)
+        .filter(ProductSpec.is_active == 1, Color.is_active == 1)
         .order_by(ProductSpec.sort_order, ProductSpec.id, Color.sort_order, Color.id)
         .all()
     )
@@ -695,6 +727,7 @@ def inventory_snapshot_download(admin: Admin = Depends(get_current_admin), db: S
         db.query(ProductSku)
         .options(joinedload(ProductSku.spec), joinedload(ProductSku.color))
         .join(ProductSpec).join(Color)
+        .filter(ProductSpec.is_active == 1, Color.is_active == 1)
         .order_by(ProductSpec.id, Color.id)
         .all()
     )

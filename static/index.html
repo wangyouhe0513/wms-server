@@ -274,7 +274,7 @@ createApp({
       await api(`/api/specs?name=${encodeURIComponent(newSpec.value.trim())}`,{method:'POST'});
       newSpec.value=''; specs.value=await api('/api/specs');
     };
-    const deleteSpec = async (id) => { if(confirm('确定删除?')){await api(`/api/specs/${id}`,{method:'DELETE'}); specs.value=await api('/api/specs');}};
+    const deleteSpec = async (id) => { if(confirm('确定删除?')){try{await api(`/api/specs/${id}`,{method:'DELETE'}); specs.value=await api('/api/specs'); refreshAll();}catch(e){alert(e.message);}}};
     const editSpec = async (s) => { const n=prompt('修改:',s.name); if(n){await api(`/api/specs/${s.id}?name=${encodeURIComponent(n)}`,{method:'PUT'}); specs.value=await api('/api/specs');}};
 
     const saveColor = async () => {
@@ -282,7 +282,7 @@ createApp({
       await api(`/api/colors?name=${encodeURIComponent(newColor.value.trim())}&code=${newColorCode.value.trim()}`,{method:'POST'});
       newColor.value=''; newColorCode.value=''; colors.value=await api('/api/colors');
     };
-    const deleteColor = async (id) => { if(confirm('确定删除?')){await api(`/api/colors/${id}`,{method:'DELETE'}); colors.value=await api('/api/colors');}};
+    const deleteColor = async (id) => { if(confirm('确定删除?')){try{await api(`/api/colors/${id}`,{method:'DELETE'}); colors.value=await api('/api/colors'); refreshAll();}catch(e){alert(e.message);}}};
     const editColor = async (c) => { const n=prompt('修改:',c.name); if(n){await api(`/api/colors/${c.id}?name=${encodeURIComponent(n)}&code=${c.code||''}`,{method:'PUT'}); colors.value=await api('/api/colors');}};
 
     const saveSP = async () => {
