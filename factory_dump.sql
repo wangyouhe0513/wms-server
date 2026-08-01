@@ -149,7 +149,7 @@ CREATE TABLE transactions (
 	amount DECIMAL(12, 2), 
 	salesperson_id INTEGER, 
 	remark VARCHAR(200), 
-	created_at DATETIME, 
+	created_at DATETIME, entry_person VARCHAR(50) DEFAULT '', 
 	PRIMARY KEY (id), 
 	FOREIGN KEY(sku_id) REFERENCES product_skus (id), 
 	FOREIGN KEY(salesperson_id) REFERENCES salespersons (id)
@@ -177,7 +177,7 @@ CREATE TABLE admins (
 	PRIMARY KEY (id), 
 	UNIQUE (username)
 );
-INSERT INTO admins VALUES(1,'admin','240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9','superadmin',1,'2026-07-31 13:04:50.769347','2026-08-01 11:18:37.725202');
+INSERT INTO admins VALUES(1,'admin','240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9','superadmin',1,'2026-07-31 13:04:50.769347','2026-08-01 16:44:34.176660');
 CREATE TABLE operation_logs (
 	id INTEGER NOT NULL, 
 	admin_id INTEGER, 
@@ -252,6 +252,9 @@ INSERT INTO operation_logs VALUES(59,1,'admin','logout','auth','管理员登出'
 INSERT INTO operation_logs VALUES(60,1,'admin','login','auth','管理员登录','','2026-08-01 11:18:37.726501');
 INSERT INTO operation_logs VALUES(61,1,'admin','update','settings','全局默认低库存阈值设为 50','','2026-08-01 12:39:53.682296');
 INSERT INTO operation_logs VALUES(62,1,'admin','update','threshold','SKU 网背心-黑中号 阈值设为 100','','2026-08-01 12:39:59.290811');
+INSERT INTO operation_logs VALUES(63,1,'admin','login','auth','管理员登录','','2026-08-01 16:44:27.070609');
+INSERT INTO operation_logs VALUES(64,1,'admin','logout','auth','管理员登出','','2026-08-01 16:44:27.111777');
+INSERT INTO operation_logs VALUES(65,1,'admin','login','auth','管理员登录','','2026-08-01 16:44:34.178530');
 CREATE TABLE system_configs (
 	id INTEGER NOT NULL, 
 	"key" VARCHAR(50) NOT NULL, 
