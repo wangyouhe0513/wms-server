@@ -613,6 +613,29 @@ def inventory_list(spec_name: str = "", db: Session = Depends(get_db)):
     }
 
 
+@app.get("/api/skus")
+def list_skus(db: Session = Depends(get_db)):
+    """返回所有 SKU 平铺列表（含规格、颜色、库存、阈值）"""
+    default_threshold = get_low_stock_threshold(db)
+    skus = (
+        db.query(ProductSku)
+        .options(joinedload(ProductSku.spec), joinedload(ProductSku.color))
+        .join(ProductSpec).join(Color)
+        .order_by(ProductSpec.sort_order, ProductSpec.id, Color.sort_order, Color.id)
+        .all()
+    )
+    return [{
+        "sku_id": sku.id,
+        "spec_id": sku.spec_id,
+        "spec_name": sku.spec.name,
+        "color_id": sku.color_id,
+        "color_name": sku.color.name,
+        "current_stock": sku.current_stock,
+        "threshold": sku.low_stock_threshold or default_threshold,
+        "is_custom": sku.low_stock_threshold is not None and sku.low_stock_threshold > 0,
+    } for sku in skus]
+
+
 @app.put("/api/skus/{sku_id}/threshold")
 def set_threshold(sku_id: int, threshold: int, admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
     sku = db.query(ProductSku).filter(ProductSku.id == sku_id).first()

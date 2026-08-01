@@ -139,6 +139,7 @@ createApp({
     const newSPType = ref('员工');
     const importResult = ref(null);
     const globalSettings = ref({low_stock_threshold: 50});
+    const skuThresholds = ref([]);
 
     const api = async (url, opts={}) => {
       const headers = {'Content-Type':'application/json', ...opts.headers};
@@ -161,6 +162,7 @@ createApp({
       invData.value = inv.inventory;
       invLowStock.value = inv.low_stock;
       try { globalSettings.value = await api('/api/settings'); } catch(e) {}
+      try { skuThresholds.value = await api('/api/skus'); } catch(e) {}
       if (authUser.value?.role === 'superadmin') loadAdmins();
     };
 
@@ -215,6 +217,19 @@ createApp({
       await api(`/api/settings?threshold=${v}`, {method:'PUT'});
       globalSettings.value.low_stock_threshold = v;
       refreshAll();
+    };
+
+    const loadSkuThresholds = async () => {
+      try { skuThresholds.value = await api('/api/skus'); } catch(e) {}
+    };
+
+    const saveSkuThreshold = async (sku) => {
+      const v = parseInt(sku.threshold);
+      if (isNaN(v) || v < 0) return alert('请输入有效数字');
+      await api(`/api/skus/${sku.sku_id}/threshold?threshold=${v}`, {method:'PUT'});
+      sku._saved = true;
+      setTimeout(() => { sku._saved = false; }, 1500);
+      loadInventory();
     };
 
     const saveSpec = async () => {
@@ -315,7 +330,7 @@ createApp({
       addEntryRow, submitEntries, loadBill, exportBill, loadSummary, loadInventory,
       saveSpec, deleteSpec, editSpec, saveColor, deleteColor, editColor,
       saveSP, deleteSP, importStock, fmt, entryOutTotal, entryInTotal, filteredInventory,
-      globalSettings, saveGlobalSettings,
+      globalSettings, saveGlobalSettings, skuThresholds, loadSkuThresholds, saveSkuThreshold,
       // Admin + Logs
       admins, newAdminUser, newAdminPass, saveAdmin, resetAdminPwd, deleteAdmin, loadAdmins,
       logs, loadLogs, showLogs,
@@ -628,6 +643,47 @@ createApp({
           h('span',{style:{color:'#909399',fontSize:'13px'}},'件'),
           h('button',{class:'btn-primary',onClick:this.saveGlobalSettings},'💾 保存设置'),
         ]),
+      ]),
+
+      // Per-SKU threshold management table
+      h('div',{class:'card',style:{width:'100%'}},[
+        h('div',{style:{fontWeight:600,marginBottom:'12px'}},'🎯 各规格颜色阈值管理'),
+        h('p',{style:{color:'#909399',fontSize:'13px',marginBottom:'16px'}},'为不同规格+颜色组合单独设置预警阈值。留空则使用上方的全局默认值。'),
+        h('div',{style:{overflowX:'auto'}},
+          h('table',{style:{minWidth:'600px'}},[
+            h('thead',h('tr',[
+              h('th',{style:{width:'140px'}},'规格'),
+              h('th',{style:{width:'120px'}},'颜色'),
+              h('th',{style:{width:'80px',textAlign:'center'}},'当前库存'),
+              h('th',{style:{width:'120px',textAlign:'center'}},'预警阈值'),
+              h('th',{style:{width:'100px',textAlign:'center'}},'操作'),
+            ])),
+            h('tbody',
+              this.skuThresholds.length === 0
+                ? [h('tr',{key:'empty'},h('td',{colSpan:5,style:{textAlign:'center',color:'#909399',padding:'24px'}},'暂无 SKU 数据'))]
+                : this.skuThresholds.map(sku => {
+                    const isLow = sku.current_stock < sku.threshold;
+                    return h('tr',{key:sku.sku_id,style:{background:isLow?'#fef0f0':''}},[
+                      h('td',{style:{fontWeight:500}},sku.spec_name),
+                      h('td',sku.color_name),
+                      h('td',{style:{textAlign:'center',color:isLow?'#f56c6c':'#303133',fontWeight:isLow?700:400}},String(sku.current_stock)),
+                      h('td',{style:{textAlign:'center'}},
+                        h('input',{type:'number',min:0,value:sku.threshold,
+                          onInput:e=>sku.threshold=parseInt(e.target.value)||0,
+                          style:{width:'80px',textAlign:'center',padding:'6px',fontSize:'14px'},
+                          onKeyup:e=>{if(e.key==='Enter')this.saveSkuThreshold(sku);}
+                        })
+                      ),
+                      h('td',{style:{textAlign:'center'}},[
+                        h('button',{class:'btn-primary btn-sm',onClick:()=>this.saveSkuThreshold(sku),
+                          style:{padding:'5px 10px',fontSize:'12px'}},
+                          sku._saved ? '✅ 已保存' : '💾 保存'),
+                      ]),
+                    ]);
+                  })
+            )
+          ])
+        ),
       ]),
 
       // Import
