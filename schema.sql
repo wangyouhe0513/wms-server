@@ -1,117 +1,104 @@
--- WMS 进销存系统 MySQL 建表语句
--- 与 Python 版本表结构完全一致
-
-CREATE DATABASE IF NOT EXISTS wms_finance DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE wms_finance;
-
--- 规格
-CREATE TABLE IF NOT EXISTS product_specs (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(50) NOT NULL UNIQUE,
-    sort_order INT DEFAULT 0,
-    is_active TINYINT DEFAULT 1,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
-
--- 颜色
-CREATE TABLE IF NOT EXISTS colors (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(30) NOT NULL UNIQUE,
-    code VARCHAR(10) DEFAULT '',
-    sort_order INT DEFAULT 0,
-    is_active TINYINT DEFAULT 1,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
-
--- SKU（规格+颜色组合）
-CREATE TABLE IF NOT EXISTS product_skus (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    spec_id INT NOT NULL,
-    color_id INT NOT NULL,
-    current_stock INT DEFAULT 0,
-    low_stock_threshold INT DEFAULT 50,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY uk_spec_color (spec_id, color_id),
-    FOREIGN KEY (spec_id) REFERENCES product_specs(id),
-    FOREIGN KEY (color_id) REFERENCES colors(id)
-) ENGINE=InnoDB;
-
--- 销售人员
-CREATE TABLE IF NOT EXISTS salespersons (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(30) NOT NULL UNIQUE,
-    type VARCHAR(10) DEFAULT '员工',
-    is_active TINYINT DEFAULT 1,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
-
--- 出入库记录
-CREATE TABLE IF NOT EXISTS transactions (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    trans_date DATE NOT NULL,
-    trans_type VARCHAR(10) NOT NULL COMMENT '出库/入库',
-    sku_id INT NOT NULL,
-    quantity INT NOT NULL,
-    unit_price DECIMAL(10,2) DEFAULT 0,
-    amount DECIMAL(12,2) DEFAULT 0,
-    salesperson_id INT,
-    entry_person VARCHAR(50) DEFAULT '',
-    remark VARCHAR(200) DEFAULT '',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (sku_id) REFERENCES product_skus(id),
-    FOREIGN KEY (salesperson_id) REFERENCES salespersons(id),
-    INDEX idx_date (trans_date),
-    INDEX idx_type (trans_type),
-    INDEX idx_sp (salesperson_id)
-) ENGINE=InnoDB;
-
--- 库存流水
-CREATE TABLE IF NOT EXISTS inventory_logs (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    sku_id INT NOT NULL,
-    transaction_id INT NOT NULL,
-    change_qty INT NOT NULL,
-    before_stock INT NOT NULL,
-    after_stock INT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (sku_id) REFERENCES product_skus(id),
-    FOREIGN KEY (transaction_id) REFERENCES transactions(id)
-) ENGINE=InnoDB;
-
--- 管理员
-CREATE TABLE IF NOT EXISTS admins (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(50) NOT NULL UNIQUE,
-    password_hash VARCHAR(200) NOT NULL,
-    role VARCHAR(20) DEFAULT 'admin',
-    is_active TINYINT DEFAULT 1,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    last_login DATETIME
-) ENGINE=InnoDB;
-
--- 操作日志
-CREATE TABLE IF NOT EXISTS operation_logs (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    admin_id INT,
-    admin_name VARCHAR(50) DEFAULT '',
-    action VARCHAR(50) NOT NULL,
-    target VARCHAR(100) DEFAULT '',
-    detail VARCHAR(500) DEFAULT '',
-    ip_address VARCHAR(50) DEFAULT '',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (admin_id) REFERENCES admins(id),
-    INDEX idx_log_time (created_at)
-) ENGINE=InnoDB;
-
--- 系统配置
-CREATE TABLE IF NOT EXISTS system_configs (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    `key` VARCHAR(50) NOT NULL UNIQUE,
-    value VARCHAR(200) NOT NULL,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
-
--- 默认管理员 admin/admin123
-INSERT IGNORE INTO admins (username, password_hash, role) VALUES ('admin', SHA2('admin123', 256), 'superadmin');
--- 默认预警阈值
-INSERT IGNORE INTO system_configs (`key`, value) VALUES ('low_stock_threshold', '50');
+CREATE TABLE product_specs (
+	id INTEGER NOT NULL, 
+	name VARCHAR(50) NOT NULL, 
+	sort_order INTEGER, 
+	is_active INTEGER, 
+	created_at DATETIME, 
+	PRIMARY KEY (id), 
+	UNIQUE (name)
+);
+CREATE TABLE colors (
+	id INTEGER NOT NULL, 
+	name VARCHAR(30) NOT NULL, 
+	code VARCHAR(10), 
+	sort_order INTEGER, 
+	is_active INTEGER, 
+	created_at DATETIME, 
+	PRIMARY KEY (id), 
+	UNIQUE (name)
+);
+CREATE TABLE salespersons (
+	id INTEGER NOT NULL, 
+	name VARCHAR(30) NOT NULL, 
+	type VARCHAR(10), 
+	is_active INTEGER, 
+	created_at DATETIME, 
+	PRIMARY KEY (id), 
+	UNIQUE (name)
+);
+CREATE TABLE product_skus (
+	id INTEGER NOT NULL, 
+	spec_id INTEGER NOT NULL, 
+	color_id INTEGER NOT NULL, 
+	current_stock INTEGER, 
+	created_at DATETIME, low_stock_threshold INTEGER DEFAULT 50, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(spec_id) REFERENCES product_specs (id), 
+	FOREIGN KEY(color_id) REFERENCES colors (id)
+);
+CREATE UNIQUE INDEX uk_spec_color ON product_skus (spec_id, color_id);
+CREATE TABLE transactions (
+	id INTEGER NOT NULL, 
+	trans_date DATE NOT NULL, 
+	trans_type VARCHAR(10) NOT NULL, 
+	sku_id INTEGER NOT NULL, 
+	quantity INTEGER NOT NULL, 
+	unit_price DECIMAL(10, 2), 
+	amount DECIMAL(12, 2), 
+	salesperson_id INTEGER, 
+	remark VARCHAR(200), 
+	created_at DATETIME, entry_person VARCHAR(50) DEFAULT '', 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(sku_id) REFERENCES product_skus (id), 
+	FOREIGN KEY(salesperson_id) REFERENCES salespersons (id)
+);
+CREATE INDEX idx_date ON transactions (trans_date);
+CREATE INDEX idx_sp ON transactions (salesperson_id);
+CREATE INDEX idx_type ON transactions (trans_type);
+CREATE TABLE inventory_logs (
+	id INTEGER NOT NULL, 
+	sku_id INTEGER NOT NULL, 
+	transaction_id INTEGER NOT NULL, 
+	change_qty INTEGER NOT NULL, 
+	before_stock INTEGER NOT NULL, 
+	after_stock INTEGER NOT NULL, 
+	created_at DATETIME, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(sku_id) REFERENCES product_skus (id), 
+	FOREIGN KEY(transaction_id) REFERENCES transactions (id)
+);
+CREATE TABLE admins (
+	id INTEGER NOT NULL, 
+	username VARCHAR(50) NOT NULL, 
+	password_hash VARCHAR(200) NOT NULL, 
+	role VARCHAR(20), 
+	is_active INTEGER, 
+	created_at DATETIME, 
+	last_login DATETIME, 
+	PRIMARY KEY (id), 
+	UNIQUE (username)
+);
+CREATE TABLE operation_logs (
+	id INTEGER NOT NULL, 
+	admin_id INTEGER, 
+	admin_name VARCHAR(50), 
+	action VARCHAR(50) NOT NULL, 
+	target VARCHAR(100), 
+	detail VARCHAR(500), 
+	ip_address VARCHAR(50), 
+	created_at DATETIME, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(admin_id) REFERENCES admins (id)
+);
+CREATE INDEX idx_log_time ON operation_logs (created_at);
+CREATE TABLE system_configs (
+	id INTEGER NOT NULL, 
+	"key" VARCHAR(50) NOT NULL, 
+	value VARCHAR(200) NOT NULL, 
+	updated_at DATETIME, 
+	PRIMARY KEY (id), 
+	UNIQUE ("key")
+);
+-- 默认数据
+INSERT OR IGNORE INTO admins (username, password_hash, role) VALUES ('admin', '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918', 'superadmin');
+INSERT OR IGNORE INTO system_configs (key, value) VALUES ('low_stock_threshold', '50');

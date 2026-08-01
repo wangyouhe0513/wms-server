@@ -21,4 +21,28 @@ def get_db():
 
 
 def init_db():
+    """创建所有表并插入默认数据"""
     Base.metadata.create_all(bind=engine)
+
+    # 确保默认数据存在
+    db = SessionLocal()
+    try:
+        from models import Admin, SystemConfig
+        import hashlib
+
+        # 默认管理员
+        if not db.query(Admin).filter(Admin.username == "admin").first():
+            admin = Admin(
+                username="admin",
+                password_hash=hashlib.sha256("admin123".encode()).hexdigest(),
+                role="superadmin"
+            )
+            db.add(admin)
+
+        # 默认预警阈值
+        if not db.query(SystemConfig).filter(SystemConfig.key == "low_stock_threshold").first():
+            db.add(SystemConfig(key="low_stock_threshold", value="50"))
+
+        db.commit()
+    finally:
+        db.close()
