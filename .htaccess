@@ -1,0 +1,42 @@
+RewriteEngine On
+
+# 允许跨域
+Header set Access-Control-Allow-Origin "*"
+Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+Header set Access-Control-Allow-Headers "Content-Type, Authorization"
+
+# OPTIONS 预检直接返回
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^(.*)$ - [R=204,L]
+
+# /api/ 路由到对应 PHP 文件
+RewriteRule ^api/auth/?$                api/auth.php [QSA,L]
+RewriteRule ^api/auth/(.+)$            api/auth.php [QSA,L]
+RewriteRule ^api/specs/?$              api/specs.php [QSA,L]
+RewriteRule ^api/specs/(.+)$           api/specs.php [QSA,L]
+RewriteRule ^api/colors/?$             api/colors.php [QSA,L]
+RewriteRule ^api/colors/(.+)$          api/colors.php [QSA,L]
+RewriteRule ^api/salespersons/?$       api/salespersons.php [QSA,L]
+RewriteRule ^api/salespersons/(.+)$    api/salespersons.php [QSA,L]
+RewriteRule ^api/transactions/?$       api/transactions.php [QSA,L]
+RewriteRule ^api/transactions/(.+)$    api/transactions.php [QSA,L]
+RewriteRule ^api/reports/(.+)$         api/reports.php [QSA,L]
+RewriteRule ^api/inventory/?$          api/inventory.php [QSA,L]
+RewriteRule ^api/inventory/(.+)$       api/inventory.php [QSA,L]
+RewriteRule ^api/skus/?$               api/skus.php [QSA,L]
+RewriteRule ^api/skus/(.+)$            api/skus.php [QSA,L]
+RewriteRule ^api/bills/(.+)$           api/bills.php [QSA,L]
+RewriteRule ^api/dashboard/?$          api/dashboard.php [QSA,L]
+RewriteRule ^api/settings/?$           api/settings.php [QSA,L]
+RewriteRule ^api/settings/(.+)$        api/settings.php [QSA,L]
+RewriteRule ^api/admins/?$             api/admins.php [QSA,L]
+RewriteRule ^api/admins/(.+)$          api/admins.php [QSA,L]
+RewriteRule ^api/logs/?$               api/logs.php [QSA,L]
+RewriteRule ^api/import/(.+)$          api/import.php [QSA,L]
+RewriteRule ^api/months/?$             api/reports.php [QSA,L]
+
+# /static/ 直接访问真实文件
+# 首页和其他路径返回前端 SPA
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [QSA,L]

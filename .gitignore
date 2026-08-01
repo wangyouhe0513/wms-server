@@ -28,11 +28,4 @@ Thumbs.db
 *.xlsx
 !sample*.xlsx
 
-# PHP legacy
-admin/
-api/
-includes/
-*.php
-config.php
-init.php
-.htaccess
+# PHP
