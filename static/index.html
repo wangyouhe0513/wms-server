@@ -110,6 +110,8 @@ createApp({
     const msg = ref('');
     const msgType = ref('ok');
     const todayRecords = ref({outbound:[], inbound:[]});
+    const quickType = ref('出库');
+    const quickSpec = ref('');
 
     // Base data
     const specs = ref([]);
@@ -176,6 +178,21 @@ createApp({
     onMounted(refreshAll);
 
     const addEntryRow = (type) => entryRows.value.push({type,spec:'',color:'',qty:1,price:0,sp:'',remark:''});
+
+    // Quick-fill computed: unique specs from inventory
+    const quickSpecs = computed(() => Object.keys(invData.value));
+
+    // Quick-fill computed: colors for selected spec
+    const quickColors = computed(() => {
+      if (!quickSpec.value) return [];
+      const items = invData.value[quickSpec.value] || [];
+      return items.map(i => i.color);
+    });
+
+    const quickAdd = (color) => {
+      entryRows.value.push({type:quickType.value, spec:quickSpec.value, color, qty:1, price:0, sp:'', remark:''});
+      quickSpec.value = '';
+    };
 
     const submitEntries = async () => {
       const items = entryRows.value.map(r => ({
@@ -365,6 +382,7 @@ createApp({
       inYear, inMonth, inData,
       sumYear, sumMonth, summary,
       newSpec, newColor, newColorCode, newSP, newSPType, importResult,
+      quickType, quickSpec, quickSpecs, quickColors, quickAdd,
       addEntryRow, submitEntries, loadTodayRecords, deleteTransaction, loadOutbound, exportOutbound, loadInbound, exportInbound, loadSummary, loadInventory,
       saveSpec, deleteSpec, editSpec, saveColor, deleteColor, editColor,
       saveSP, deleteSP, importStock, fmt, entryOutTotal, entryInTotal, filteredInventory,
@@ -474,6 +492,32 @@ createApp({
           h('button',{class:'btn-success',onClick:()=>this.addEntryRow('入库')},'+ 入库行'),
         ])
       ]),
+
+      // Quick fill panel
+      h('div',{style:{background:'#f5f7fa',borderRadius:'10px',padding:'12px 14px',marginBottom:'16px'}},[
+        h('div',{style:{display:'flex',alignItems:'center',gap:'8px',marginBottom:'10px',flexWrap:'wrap'}},[
+          h('span',{style:{fontWeight:600,fontSize:'13px'}},'⚡ 快速填写:'),
+          h('button',{class:this.quickType==='出库'?'btn-danger btn-sm':'btn-sm',
+            style:{background:this.quickType==='出库'?'#f56c6c':undefined,color:this.quickType==='出库'?'#fff':undefined},
+            onClick:()=>this.quickType='出库'},'出库'),
+          h('button',{class:this.quickType==='入库'?'btn-success btn-sm':'btn-sm',
+            style:{background:this.quickType==='入库'?'#67c23a':undefined,color:this.quickType==='入库'?'#fff':undefined},
+            onClick:()=>this.quickType='入库'},'入库'),
+          h('span',{style:{marginLeft:'12px',fontWeight:600,fontSize:'13px'}},'规格:'),
+          ...this.quickSpecs.map(spec=>h('button',{class:'btn-sm',key:spec,
+            style:{background:this.quickSpec===spec?'#409eff':'#fff',color:this.quickSpec===spec?'#fff':'#606266',border:'1px solid #dcdfe6'},
+            onClick:()=>this.quickSpec=this.quickSpec===spec?'':spec
+          },spec)),
+        ]),
+        this.quickSpec ? h('div',{style:{display:'flex',alignItems:'center',gap:'6px',flexWrap:'wrap',paddingTop:'8px',borderTop:'1px solid #e4e7ed'}},[
+          h('span',{style:{fontWeight:600,fontSize:'13px',color:'#409eff'}},this.quickSpec + ' →'),
+          ...this.quickColors.map(color=>h('button',{class:'btn-sm',key:color,
+            style:{background:'#ecf5ff',color:'#409eff',border:'1px solid #d9ecff',fontWeight:500},
+            onClick:()=>this.quickAdd(color)
+          },color)),
+        ]) : null,
+      ]),
+
       h('table',[
         h('thead',h('tr',[
           h('th',{style:{width:'50px'}},'#'),
