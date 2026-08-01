@@ -430,7 +430,7 @@ class TransactionItem(BaseModel):
     unit_price: float = 0
     amount: float = 0
     salesperson_name: Optional[str] = ""
-    remark: Optional[str] = None
+    remark: Optional[str] = ""
 
 
 class TransactionBatch(BaseModel):
@@ -447,9 +447,11 @@ def create_transactions(batch: TransactionBatch, admin: Admin = Depends(get_curr
             # 获取或创建 SKU
             sku = get_or_create_sku(db, item.spec_name, item.color_name)
 
-            # 获取销售人员（默认使用当前登录用户作为录入人）
-            sp_name = item.salesperson_name.strip() if item.salesperson_name else admin.username
+            # 获取销售人员
+            sp_name = item.salesperson_name.strip() if item.salesperson_name else ""
             sp_id = None
+            if not sp_name:
+                sp_name = admin.username  # 没填则默认当前用户
             if sp_name:
                 sp = db.query(Salesperson).filter(
                     Salesperson.name == sp_name,
@@ -468,6 +470,7 @@ def create_transactions(batch: TransactionBatch, admin: Admin = Depends(get_curr
             t = Transaction(
                 trans_date=trans_date,
                 trans_type=item.trans_type,
+                entry_person=admin.username,
                 sku_id=sku.id,
                 quantity=item.quantity,
                 unit_price=item.unit_price,
@@ -548,7 +551,8 @@ def daily_report(
             "unit_price": float(t.unit_price),
             "amount": float(t.amount),
             "salesperson": sp.name if sp else "",
-            "remark": t.remark,
+            "entry_person": t.entry_person or "",
+            "remark": t.remark or "",
         }
         if t.trans_type == "出库":
             out_list.append(item)

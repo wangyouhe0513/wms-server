@@ -71,6 +71,7 @@ class Transaction(Base):
     unit_price = Column(DECIMAL(10, 2), default=0, comment="单价")
     amount = Column(DECIMAL(12, 2), default=0, comment="金额")
     salesperson_id = Column(Integer, ForeignKey("salespersons.id"), nullable=True)
+    entry_person = Column(String(50), default="", comment="录入人（操作员）")
     remark = Column(String(200))
     created_at = Column(DateTime, default=datetime.now)
 
