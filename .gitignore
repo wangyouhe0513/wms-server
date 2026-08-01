@@ -30,3 +30,4 @@ Thumbs.db
 !sample*.xlsx
 
 # PHP
+backups/
