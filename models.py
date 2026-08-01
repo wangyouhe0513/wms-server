@@ -123,3 +123,12 @@ class OperationLog(Base):
     created_at = Column(DateTime, default=datetime.now)
 
     __table_args__ = (Index("idx_log_time", "created_at"),)
+
+
+class SystemConfig(Base):
+    __tablename__ = "system_configs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    key = Column(String(50), unique=True, nullable=False, comment="配置键")
+    value = Column(String(200), nullable=False, comment="配置值")
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)

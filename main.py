@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, extract
 
 from database import init_db, get_db
-from models import ProductSpec, Color, ProductSku, Salesperson, Transaction, InventoryLog, Admin, OperationLog
+from models import ProductSpec, Color, ProductSku, Salesperson, Transaction, InventoryLog, Admin, OperationLog, SystemConfig
 
 app = FastAPI(title="工厂进销存管理系统")
 
@@ -41,6 +41,31 @@ def log_operation(db: Session, admin_id: int, admin_name: str, action: str, targ
         action=action, target=target, detail=detail, ip_address=ip
     )
     db.add(log)
+
+
+def get_config(db: Session, key: str, default: str = "") -> str:
+    """读取系统配置值"""
+    config = db.query(SystemConfig).filter(SystemConfig.key == key).first()
+    return config.value if config else default
+
+
+def set_config(db: Session, key: str, value: str):
+    """写入系统配置值"""
+    config = db.query(SystemConfig).filter(SystemConfig.key == key).first()
+    if config:
+        config.value = value
+    else:
+        config = SystemConfig(key=key, value=value)
+        db.add(config)
+
+
+def get_low_stock_threshold(db: Session) -> int:
+    """获取全局默认低库存阈值"""
+    val = get_config(db, "low_stock_threshold", "50")
+    try:
+        return int(val)
+    except (ValueError, TypeError):
+        return 50
 
 
 def get_current_admin(authorization: str = Header(None), db: Session = Depends(get_db)):
@@ -547,6 +572,8 @@ def daily_report(
 # ============================================================
 @app.get("/api/inventory")
 def inventory_list(spec_name: str = "", db: Session = Depends(get_db)):
+    default_threshold = get_low_stock_threshold(db)
+
     query = (
         db.query(ProductSku)
         .options(joinedload(ProductSku.spec), joinedload(ProductSku.color))
@@ -569,12 +596,12 @@ def inventory_list(spec_name: str = "", db: Session = Depends(get_db)):
             "sku_id": sku.id,
             "color": color,
             "stock": sku.current_stock,
-            "threshold": sku.low_stock_threshold or 50,
+            "threshold": sku.low_stock_threshold or default_threshold,
         })
 
     low_stock = []
     for sku in skus:
-        threshold = sku.low_stock_threshold or 50
+        threshold = sku.low_stock_threshold or default_threshold
         if sku.current_stock < threshold:
             low_stock.append(f"{sku.spec.name}-{sku.color.name}: {sku.current_stock}（阈值{threshold}）")
 
@@ -602,6 +629,7 @@ def inventory_snapshot_download(admin: Admin = Depends(get_current_admin), db: S
     """生成带水印的库存快照 HTML，浏览器可直接打印为 PDF"""
     from datetime import date as dt_date
     today_str = dt_date.today().strftime("%Y-%m-%d")
+    default_threshold = get_low_stock_threshold(db)
 
     skus = (
         db.query(ProductSku)
@@ -620,7 +648,7 @@ def inventory_snapshot_download(admin: Admin = Depends(get_current_admin), db: S
         groups[spec].append({
             "color": sku.color.name,
             "stock": sku.current_stock,
-            "threshold": sku.low_stock_threshold or 50,
+            "threshold": sku.low_stock_threshold or default_threshold,
         })
 
     # 构建表格行
@@ -960,11 +988,35 @@ def get_available_months(db: Session = Depends(get_db)):
 
 
 # ============================================================
+# 系统设置
+# ============================================================
+@app.get("/api/settings")
+def get_settings(db: Session = Depends(get_db)):
+    """获取系统设置（当前支持：全局低库存预警阈值）"""
+    return {
+        "low_stock_threshold": get_low_stock_threshold(db),
+    }
+
+
+@app.put("/api/settings")
+def update_settings(threshold: int, admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
+    """更新系统设置"""
+    if threshold < 0:
+        raise HTTPException(400, "阈值不能为负数")
+    set_config(db, "low_stock_threshold", str(threshold))
+    log_operation(db, admin.id, admin.username, "update", "settings", f"全局默认低库存阈值设为 {threshold}")
+    db.commit()
+    return {"ok": True, "low_stock_threshold": threshold}
+
+
+# ============================================================
 # 首页仪表盘数据
 # ============================================================
 @app.get("/api/dashboard")
 def dashboard(db: Session = Depends(get_db)):
     today = date.today()
+    default_threshold = get_low_stock_threshold(db)
+
     today_rows = db.query(Transaction).filter(Transaction.trans_date == today).all()
     today_out = sum(float(t.amount) for t in today_rows if t.trans_type == "出库")
     today_in = sum(t.quantity for t in today_rows if t.trans_type == "入库")
@@ -980,7 +1032,7 @@ def dashboard(db: Session = Depends(get_db)):
 
     # 低库存
     low_skus = db.query(ProductSku).filter(
-        ProductSku.current_stock < func.coalesce(ProductSku.low_stock_threshold, 50)
+        ProductSku.current_stock < func.coalesce(ProductSku.low_stock_threshold, default_threshold)
     ).count()
 
     return {

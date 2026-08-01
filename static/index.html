@@ -138,6 +138,7 @@ createApp({
     const newSP = ref('');
     const newSPType = ref('员工');
     const importResult = ref(null);
+    const globalSettings = ref({low_stock_threshold: 50});
 
     const api = async (url, opts={}) => {
       const headers = {'Content-Type':'application/json', ...opts.headers};
@@ -152,12 +153,14 @@ createApp({
     };
 
     const refreshAll = async () => {
-      [dash.value, specs.value, colors.value, salespersons.value] = await Promise.all([
+      const results = await Promise.all([
         api('/api/dashboard'), api('/api/specs'), api('/api/colors'), api('/api/salespersons')
       ]);
+      [dash.value, specs.value, colors.value, salespersons.value] = results;
       const inv = await api('/api/inventory');
       invData.value = inv.inventory;
       invLowStock.value = inv.low_stock;
+      try { globalSettings.value = await api('/api/settings'); } catch(e) {}
       if (authUser.value?.role === 'superadmin') loadAdmins();
     };
 
@@ -204,6 +207,14 @@ createApp({
     const loadInventory = async () => {
       const d = await api('/api/inventory');
       invData.value = d.inventory; invLowStock.value = d.low_stock;
+    };
+
+    const saveGlobalSettings = async () => {
+      const v = parseInt(globalSettings.value.low_stock_threshold);
+      if (isNaN(v) || v < 0) return alert('请输入有效数字（0 或正整数）');
+      await api(`/api/settings?threshold=${v}`, {method:'PUT'});
+      globalSettings.value.low_stock_threshold = v;
+      refreshAll();
     };
 
     const saveSpec = async () => {
@@ -304,6 +315,7 @@ createApp({
       addEntryRow, submitEntries, loadBill, exportBill, loadSummary, loadInventory,
       saveSpec, deleteSpec, editSpec, saveColor, deleteColor, editColor,
       saveSP, deleteSP, importStock, fmt, entryOutTotal, entryInTotal, filteredInventory,
+      globalSettings, saveGlobalSettings,
       // Admin + Logs
       admins, newAdminUser, newAdminPass, saveAdmin, resetAdminPwd, deleteAdmin, loadAdmins,
       logs, loadLogs, showLogs,
@@ -428,7 +440,8 @@ createApp({
 
     // --- Inventory ---
     const setThreshold = async (skuId, current) => {
-      const t = prompt('设置低库存阈值（低于此值将预警）：', String(current||50));
+      const def = globalSettings.value.low_stock_threshold || 50;
+      const t = prompt('设置低库存阈值（低于此值将预警）：', String(current || def));
       if (t === null) return;
       const v = parseInt(t);
       if (isNaN(v) || v < 0) return alert('请输入有效数字');
@@ -450,7 +463,7 @@ createApp({
         h('div',{style:{fontWeight:600,color:'#303133',marginBottom:'8px',borderBottom:'2px solid #409eff',paddingBottom:'4px',display:'inline-block'}},spec),
         h('div',{style:{display:'flex',flexWrap:'wrap',gap:'10px'}},
           items.map(item => {
-            const threshold = item.threshold || 50;
+            const threshold = item.threshold || this.globalSettings.low_stock_threshold || 50;
             const isLow = item.stock < threshold;
             return h('div',{key:item.sku_id,style:{padding:'8px 14px',borderRadius:'8px',minWidth:'100px',textAlign:'center',background:isLow?'#fef0f0':'#f5f7fa'}},
             [
@@ -603,6 +616,20 @@ createApp({
           ])
         ))))
       ]),
+      // Global threshold settings
+      h('div',{class:'card',style:{width:'100%'}},[
+        h('div',{style:{fontWeight:600,marginBottom:'12px'}},'⚠️ 库存安全预警设置'),
+        h('p',{style:{color:'#909399',fontSize:'13px',marginBottom:'16px'}},'设置全局默认低库存阈值。当 SKU 库存低于此值时，首页和库存页将显示预警。每个 SKU 可在库存页单独设置覆盖阈值。'),
+        h('div',{style:{display:'flex',gap:'12px',alignItems:'center',flexWrap:'wrap'}},[
+          h('span',{style:{fontWeight:500}},'默认预警阈值：'),
+          h('input',{type:'number',min:0,value:this.globalSettings.low_stock_threshold,
+            onInput:e=>this.globalSettings.low_stock_threshold=parseInt(e.target.value)||0,
+            style:{width:'100px',textAlign:'center',fontSize:'18px',fontWeight:700,padding:'8px'}}),
+          h('span',{style:{color:'#909399',fontSize:'13px'}},'件'),
+          h('button',{class:'btn-primary',onClick:this.saveGlobalSettings},'💾 保存设置'),
+        ]),
+      ]),
+
       // Import
       h('div',{class:'card',style:{width:'100%',marginTop:'0'}},[
         h('div',{style:{fontWeight:600,marginBottom:'12px'}},'📥 一次性库存导入（Excel）'),
