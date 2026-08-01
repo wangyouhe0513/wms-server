@@ -1,7 +1,8 @@
-# Python
-__pycache__/
-*.py[cod]
-*.egg-info/
+# Database (不要提交，避免覆盖线上数据)
+factory.db
+factory_dump.sql
+*.db
+data/
 
 # Database backups
 *.db-backup
