@@ -439,7 +439,7 @@ createApp({
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url; a.download = `库存快照_${today}.png`; a.click();
+        a.href = url; a.download = `库存快照_${today}.html`; a.click();
         URL.revokeObjectURL(url);
       } catch(e) { alert('下载失败: '+e.message); }
     };
