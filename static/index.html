@@ -988,7 +988,7 @@ createApp({
         ]),
         h('div',{class:'sidebar-nav'},
           tabs.map(tab=>h('button',{key:tab.key, class:this.currentTab===tab.key?'active':'',
-            onClick:()=>this.currentTab=tab.key
+            onClick:()=>{this.currentTab=tab.key;if(tab.key==='admin'){this.loadAdmins();this.loadLogs();}}
           },tab.label))
         ),
         h('div',{class:'sidebar-footer'},[
