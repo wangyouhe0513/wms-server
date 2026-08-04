@@ -150,3 +150,13 @@ class FinanceRecord(Base):
     created_at = Column(DateTime, default=datetime.now)
 
     __table_args__ = (Index("idx_finance_date", "date"), Index("idx_finance_type", "type"))
+
+
+class FinanceCategory(Base):
+    __tablename__ = "finance_categories"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(30), unique=True, nullable=False)
+    sort_order = Column(Integer, default=0)
+    is_active = Column(Integer, default=1)
+    created_at = Column(DateTime, default=datetime.now)

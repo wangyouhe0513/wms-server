@@ -39,11 +39,7 @@ textarea { resize: vertical; min-height: 60px; }
 <div class="row">
   <div><label>日期</label><input type="date" id="date"></div>
   <div><label>类别</label>
-    <select id="category">
-      <option value="货款">货款</option><option value="日杂">日杂</option><option value="辅料">辅料</option>
-      <option value="运费">运费</option><option value="印花">印花</option><option value="布">布</option>
-      <option value="货拉拉">货拉拉</option><option value="其他">其他</option>
-    </select>
+    <select id="category"><option value="">加载中...</option></select>
   </div>
 </div>
 <div class="row">
@@ -97,10 +93,15 @@ async function submit() {
   }
 }
 document.getElementById('date').value = new Date().toISOString().slice(0,10);
-// 加载销售人员列表
+// 加载销售人员 + 类别
 fetch('/api/salespersons').then(r=>r.json()).then(list=>{
   const sel = document.getElementById('person');
   list.forEach(s=>{ const o = document.createElement('option'); o.value = s.name; o.textContent = s.name; sel.appendChild(o); });
+});
+fetch('/api/finance/categories').then(r=>r.json()).then(list=>{
+  const sel = document.getElementById('category');
+  sel.innerHTML = '';
+  list.forEach(c=>{ const o = document.createElement('option'); o.value = c.name; o.textContent = c.name; sel.appendChild(o); });
 });
 </script>
 </body>

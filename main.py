@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, extract
 
 from database import init_db, get_db
-from models import ProductSpec, Color, ProductSku, Salesperson, Transaction, InventoryLog, Admin, OperationLog, SystemConfig, FinanceRecord
+from models import ProductSpec, Color, ProductSku, Salesperson, Transaction, InventoryLog, Admin, OperationLog, SystemConfig, FinanceRecord, FinanceCategory
 
 app = FastAPI(title="工厂进销存管理系统")
 
@@ -1345,6 +1345,38 @@ def finance_init_balance(secret: str = Form(""), amount: float = Form(0), person
     db.add(r)
     db.commit()
     return {"ok": True, "id": r.id, "balance": amount}
+
+
+# 财务类别 CRUD
+@app.get("/api/finance/categories")
+def finance_categories(db: Session = Depends(get_db)):
+    rows = db.query(FinanceCategory).filter(FinanceCategory.is_active == 1).order_by(FinanceCategory.sort_order).all()
+    return [{"id": r.id, "name": r.name} for r in rows]
+
+@app.post("/api/finance/categories")
+def finance_category_create(name: str, admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
+    if db.query(FinanceCategory).filter(FinanceCategory.name == name, FinanceCategory.is_active == 1).first():
+        raise HTTPException(400, "类别已存在")
+    c = FinanceCategory(name=name, sort_order=db.query(FinanceCategory).count())
+    db.add(c)
+    db.commit()
+    return {"ok": True, "id": c.id}
+
+@app.put("/api/finance/categories/{cid}")
+def finance_category_update(cid: int, name: str, admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
+    c = db.query(FinanceCategory).filter(FinanceCategory.id == cid).first()
+    if not c: raise HTTPException(404, "类别不存在")
+    c.name = name
+    db.commit()
+    return {"ok": True}
+
+@app.delete("/api/finance/categories/{cid}")
+def finance_category_delete(cid: int, admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
+    c = db.query(FinanceCategory).filter(FinanceCategory.id == cid).first()
+    if not c: raise HTTPException(404, "类别不存在")
+    c.is_active = 0
+    db.commit()
+    return {"ok": True}
 
 
 @app.get("/api/finance/summary")
