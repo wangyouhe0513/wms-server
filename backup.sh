@@ -1,33 +1,35 @@
 #!/bin/bash
-# 工厂进销存系统 — 数据库自动备份脚本
+# 工厂进销存系统 — MySQL 数据库自动备份脚本
 # 用法: ./backup.sh 或通过 cron 定时执行
 
 set -e
 
 # 配置
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
-DB_FILE="$PROJECT_DIR/factory.db"
 BACKUP_DIR="$PROJECT_DIR/backups"
-KEEP_DAYS=30  # 保留最近30天的备份
+KEEP_DAYS=30
 
-# 创建备份目录
+# MySQL 连接信息（可通过环境变量覆盖）
+DB_HOST="${DB_HOST:-127.0.0.1}"
+DB_PORT="${DB_PORT:-3306}"
+DB_USER="${DB_USER:-root}"
+DB_PASS="${DB_PASS:-}"
+DB_NAME="${DB_NAME:-wms_finance}"
+
 mkdir -p "$BACKUP_DIR"
 
-# 备份文件名：factory_YYYYMMDD_HHMMSS.db
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-BACKUP_FILE="$BACKUP_DIR/factory_$TIMESTAMP.db"
-SQL_FILE="$BACKUP_DIR/factory_$TIMESTAMP.sql"
+SQL_FILE="$BACKUP_DIR/wms_$TIMESTAMP.sql"
 
-# SQLite .dump 导出（纯文本，兼容性好）
-sqlite3 "$DB_FILE" ".dump" > "$SQL_FILE"
-
-# 同时复制一份 .db 二进制文件
-cp "$DB_FILE" "$BACKUP_FILE"
+# mysqldump 导出
+MYSQL_PWD="$DB_PASS" mysqldump -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" \
+    --single-transaction --routines --triggers \
+    --default-character-set=utf8mb4 \
+    "$DB_NAME" > "$SQL_FILE" 2>/dev/null
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] 备份完成: $SQL_FILE ($(wc -c < "$SQL_FILE") bytes)"
 
-# 清理超过 KEEP_DAYS 天的旧备份
-find "$BACKUP_DIR" -name "factory_*.db" -mtime +$KEEP_DAYS -delete 2>/dev/null
-find "$BACKUP_DIR" -name "factory_*.sql" -mtime +$KEEP_DAYS -delete 2>/dev/null
+# 清理旧备份
+find "$BACKUP_DIR" -name "wms_*.sql" -mtime +$KEEP_DAYS -delete 2>/dev/null
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] 清理完成，保留最近 ${KEEP_DAYS} 天"
