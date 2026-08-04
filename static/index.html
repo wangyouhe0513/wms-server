@@ -422,6 +422,7 @@ createApp({
       {key:'summary', label:'📊 销售汇总'},
       {key:'thresholds', label:'⚠️ 预警阈值'},
       {key:'settings', label:'⚙️ 基础数据'},
+      {key:'admin', label:'👑 管理员'},
     ];
 
     // --- Dashboard ---
@@ -893,12 +894,13 @@ createApp({
           this.importResult.ok ? `✅ 成功导入 ${this.importResult.imported_skus} 个 SKU` : '❌ 导入失败') : null
       ]),
 
-      // Admin Management (superadmin only)
-      this.authUser?.role === 'superadmin' ? h('div',{class:'card',style:{width:'100%'}},[
-        h('div',{style:{fontWeight:600,marginBottom:'12px',display:'flex',justifyContent:'space-between',alignItems:'center'}},[
-          h('span','👑 管理员管理'),
-          h('button',{class:'btn-primary btn-sm',onClick:()=>{this.showLogs=!this.showLogs;if(this.showLogs)this.loadLogs();}},'📋 操作日志'),
-        ]),
+    ]);
+
+    // --- Admin ---
+    const renderAdmin = () => h('div',{style:{display:'flex',flexDirection:'column',gap:'20px'}},[
+      this.authUser?.role !== 'superadmin' ? h('div',{class:'card'},[h('p',{style:{textAlign:'center',color:'#909399',padding:'40px'}},'仅超级管理员可访问')]) : null,
+      this.authUser?.role === 'superadmin' ? h('div',{class:'card'},[
+        h('div',{style:{fontWeight:600,fontSize:'16px',marginBottom:'12px'}},'👑 管理员管理'),
         h('div',{style:{display:'flex',gap:'8px',marginBottom:'12px'}},[
           h('input',{value:this.newAdminUser,onInput:e=>this.newAdminUser=e.target.value,placeholder:'用户名',style:{flex:1}}),
           h('input',{type:'password',value:this.newAdminPass,onInput:e=>this.newAdminPass=e.target.value,placeholder:'密码',style:{flex:1}}),
@@ -916,12 +918,10 @@ createApp({
           ])))
         )
       ]) : null,
-
-      // Operation logs (toggle)
-      this.showLogs ? h('div',{class:'card',style:{width:'100%'}},[
-        h('div',{style:{fontWeight:600,marginBottom:'12px',display:'flex',justifyContent:'space-between'}},[
+      this.authUser?.role === 'superadmin' ? h('div',{class:'card'},[
+        h('div',{style:{fontWeight:600,fontSize:'16px',marginBottom:'12px',display:'flex',justifyContent:'space-between'}},[
           h('span','📋 操作日志（最近 200 条）'),
-          h('button',{class:'btn-sm',onClick:()=>this.showLogs=false},'关闭'),
+          h('button',{class:'btn-primary btn-sm',onClick:this.loadLogs},'🔄 刷新'),
         ]),
         h('div',{style:{maxHeight:'400px',overflowY:'auto'}},
           h('table',[
@@ -999,7 +999,8 @@ createApp({
         this.currentTab === 'inbound' ? renderInbound() :
         this.currentTab === 'summary' ? renderSummary() :
         this.currentTab === 'thresholds' ? renderThresholds() :
-        this.currentTab === 'settings' ? renderSettings() : null
+        this.currentTab === 'settings' ? renderSettings() :
+        this.currentTab === 'admin' ? renderAdmin() : null
       ])
     ]);
   }
