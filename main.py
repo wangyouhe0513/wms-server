@@ -930,6 +930,7 @@ def sales_summary(year: int, month: int = 0, db: Session = Depends(get_db)):
     by_sp = {}
     by_spec = {}
     by_month = {}
+    by_day = {}
     total = Decimal("0")
 
     for t in rows:
@@ -949,9 +950,11 @@ def sales_summary(year: int, month: int = 0, db: Session = Depends(get_db)):
             spec_name = spec.name if spec else "未知"
             by_spec[spec_name] = by_spec.get(spec_name, 0) + float(amt)
 
-        # 按月
+        # 按月/按日
         m_key = t.trans_date.strftime("%Y-%m")
         by_month[m_key] = by_month.get(m_key, 0) + float(amt)
+        d_key = t.trans_date.strftime("%m-%d")
+        by_day[d_key] = by_day.get(d_key, 0) + float(amt)
 
     return {
         "year": year,
@@ -960,6 +963,7 @@ def sales_summary(year: int, month: int = 0, db: Session = Depends(get_db)):
         "by_salesperson": dict(sorted(by_sp.items(), key=lambda x: x[1], reverse=True)),
         "by_spec": dict(sorted(by_spec.items(), key=lambda x: x[1], reverse=True)),
         "by_month": dict(sorted(by_month.items())),
+        "by_day": dict(sorted(by_day.items())),
     }
 
 
