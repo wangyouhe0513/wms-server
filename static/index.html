@@ -349,6 +349,11 @@ createApp({
     const exportFinance = () => {
       window.open(`/api/finance/export?year=${finYear.value}&month=${finMonth.value}`, '_blank');
     };
+    const deleteFinance = async (id) => {
+      if (!confirm('确定撤销这条财务记录？')) return;
+      await api(`/api/finance/${id}`, {method:'DELETE'});
+      loadFinance();
+    };
 
     const loadAnalysis = async () => {
       analysisData.value = await api(`/api/reports/sales-summary?year=${analysisYear.value}&month=${analysisMonth.value}`);
@@ -577,7 +582,7 @@ createApp({
       obSP, obYear, obMonth, obData,
       inYear, inMonth, inData,
       sumYear, sumMonth, summary,
-      finYear, finMonth, finRecords, finSummary, loadFinance, exportFinance,
+      finYear, finMonth, finRecords, finSummary, loadFinance, exportFinance, deleteFinance,
       analysisYear, analysisMonth, analysisData, loadAnalysis,
       newSpec, newColor, newColorCode, newSP, newSPType, importResult,
       quickType, quickSpec, quickSP, quickSpecs, quickColors, quickAdd,
@@ -953,8 +958,8 @@ createApp({
             h('button',{class:'btn-warning btn-sm',onClick:this.exportFinance},'📥 导出CSV'),
           ]),
           h('div',{class:'table-wrap'},h('table',[
-            h('thead',h('tr',[h('th','日期'),h('th','类型'),h('th','金额'),h('th','类别'),h('th','明细'),h('th','责任人'),h('th','凭证')])),
-            h('tbody',this.finRecords.length===0?[h('tr',h('td',{colSpan:7,style:{textAlign:'center',color:'#909399',padding:'24px'}},'暂无记录'))]:
+            h('thead',h('tr',[h('th','日期'),h('th','类型'),h('th','金额'),h('th','类别'),h('th','明细'),h('th','责任人'),h('th','凭证'),h('th','操作')])),
+            h('tbody',this.finRecords.length===0?[h('tr',h('td',{colSpan:8,style:{textAlign:'center',color:'#909399',padding:'24px'}},'暂无记录'))]:
               this.finRecords.map(r=>h('tr',{key:r.id},[
                 h('td',{style:{fontSize:'12px'}},r.date),
                 h('td',h('span',{class:'tag '+(r.type==='收入'?'tag-in':'tag-out')},r.type)),
@@ -962,6 +967,7 @@ createApp({
                 h('td',r.category),h('td',{style:{fontSize:'13px',maxWidth:'150px'}},r.detail),
                 h('td',r.person),
                 h('td',r.receipt?r.receipt.split(',').map((p,i)=>h('a',{href:p.trim(),target:'_blank',style:{color:'#4f6ef7',fontSize:'12px',marginRight:'6px'}},'图'+(i+1))):'—'),
+                h('td',h('button',{class:'btn-danger btn-xs',onClick:()=>this.deleteFinance(r.id)},'✕')),
               ]))
             )
           ]))

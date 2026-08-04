@@ -1286,7 +1286,7 @@ async def finance_create(
 
 @app.get("/api/finance/export")
 def finance_export(year: int = 0, month: int = 0, db: Session = Depends(get_db)):
-    """导出财务记录为CSV"""
+    """导出财务记录为Excel"""
     q = db.query(FinanceRecord).order_by(FinanceRecord.date.desc(), FinanceRecord.id.desc())
     if year > 0:
         q = q.filter(extract("year", FinanceRecord.date) == year)
@@ -1294,20 +1294,40 @@ def finance_export(year: int = 0, month: int = 0, db: Session = Depends(get_db))
         q = q.filter(extract("month", FinanceRecord.date) == month)
     rows = q.all()
 
-    csv = "日期,类型,金额,类别,明细,责任人\n"
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "财务记录"
+    ws.append(["日期", "类型", "金额", "类别", "明细", "责任人"])
     for r in rows:
-        csv += f"{r.date},{r.type},{r.amount},{r.category},{r.detail},{r.person}\n"
+        ws.append([str(r.date), r.type, float(r.amount), r.category, r.detail, r.person])
 
-    # 汇总
+    # 汇总行
     total_in = sum(float(r.amount) for r in rows if r.type == "收入")
     total_out = sum(float(r.amount) for r in rows if r.type == "支出")
-    csv += f"\n总收入,{total_in:.2f}\n总支出,{total_out:.2f}\n余额,{total_in - total_out:.2f}\n"
+    ws.append([])
+    ws.append(["", "总收入", total_in])
+    ws.append(["", "总支出", total_out])
+    ws.append(["", "余额", total_in - total_out])
 
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
     return Response(
-        content=csv.encode('utf-8-sig'),
-        media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": f"attachment; filename=finance_{year}{month:02d}.csv"}
+        content=buf.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename=finance_{year}{month:02d}.xlsx"}
     )
+
+
+@app.delete("/api/finance/{record_id}")
+def finance_delete(record_id: int, db: Session = Depends(get_db)):
+    """撤销财务记录"""
+    r = db.query(FinanceRecord).filter(FinanceRecord.id == record_id).first()
+    if not r:
+        raise HTTPException(404, "记录不存在")
+    db.delete(r)
+    db.commit()
+    return {"ok": True}
 
 
 @app.post("/api/finance/init-balance")
