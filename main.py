@@ -1338,6 +1338,11 @@ def finance_init_balance(secret: str = Form(""), amount: float = Form(0), person
     if secret != "上山打老虎":
         raise HTTPException(403, "密钥错误")
 
+    # 先删旧期初记录，再插入新记录（保证只有一条）
+    db.query(FinanceRecord).filter(
+        FinanceRecord.category == "初始化"
+    ).delete()
+
     r = FinanceRecord(
         type="收入", date=date.today(), amount=Decimal(str(amount)),
         category="初始化", detail="期初余额", person=person,
