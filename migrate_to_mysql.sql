@@ -117,7 +117,7 @@ INSERT IGNORE INTO salespersons (id, name, type, is_active, created_at) VALUES (
 INSERT IGNORE INTO admins (id, username, password_hash, role, is_active, created_at, last_login) VALUES (1, 'admin', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'superadmin', 1, '2026-07-31 13:04:50.769347', '2026-08-01 20:32:12.832679');
 
 -- system_configs (1 rows)
-INSERT IGNORE INTO system_configs (id, key, value, updated_at) VALUES (1, 'low_stock_threshold', '50', '2026-08-01 10:39:39.219358');
+INSERT IGNORE INTO system_configs (id, `key`, value, updated_at) VALUES (1, 'low_stock_threshold', '50', '2026-08-01 10:39:39.219358');
 
 -- transactions (2 rows)
 INSERT IGNORE INTO transactions (id, trans_date, trans_type, sku_id, quantity, unit_price, amount, salesperson_id, remark, created_at, entry_person) VALUES (1, '2026-08-01', '出库', 1, 1, 40, 40, 1, '', '2026-08-01 21:02:53.331914', 'admin');
