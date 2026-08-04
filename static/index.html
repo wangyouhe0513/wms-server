@@ -12,65 +12,109 @@
 <meta name="x5-page-mode" content="app">
 <title>工厂进销存管理系统</title>
 <style>
+  :root {
+    --primary: #4f6ef7;
+    --primary-light: #eef1ff;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --bg: #f0f2f7;
+    --card-bg: #fff;
+    --text: #1e293b;
+    --text-secondary: #64748b;
+    --text-muted: #94a3b8;
+    --border: #e2e8f0;
+    --shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+    --shadow-md: 0 4px 12px rgba(0,0,0,.08);
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
   *, *::before, *::after { box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif; background: #f5f7fa; margin:0; -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; }
-  .card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); margin-bottom: 16px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  .stat-card { color: #fff; border-radius: 12px; padding: 20px; margin-bottom: 12px; }
-  .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
-  .tag-out { background: #fef0f0; color: #f56c6c; }
-  .tag-in { background: #f0f9eb; color: #67c23a; }
-  .low-stock { color: #f56c6c; font-weight: bold; }
-  input, select { border: 1px solid #dcdfe6; border-radius: 6px; padding: 8px 10px; font-size: 14px; max-width: 100%; }
-  input:focus, select:focus { outline: none; border-color: #409eff; }
-  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; -webkit-transform: translateZ(0); margin: 0 -14px; padding: 0 14px; }
-  table { width: 100%; border-collapse: collapse; }
-  th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #ebeef5; font-size: 14px; }
-  th { background: #fafafa; color: #606266; font-weight: 600; white-space: nowrap; }
-  tr:hover { background: #f5f7fa; }
-  button { padding: 8px 18px; border-radius: 6px; font-size: 14px; cursor: pointer; border: none; transition: all 0.2s; -webkit-tap-highlight-color: transparent; touch-action: manipulation; white-space: nowrap; }
-  .btn-primary { background: #409eff; color: #fff; }
-  .btn-primary:hover { background: #337ecc; }
-  .btn-success { background: #67c23a; color: #fff; }
-  .btn-danger { background: #f56c6c; color: #fff; }
-  .btn-warning { background: #e6a23c; color: #fff; }
-  .btn-sm { padding: 6px 12px; font-size: 12px; }
-  .login-box { max-width: 400px; margin: 60px 16px; background: #fff; border-radius: 16px; padding: 32px 24px; box-shadow: 0 4px 24px rgba(0,0,0,0.1); text-align: center; }
-  .login-box input { width: 100%; padding: 12px; margin-bottom: 16px; font-size: 15px; box-sizing: border-box; }
-  .login-box h2 { margin-bottom: 24px; color: #303133; font-size: 22px; }
-  .error-msg { background: #fef0f0; color: #f56c6c; padding: 10px; border-radius: 6px; margin-bottom: 16px; font-size: 14px; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif; background: var(--bg); margin:0; color: var(--text); font-size: 14px; line-height: 1.5; -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; }
 
-  /* === 侧边栏布局 === */
+  /* 卡片 */
+  .card { background: var(--card-bg); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); margin-bottom: 16px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .card-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 16px; display: flex; align-items: center; gap: 6px; }
+
+  /* 统计卡片 */
+  .stat-card { color: #fff; border-radius: var(--radius); padding: 22px 20px; margin-bottom: 12px; cursor: pointer; transition: transform .15s, box-shadow .15s; }
+  .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+  .stat-card .label { font-size: 12px; opacity: .85; font-weight: 500; }
+  .stat-card .value { font-size: 28px; font-weight: 800; margin-top: 8px; }
+
+  /* 标签 */
+  .tag { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+  .tag-out { background: #fef2f2; color: var(--danger); }
+  .tag-in { background: #f0fdf4; color: var(--success); }
+  .low-stock { color: var(--danger); font-weight: 700; }
+
+  /* 表单 */
+  input, select { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; font-size: 13px; color: var(--text); background: #fff; max-width: 100%; transition: border-color .15s; }
+  input:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,110,247,.1); }
+
+  /* 表格 */
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -8px; padding: 0 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { background: #f8fafc; color: var(--text-secondary); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .3px; white-space: nowrap; }
+  td { color: var(--text); }
+  tr:hover td { background: #fafbfd; }
+  tfoot td { font-weight: 700; background: #f8fafc !important; }
+
+  /* 按钮 */
+  button { padding: 8px 18px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: all .15s; -webkit-tap-highlight-color: transparent; touch-action: manipulation; white-space: nowrap; }
+  button:active { transform: scale(.97); }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { background: #3d5ce5; }
+  .btn-success { background: var(--success); color: #fff; }
+  .btn-success:hover { background: #16a34a; }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-danger:hover { background: #dc2626; }
+  .btn-warning { background: var(--warning); color: #fff; }
+  .btn-warning:hover { background: #d97706; }
+  .btn-sm { padding: 5px 12px; font-size: 12px; }
+  .btn-xs { padding: 4px 10px; font-size: 11px; border-radius: 4px; }
+
+  /* 登录 */
+  .login-box { max-width: 400px; margin: 80px auto; background: #fff; border-radius: 16px; padding: 40px 32px; box-shadow: var(--shadow-md); text-align: center; }
+  .login-box input { width: 100%; padding: 12px 14px; margin-bottom: 14px; font-size: 14px; border-radius: 8px; }
+  .login-box h2 { margin: 0 0 6px; color: var(--text); font-size: 20px; }
+  .login-box .subtitle { color: var(--text-muted); font-size: 13px; margin-bottom: 28px; }
+  .error-msg { background: #fef2f2; color: var(--danger); padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
+
+  /* === 侧边栏 === */
   .app-layout { display: flex; min-height: 100vh; }
-  .sidebar { width: 200px; min-width: 200px; background: #fff; border-right: 1px solid #e4e7ed; display: flex; flex-direction: column; position: fixed; top:0; left:0; bottom:0; z-index: 100; overflow-y: auto; }
-  .sidebar-logo { padding: 16px 12px; text-align: center; border-bottom: 1px solid #f0f0f0; }
-  .sidebar-logo img { width: 48px; height: 48px; border-radius: 8px; object-fit: cover; }
-  .sidebar-logo .name { font-size: 13px; font-weight: 700; color: #303133; margin-top: 4px; }
-  .sidebar-logo .sub { font-size: 10px; color: #909399; }
-  .sidebar-nav { flex:1; padding: 8px 0; }
-  .sidebar-nav button { display: block; width: 100%; text-align: left; padding: 12px 16px; border-radius: 0; background: none; font-size: 14px; font-weight: 500; color: #606266; border-left: 3px solid transparent; margin: 2px 0; }
-  .sidebar-nav button:hover { background: #f5f7fa; }
-  .sidebar-nav button.active { color: #409eff; background: #ecf5ff; border-left-color: #409eff; font-weight: 600; }
-  .sidebar-footer { padding: 12px; border-top: 1px solid #f0f0f0; display: flex; gap: 6px; }
-  .sidebar-footer button { flex: 1; padding: 8px 6px; font-size: 12px; }
-  .main-content { margin-left: 200px; flex: 1; padding: 12px; min-width: 0; }
+  .sidebar { width: 210px; min-width: 210px; background: #fff; border-right: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; top:0; left:0; bottom:0; z-index: 100; overflow-y: auto; }
+  .sidebar-logo { padding: 20px 16px; text-align: center; border-bottom: 1px solid var(--border); }
+  .sidebar-logo img { width: 44px; height: 44px; border-radius: 10px; object-fit: cover; }
+  .sidebar-logo .name { font-size: 13px; font-weight: 700; color: var(--text); margin-top: 6px; }
+  .sidebar-logo .sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .sidebar-nav { flex:1; padding: 8px; }
+  .sidebar-nav button { display: block; width: 100%; text-align: left; padding: 10px 14px; border-radius: 8px; background: none; font-size: 13px; font-weight: 500; color: var(--text-secondary); margin: 1px 0; transition: all .12s; }
+  .sidebar-nav button:hover { background: var(--bg); color: var(--text); }
+  .sidebar-nav button.active { color: var(--primary); background: var(--primary-light); font-weight: 600; }
+  .sidebar-footer { padding: 10px 8px; border-top: 1px solid var(--border); display: flex; gap: 6px; }
+  .sidebar-footer button { flex: 1; padding: 7px 6px; font-size: 12px; border-radius: 8px; }
+  .main-content { margin-left: 210px; flex: 1; padding: 20px; min-width: 0; max-width: 1440px; }
 
-  /* 移动端：底部Tab条 */
+  /* 移动端 */
   @media (max-width: 768px) {
     .app-layout { flex-direction: column; }
-    .sidebar { position: fixed; bottom: 0; top: auto; left: 0; right: 0; width: 100%; min-width: 100%; height: 56px; flex-direction: row; overflow-x: auto; overflow-y: hidden; border-right: none; border-top: 1px solid #e4e7ed; z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
+    .sidebar { position: fixed; bottom: 0; top: auto; left: 0; right: 0; width: 100%; min-width: 100%; height: 54px; flex-direction: row; overflow-x: auto; overflow-y: hidden; border-right: none; border-top: 1px solid var(--border); z-index: 100; padding-bottom: env(safe-area-inset-bottom); box-shadow: 0 -2px 8px rgba(0,0,0,.06); }
     .sidebar-logo { display: none; }
-    .sidebar-nav { display: flex; flex: 1; padding: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .sidebar-nav button { flex-shrink: 0; width: auto; padding: 10px 12px; font-size: 12px; border-left: none; border-bottom: 2px solid transparent; white-space: nowrap; }
-    .sidebar-nav button.active { border-left: none; border-bottom-color: #409eff; background: none; }
+    .sidebar-nav { display: flex; flex: 1; padding: 0 4px; overflow-x: auto; -webkit-overflow-scrolling: touch; gap: 2px; }
+    .sidebar-nav button { flex-shrink: 0; width: auto; padding: 8px 11px; font-size: 12px; white-space: nowrap; border-radius: 6px; margin: 6px 1px; }
+    .sidebar-nav button.active { background: var(--primary-light); }
     .sidebar-footer { display: none; }
-    .main-content { margin-left: 0; padding: 12px 12px 68px 12px; }
-    .card { padding: 14px; border-radius: 8px; }
-    .stat-card { padding: 14px; }
-    th, td { padding: 8px 10px; font-size: 13px; }
-    button { padding: 10px 16px; font-size: 13px; min-height: 36px; }
-    .btn-sm { padding: 6px 10px; font-size: 11px; min-height: 30px; }
-    .login-box { margin: 40px 12px; padding: 28px 16px; }
-    .login-box h2 { font-size: 20px; }
+    .main-content { margin-left: 0; padding: 12px 10px 72px 10px; }
+    .card { padding: 14px; border-radius: 8px; margin-bottom: 12px; }
+    .stat-card { padding: 16px 14px; }
+    .stat-card .value { font-size: 24px; }
+    th, td { padding: 8px 10px; font-size: 12px; }
+    button { padding: 9px 14px; font-size: 13px; }
+    .btn-sm { padding: 5px 10px; font-size: 11px; }
+    .login-box { margin: 40px 12px; padding: 28px 20px; }
+    .login-box h2 { font-size: 18px; }
   }
   @media (min-width: 769px) {
     .login-box { margin: 100px auto; }
@@ -422,7 +466,7 @@ createApp({
       return h('div',{class:'login-box'},[
         h('img',{src:'/static/logo.jpg',style:{display:'block',margin:'0 auto 12px',width:'64px',height:'64px',borderRadius:'8px',objectFit:'cover'}}),
         h('h2','淼伊库服饰有限公司'),
-        h('p',{style:{color:'#909399',marginBottom:'24px',fontSize:'13px'}},'进销存管理系统'),
+        h('p',{class:'subtitle'},'进销存管理系统'),
         this.loginError ? h('div',{class:'error-msg'},this.loginError) : null,
         h('input',{type:'text',value:this.loginUsername,onInput:e=>this.loginUsername=e.target.value,placeholder:'用户名',onKeyup:e=>e.key==='Enter'&&this.doLogin()}),
         h('input',{type:'password',value:this.loginPassword,onInput:e=>this.loginPassword=e.target.value,placeholder:'密码',onKeyup:e=>e.key==='Enter'&&this.doLogin()}),
@@ -449,23 +493,23 @@ createApp({
       h('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:'16px'}},[
         h('div',{class:'stat-card',style:{background:'linear-gradient(135deg,#409eff,#337ecc)',cursor:'pointer'},
           onClick:()=>this.currentTab='outbound'},[
-          h('div',{style:{fontSize:'13px',opacity:'.85'}},'📤 今日出库金额'),
-          h('div',{style:{fontSize:'32px',fontWeight:800,marginTop:'10px'}},'¥'+this.fmt(this.dash.today_out_amount)),
+          h('div',{class:'label'},'📤 今日出库金额'),
+          h('div',{class:'value'},'¥'+this.fmt(this.dash.today_out_amount)),
         ]),
         h('div',{class:'stat-card',style:{background:'linear-gradient(135deg,#67c23a,#529b2e)',cursor:'pointer'},
           onClick:()=>this.currentTab='inbound'},[
-          h('div',{style:{fontSize:'13px',opacity:'.85'}},'📥 今日入库数量'),
-          h('div',{style:{fontSize:'32px',fontWeight:800,marginTop:'10px'}},String(this.dash.today_in_qty)+' 件'),
+          h('div',{class:'label'},'📥 今日入库数量'),
+          h('div',{class:'value'},String(this.dash.today_in_qty)+' 件'),
         ]),
         h('div',{class:'stat-card',style:{background:'linear-gradient(135deg,#e6a23c,#d4880f)',cursor:'pointer'},
           onClick:()=>this.currentTab='summary'},[
-          h('div',{style:{fontSize:'13px',opacity:'.85'}},'💰 本月销售额'),
-          h('div',{style:{fontSize:'32px',fontWeight:800,marginTop:'10px'}},'¥'+this.fmt(this.dash.month_total)),
+          h('div',{class:'label'},'💰 本月销售额'),
+          h('div',{class:'value'},'¥'+this.fmt(this.dash.month_total)),
         ]),
         h('div',{class:'stat-card',style:{background:'linear-gradient(135deg,#f56c6c,#c0392b)',cursor:'pointer'},
           onClick:()=>this.currentTab='thresholds'},[
-          h('div',{style:{fontSize:'13px',opacity:'.85'}},'🔴 低库存预警'),
-          h('div',{style:{fontSize:'32px',fontWeight:800,marginTop:'10px'}},String(this.dash.low_stock_count)+' SKU'),
+          h('div',{class:'label'},'🔴 低库存预警'),
+          h('div',{class:'value'},String(this.dash.low_stock_count)+' SKU'),
         ]),
       ]),
 
@@ -473,7 +517,7 @@ createApp({
       h('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))',gap:'16px'}},[
         // Quick actions
         h('div',{class:'card',style:{textAlign:'center'}},[
-          h('div',{style:{fontWeight:600,fontSize:'15px',marginBottom:'16px'}},'⚡ 快捷操作'),
+          h('div',{class:'card-title'},'⚡ 快捷操作'),
           h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px'}},[
             h('button',{class:'btn-primary',onClick:()=>this.currentTab='entry',style:{padding:'12px',fontSize:'14px'}},'📝 每日录入'),
             h('button',{class:'btn-success',onClick:()=>this.currentTab='inventory',style:{padding:'12px',fontSize:'14px'}},'📦 实时库存'),
@@ -484,7 +528,7 @@ createApp({
         ]),
         // System info
         h('div',{class:'card'},[
-          h('div',{style:{fontWeight:600,fontSize:'15px',marginBottom:'16px'}},'📊 系统概况'),
+          h('div',{class:'card-title'},'📊 系统概况'),
           h('div',{style:{display:'flex',flexDirection:'column',gap:'12px',color:'#606266',fontSize:'15px'}},[
             h('div',{style:{display:'flex',justifyContent:'space-between',padding:'8px 0',borderBottom:'1px solid #ebeef5'}},
               [h('span','📋 规格数量'),h('b',String(this.dash.total_specs))]),
@@ -503,7 +547,7 @@ createApp({
     const renderEntry = () => h('div',{class:'card'},[
       h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'16px'}},[
         h('div',{style:{display:'flex',alignItems:'center',gap:'12px'}},[
-          h('span',{style:{fontWeight:600,fontSize:'16px'}},'📝 每日录入'),
+          h('span',{class:'card-title'},'📝 每日录入'),
           h('input',{type:'date',value:this.entryDate,onInput:e=>this.entryDate=e.target.value,style:{width:'160px'}})
         ]),
         h('div',{style:{display:'flex',gap:'8px'}},[
@@ -589,7 +633,7 @@ createApp({
 
       // Today's submitted records
       (this.todayRecords.outbound.length > 0 || this.todayRecords.inbound.length > 0) ? h('div',{style:{marginTop:'24px',borderTop:'2px solid #ebeef5',paddingTop:'16px'}},[
-        h('div',{style:{fontWeight:600,fontSize:'15px',marginBottom:'12px'}},'📋 今日已录入（可撤销）'),
+        h('div',{class:'card-title'},'📋 今日已录入（可撤销）'),
         h('div',{style:{overflowX:'auto'}},h('table',[
           h('thead',h('tr',[
             h('th','类型'),h('th','规格'),h('th','颜色'),h('th','数量'),h('th','单价'),h('th','金额'),h('th','销售人'),h('th','录入人'),h('th','操作'),
@@ -643,7 +687,7 @@ createApp({
 
     const renderInventory = () => h('div',{class:'card'},[
       h('div',{style:{display:'flex',gap:'12px',alignItems:'center',marginBottom:'16px',flexWrap:'wrap'}},[
-        h('span',{style:{fontWeight:600,fontSize:'16px'}},'📦 实时库存'),
+        h('span',{class:'card-title'},'📦 实时库存'),
         h('input',{value:this.invFilter,onInput:e=>this.invFilter=e.target.value,placeholder:'搜索规格...',style:{width:'200px'}}),
         h('button',{class:'btn-warning btn-sm',onClick:()=>window.open('/api/inventory/snapshot','_blank')},'📥 下载快照'),
       ]),
@@ -682,7 +726,7 @@ createApp({
     const years = [2024,2025,2026,2027,2028];
     const renderOutbound = () => h('div',{class:'card'},[
       h('div',{style:{display:'flex',gap:'12px',alignItems:'center',marginBottom:'16px',flexWrap:'wrap'}},[
-        h('span',{style:{fontWeight:600,fontSize:'16px'}},'📤 出库记录'),
+        h('span',{class:'card-title'},'📤 出库记录'),
         h('select',{value:this.obSP,onChange:e=>this.obSP=e.target.value,style:{width:'140px'}},[
           h('option',{value:''},'选择人员'),
           ...this.salespersons.map(s=>h('option',{value:s.name},s.name))
@@ -714,7 +758,7 @@ createApp({
     // --- Inbound ---
     const renderInbound = () => h('div',{class:'card'},[
       h('div',{style:{display:'flex',gap:'12px',alignItems:'center',marginBottom:'16px',flexWrap:'wrap'}},[
-        h('span',{style:{fontWeight:600,fontSize:'16px'}},'📥 入库记录'),
+        h('span',{class:'card-title'},'📥 入库记录'),
         h('select',{value:this.inYear,onChange:e=>this.inYear=parseInt(e.target.value),style:{width:'100px'}},
           years.map(y=>h('option',{value:y},String(y)))),
         h('span','年'),
@@ -745,7 +789,7 @@ createApp({
     // --- Summary ---
     const renderSummary = () => h('div',{class:'card'},[
       h('div',{style:{display:'flex',gap:'12px',alignItems:'center',marginBottom:'16px',flexWrap:'wrap'}},[
-        h('span',{style:{fontWeight:600,fontSize:'16px'}},'📊 销售额汇总'),
+        h('span',{class:'card-title'},'📊 销售额汇总'),
         h('select',{value:this.sumYear,onChange:e=>this.sumYear=parseInt(e.target.value),style:{width:'100px'}},
           years.map(y=>h('option',{value:y},String(y)))),
         h('span','年'),
@@ -800,7 +844,7 @@ createApp({
     const renderThresholds = () => h('div',{style:{display:'flex',flexDirection:'column',gap:'20px'}},[
       // Global threshold settings
       h('div',{class:'card'},[
-        h('div',{style:{fontWeight:600,marginBottom:'12px',fontSize:'16px'}},'⚠️ 全局默认预警阈值'),
+        h('div',{class:'card-title'},'⚠️ 全局默认预警阈值'),
         h('p',{style:{color:'#909399',fontSize:'13px',marginBottom:'16px'}},'设置全局默认低库存阈值。当 SKU 库存低于此值时，首页和库存页将显示预警。每个 SKU 可单独设置覆盖阈值。'),
         h('div',{style:{display:'flex',gap:'12px',alignItems:'center',flexWrap:'wrap'}},[
           h('span',{style:{fontWeight:500}},'默认预警阈值：'),
@@ -814,7 +858,7 @@ createApp({
 
       // Per-SKU threshold management table
       h('div',{class:'card'},[
-        h('div',{style:{fontWeight:600,marginBottom:'12px',fontSize:'16px'}},'🎯 各规格颜色阈值管理'),
+        h('div',{class:'card-title'},'🎯 各规格颜色阈值管理'),
         h('p',{style:{color:'#909399',fontSize:'13px',marginBottom:'16px'}},'为不同规格+颜色组合单独设置预警阈值。留空或设为 0 则使用上方的全局默认值。'),
         h('div',{style:{overflowX:'auto'}},
           h('table',{style:{minWidth:'600px'}},[
