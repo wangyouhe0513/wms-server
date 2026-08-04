@@ -204,7 +204,7 @@ createApp({
 
     // Summary
     const sumYear = ref(new Date().getFullYear());
-    const sumMonth = ref(0);
+    const sumMonth = ref(new Date().getMonth() + 1);
     const summary = ref(null);
 
     // Analysis
@@ -1154,7 +1154,7 @@ createApp({
         ]),
         h('div',{class:'sidebar-nav'},
           tabs.map(tab=>h('button',{key:tab.key, class:this.currentTab===tab.key?'active':'',
-            onClick:()=>{this.currentTab=tab.key;if(tab.key==='admin'){this.loadAdmins();this.loadLogs();}if(tab.key==='analysis'){this.loadAnalysis();}}
+            onClick:()=>{this.currentTab=tab.key;if(tab.key==='admin'){this.loadAdmins();this.loadLogs();}if(tab.key==='summary'){this.loadSummary();}if(tab.key==='analysis'){this.loadAnalysis();}}
           },tab.label))
         ),
         h('div',{class:'sidebar-footer'},[
