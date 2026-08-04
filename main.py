@@ -1160,12 +1160,15 @@ async def import_stock_secret(file: UploadFile = File(...), secret: str = Form("
                 stock = int(stock_val) if stock_val is not None else 0
             except:
                 continue
-            try:
-                sku = get_or_create_sku(db, spec_name, color_name)
+            # 只更新数据库中已有的 SKU，不新增，不删除
+            sku = db.query(ProductSku).join(ProductSpec).join(Color).filter(
+                ProductSpec.name == spec_name,
+                Color.name == color_name
+            ).first()
+            if sku:
                 sku.current_stock = stock
                 updated += 1
-            except Exception as e:
-                errors.append(f"{spec_name}-{color_name}: {e}")
+            # 如果 DB 里没有这个 SKU，跳过不创建
 
     log = OperationLog(
         admin_name=admin_name or "secret_upload",
