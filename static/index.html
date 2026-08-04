@@ -361,13 +361,17 @@ createApp({
     };
     const saveFinCat = async () => {
       if (!newFinCat.value.trim()) return;
-      await api(`/api/finance/categories?name=${encodeURIComponent(newFinCat.value.trim())}`, {method:'POST'});
-      newFinCat.value = ''; loadFinCategories();
+      try {
+        await api(`/api/finance/categories?name=${encodeURIComponent(newFinCat.value.trim())}`, {method:'POST'});
+        newFinCat.value = ''; loadFinCategories();
+      } catch(e) { alert(e.message); }
     };
     const deleteFinCat = async (id) => {
       if (!confirm('确定删除？')) return;
-      await api(`/api/finance/categories/${id}`, {method:'DELETE'});
-      loadFinCategories();
+      try {
+        await api(`/api/finance/categories/${id}`, {method:'DELETE'});
+        loadFinCategories();
+      } catch(e) { alert(e.message); }
     };
 
     const loadAnalysis = async () => {

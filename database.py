@@ -65,6 +65,13 @@ def init_db():
         if not db.query(SystemConfig).filter(SystemConfig.key == "low_stock_threshold").first():
             db.add(SystemConfig(key="low_stock_threshold", value="50"))
 
+        # 默认财务类别
+        from models import FinanceCategory
+        defaults = ["货款", "日杂", "辅料", "运费", "印花", "布", "货拉拉", "其他"]
+        for i, name in enumerate(defaults):
+            if not db.query(FinanceCategory).filter(FinanceCategory.name == name).first():
+                db.add(FinanceCategory(name=name, sort_order=i))
+
         db.commit()
         print("[init_db] 数据库初始化完成")
     finally:
