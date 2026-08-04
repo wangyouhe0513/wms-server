@@ -431,11 +431,10 @@ createApp({
         const headers = token.value ? {'Authorization':'Bearer '+token.value} : {};
         const res = await fetch('/api/inventory/snapshot', {headers});
         if (!res.ok) { alert('下载失败，请先登录'); return; }
-        const html = await res.text();
-        const blob = new Blob([html], {type:'text/html;charset=utf-8'});
+        const blob = await res.blob();
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url; a.download = `库存快照_${today}.html`; a.click();
+        a.href = url; a.download = `库存快照_${today}.png`; a.click();
         URL.revokeObjectURL(url);
       } catch(e) { alert('下载失败'); }
     };
