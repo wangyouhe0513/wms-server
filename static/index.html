@@ -207,6 +207,11 @@ createApp({
     const sumMonth = ref(0);
     const summary = ref(null);
 
+    // Analysis
+    const analysisYear = ref(new Date().getFullYear());
+    const analysisMonth = ref(new Date().getMonth() + 1);
+    const analysisData = ref(null);
+
     // Settings
     const newSpec = ref('');
     const newColor = ref('');
@@ -326,12 +331,16 @@ createApp({
 
     const loadSummary = async () => {
       summary.value = await api(`/api/reports/sales-summary?year=${sumYear.value}&month=${sumMonth.value}`);
+    };
+
+    const loadAnalysis = async () => {
+      analysisData.value = await api(`/api/reports/sales-summary?year=${analysisYear.value}&month=${analysisMonth.value}`);
       setTimeout(() => renderCharts(), 300);
     };
 
     const renderCharts = () => {
-      const s = summary.value;
-      if (!s || !s.month || s.month <= 0) return;
+      const s = analysisData.value;
+      if (!s) return;
 
       // 销毁旧图表
       ['chartDaily','chartSalesperson','chartSpec'].forEach(id=>{
@@ -533,6 +542,7 @@ createApp({
       obSP, obYear, obMonth, obData,
       inYear, inMonth, inData,
       sumYear, sumMonth, summary,
+      analysisYear, analysisMonth, analysisData, loadAnalysis,
       newSpec, newColor, newColorCode, newSP, newSPType, importResult,
       quickType, quickSpec, quickSP, quickSpecs, quickColors, quickAdd,
       addEntryRow, submitEntries, loadTodayRecords, deleteTransaction, loadOutbound, exportOutbound, loadInbound, exportInbound, loadSummary, renderCharts, loadInventory,
@@ -568,6 +578,7 @@ createApp({
       {key:'outbound', label:'📤 出库记录'},
       {key:'inbound', label:'📥 入库记录'},
       {key:'summary', label:'📊 销售汇总'},
+      {key:'analysis', label:'📈 数据分析'},
       {key:'thresholds', label:'⚠️ 预警阈值'},
       {key:'settings', label:'⚙️ 基础数据'},
       {key:'admin', label:'👑 管理员'},
@@ -913,31 +924,43 @@ createApp({
             ])
           ]),
         ]),
-        // 图表区域
-        this.summary.month > 0 ? h('div',{style:{marginTop:'24px'}},[
-          h('h4',{class:'card-title'},'📈 数据分析'),
-          h('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(400px,1fr))',gap:'20px'}},[
-            // 折线图：每日销售
-            h('div',{class:'card'},[
-              h('div',{style:{fontWeight:600,fontSize:'14px',marginBottom:'12px'}},'📅 每日销售额'),
-              h('div',{style:{position:'relative',height:'280px'}},h('canvas',{id:'chartDaily'}))
-            ]),
-            // 柱状图：按销售人
-            h('div',{class:'card'},[
-              h('div',{style:{fontWeight:600,fontSize:'14px',marginBottom:'12px'}},'👤 销售人员销售额'),
-              h('div',{style:{position:'relative',height:'280px'}},h('canvas',{id:'chartSalesperson'}))
-            ]),
-          ]),
-          // 饼图：按品类
-          h('div',{style:{marginTop:'20px'}},h('div',{class:'card'},[
-            h('div',{style:{fontWeight:600,fontSize:'14px',marginBottom:'12px'}},'📦 产品规格销售额占比'),
-            h('div',{style:{position:'relative',height:'360px',maxWidth:'600px',margin:'0 auto'}},h('canvas',{id:'chartSpec'}))
-          ])),
-        ]) : null
-      ] : null,
-      // 渲染图表
-      this.summary && this.summary.month > 0 ? setTimeout(()=>this.renderCharts(), 200) : null,
+      ] : null
     ]);
+
+    // --- Analysis ---
+    const renderAnalysis = () => {
+      const years = [2024,2025,2026,2027,2028];
+      return h('div',{style:{display:'flex',flexDirection:'column',gap:'20px'}},[
+        h('div',{class:'card'},[
+          h('div',{style:{display:'flex',gap:'12px',alignItems:'center',marginBottom:'20px',flexWrap:'wrap'}},[
+            h('span',{class:'card-title',style:{marginBottom:0}},'📈 数据分析'),
+            h('select',{value:this.analysisYear,onChange:e=>{this.analysisYear=parseInt(e.target.value);this.loadAnalysis();},style:{width:'100px'}},
+              years.map(y=>h('option',{value:y},String(y)))),
+            h('span','年'),
+            h('select',{value:this.analysisMonth,onChange:e=>{this.analysisMonth=parseInt(e.target.value);this.loadAnalysis();},style:{width:'80px'}},
+              Array.from({length:12},(_,i)=>h('option',{value:i+1},String(i+1)+'月'))),
+            h('button',{class:'btn-primary btn-sm',onClick:this.loadAnalysis},'查询'),
+          ]),
+          this.analysisData ? [
+            h('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(380px,1fr))',gap:'20px',marginBottom:'20px'}},[
+              h('div',{class:'card',style:{marginBottom:0}},[
+                h('div',{style:{fontWeight:600,fontSize:'14px',marginBottom:'12px'}},'📅 每日销售额'),
+                h('div',{style:{position:'relative',height:'260px'}},h('canvas',{id:'chartDaily'}))
+              ]),
+              h('div',{class:'card',style:{marginBottom:0}},[
+                h('div',{style:{fontWeight:600,fontSize:'14px',marginBottom:'12px'}},'👤 销售人员销售额'),
+                h('div',{style:{position:'relative',height:'260px'}},h('canvas',{id:'chartSalesperson'}))
+              ]),
+            ]),
+            h('div',{class:'card'},[
+              h('div',{style:{fontWeight:600,fontSize:'14px',marginBottom:'12px'}},'📦 产品规格销售额占比'),
+              h('div',{style:{position:'relative',height:'360px',maxWidth:'600px',margin:'0 auto'}},h('canvas',{id:'chartSpec'}))
+            ]),
+          ] : h('div',{style:{textAlign:'center',color:'#909399',padding:'60px'}},'请选择月份并点击查询'),
+        ]),
+        this.analysisData ? setTimeout(()=>this.renderCharts(), 200) : null,
+      ]);
+    };
 
     // --- Thresholds ---
     const renderThresholds = () => h('div',{style:{display:'flex',flexDirection:'column',gap:'20px'}},[
@@ -1131,7 +1154,7 @@ createApp({
         ]),
         h('div',{class:'sidebar-nav'},
           tabs.map(tab=>h('button',{key:tab.key, class:this.currentTab===tab.key?'active':'',
-            onClick:()=>{this.currentTab=tab.key;if(tab.key==='admin'){this.loadAdmins();this.loadLogs();}}
+            onClick:()=>{this.currentTab=tab.key;if(tab.key==='admin'){this.loadAdmins();this.loadLogs();}if(tab.key==='analysis'){this.loadAnalysis();}}
           },tab.label))
         ),
         h('div',{class:'sidebar-footer'},[
@@ -1148,6 +1171,7 @@ createApp({
         this.currentTab === 'outbound' ? renderOutbound() :
         this.currentTab === 'inbound' ? renderInbound() :
         this.currentTab === 'summary' ? renderSummary() :
+        this.currentTab === 'analysis' ? renderAnalysis() :
         this.currentTab === 'thresholds' ? renderThresholds() :
         this.currentTab === 'settings' ? renderSettings() :
         this.currentTab === 'admin' ? renderAdmin() : null
