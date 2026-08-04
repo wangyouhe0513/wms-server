@@ -428,15 +428,20 @@ createApp({
 
     const downloadSnapshot = async () => {
       try {
-        const headers = token.value ? {'Authorization':'Bearer '+token.value} : {};
+        if (!token.value) { alert('请先登录'); return; }
+        const headers = {'Authorization':'Bearer '+token.value};
         const res = await fetch('/api/inventory/snapshot', {headers});
-        if (!res.ok) { alert('下载失败，请先登录'); return; }
+        if (!res.ok) {
+          const err = await res.json().catch(()=>({detail:'下载失败'}));
+          alert(err.detail||'下载失败，请先登录');
+          return;
+        }
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url; a.download = `库存快照_${today}.png`; a.click();
         URL.revokeObjectURL(url);
-      } catch(e) { alert('下载失败'); }
+      } catch(e) { alert('下载失败: '+e.message); }
     };
 
     const saveGlobalSettings = async () => {
