@@ -178,6 +178,7 @@ createApp({
     const todayRecords = ref({outbound:[], inbound:[]});
     const quickType = ref('出库');
     const quickSpec = ref('');
+    const quickSP = ref('');
 
     // Base data
     const specs = ref([]);
@@ -256,7 +257,7 @@ createApp({
     });
 
     const quickAdd = (color) => {
-      entryRows.value.push({type:quickType.value, spec:quickSpec.value, color, qty:1, price:0, sp:'', remark:''});
+      entryRows.value.push({type:quickType.value, spec:quickSpec.value, color, qty:1, price:0, sp:quickSP.value, remark:''});
       quickSpec.value = '';
     };
 
@@ -448,7 +449,7 @@ createApp({
       inYear, inMonth, inData,
       sumYear, sumMonth, summary,
       newSpec, newColor, newColorCode, newSP, newSPType, importResult,
-      quickType, quickSpec, quickSpecs, quickColors, quickAdd,
+      quickType, quickSpec, quickSP, quickSpecs, quickColors, quickAdd,
       addEntryRow, submitEntries, loadTodayRecords, deleteTransaction, loadOutbound, exportOutbound, loadInbound, exportInbound, loadSummary, loadInventory,
       saveSpec, deleteSpec, editSpec, saveColor, deleteColor, editColor,
       saveSP, deleteSP, importStock, fmt, entryOutTotal, entryInTotal, filteredInventory,
@@ -566,7 +567,10 @@ createApp({
           h('button',{class:this.quickType==='入库'?'btn-success btn-sm':'btn-sm',
             style:{background:this.quickType==='入库'?'#67c23a':undefined,color:this.quickType==='入库'?'#fff':undefined},
             onClick:()=>this.quickType='入库'},'入库'),
-          h('span',{style:{marginLeft:'12px',fontWeight:600,fontSize:'13px'}},'规格:'),
+          h('span',{style:{marginLeft:'8px',fontWeight:600,fontSize:'13px'}},'销售人:'),
+          h('select',{value:this.quickSP,onChange:e=>this.quickSP=e.target.value,style:{width:'100px',fontSize:'12px',padding:'5px 8px'}},
+            [h('option',{value:''},'不限'),...this.salespersons.map(s=>h('option',{value:s.name},s.name))]),
+          h('span',{style:{marginLeft:'8px',fontWeight:600,fontSize:'13px'}},'规格:'),
           ...this.quickSpecs.map(spec=>h('button',{class:'btn-sm',key:spec,
             style:{background:this.quickSpec===spec?'#409eff':'#fff',color:this.quickSpec===spec?'#fff':'#606266',border:'1px solid #dcdfe6'},
             onClick:()=>this.quickSpec=this.quickSpec===spec?'':spec
