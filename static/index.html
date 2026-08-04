@@ -346,9 +346,8 @@ createApp({
       ]);
       finRecords.value = records; finSummary.value = summary;
     };
-    const approveFinance = async (id, status) => {
-      await api(`/api/finance/${id}/status?status=${status}`, {method:'PUT'});
-      loadFinance();
+    const exportFinance = () => {
+      window.open(`/api/finance/export?year=${finYear.value}&month=${finMonth.value}`, '_blank');
     };
 
     const loadAnalysis = async () => {
@@ -578,7 +577,7 @@ createApp({
       obSP, obYear, obMonth, obData,
       inYear, inMonth, inData,
       sumYear, sumMonth, summary,
-      finYear, finMonth, finRecords, finSummary, loadFinance, approveFinance,
+      finYear, finMonth, finRecords, finSummary, loadFinance, exportFinance,
       analysisYear, analysisMonth, analysisData, loadAnalysis,
       newSpec, newColor, newColorCode, newSP, newSPType, importResult,
       quickType, quickSpec, quickSP, quickSpecs, quickColors, quickAdd,
@@ -951,19 +950,18 @@ createApp({
             h('button',{class:'btn-primary btn-sm',onClick:this.loadFinance},'查询'),
             h('span',{style:{flex:1}}),
             h('button',{class:'btn-success btn-sm',onClick:()=>window.open('/static/report.html','_blank')},'📋 报账链接'),
+            h('button',{class:'btn-warning btn-sm',onClick:this.exportFinance},'📥 导出CSV'),
           ]),
           h('div',{class:'table-wrap'},h('table',[
-            h('thead',h('tr',[h('th','日期'),h('th','类型'),h('th','金额'),h('th','类别'),h('th','明细'),h('th','责任人'),h('th','凭证'),h('th','状态'),h('th','操作')])),
-            h('tbody',this.finRecords.length===0?[h('tr',h('td',{colSpan:9,style:{textAlign:'center',color:'#909399',padding:'24px'}},'暂无记录'))]:
+            h('thead',h('tr',[h('th','日期'),h('th','类型'),h('th','金额'),h('th','类别'),h('th','明细'),h('th','责任人'),h('th','凭证')])),
+            h('tbody',this.finRecords.length===0?[h('tr',h('td',{colSpan:7,style:{textAlign:'center',color:'#909399',padding:'24px'}},'暂无记录'))]:
               this.finRecords.map(r=>h('tr',{key:r.id},[
                 h('td',{style:{fontSize:'12px'}},r.date),
                 h('td',h('span',{class:'tag '+(r.type==='收入'?'tag-in':'tag-out')},r.type)),
                 h('td',{style:{fontWeight:600,color:r.type==='收入'?'#22c55e':'#ef4444'}},'¥'+r.amount.toFixed(2)),
-                h('td',r.category),h('td',{style:{fontSize:'13px',maxWidth:'150px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},r.detail),
+                h('td',r.category),h('td',{style:{fontSize:'13px',maxWidth:'150px'}},r.detail),
                 h('td',r.person),
-                h('td',r.receipt?h('a',{href:r.receipt,target:'_blank',style:{color:'#4f6ef7',fontSize:'12px'}},'查看'):'—'),
-                h('td',h('span',{class:'tag',style:{background:r.status==='已审核'?'#f0fdf4':'#fefce8',color:r.status==='已审核'?'#22c55e':'#f59e0b'}},r.status)),
-                h('td',r.status==='待审核'?h('button',{class:'btn-success btn-xs',onClick:()=>this.approveFinance(r.id,'已审核')},'✓ 审核'):h('button',{class:'btn-xs',style:{background:'#f1f5f9',color:'#94a3b8'}},'已审')),
+                h('td',r.receipt?r.receipt.split(',').map((p,i)=>h('a',{href:p.trim(),target:'_blank',style:{color:'#4f6ef7',fontSize:'12px',marginRight:'6px'}},'图'+(i+1))):'—'),
               ]))
             )
           ]))

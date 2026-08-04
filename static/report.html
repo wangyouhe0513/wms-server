@@ -50,7 +50,7 @@ textarea { resize: vertical; min-height: 60px; }
   <div><label>明细说明</label><input id="detail" placeholder="简要说明"></div>
   <div><label>责任人</label><input id="person" placeholder="姓名"></div>
 </div>
-<div><label>凭证截图</label><input type="file" id="receipt" accept="image/*" onchange="previewImage()"></div>
+<div><label>凭证截图（可多选）</label><input type="file" id="receipt" accept="image/*" multiple onchange="previewImage()"></div>
 <div class="preview" id="preview"></div>
 <button class="btn" onclick="submit()">提交报账</button>
 </div>
@@ -59,8 +59,10 @@ textarea { resize: vertical; min-height: 60px; }
 let type = '支出';
 function setType(t) { type = t; document.getElementById('btnOut').className = t==='支出'?'type-btn out-active':'type-btn'; document.getElementById('btnIn').className = t==='收入'?'type-btn in-active':'type-btn'; }
 function previewImage() {
-  const f = document.getElementById('receipt').files[0];
-  document.getElementById('preview').innerHTML = f ? `<img src="${URL.createObjectURL(f)}">` : '';
+  const files = document.getElementById('receipt').files;
+  let html = '';
+  for (const f of files) html += `<img src="${URL.createObjectURL(f)}" style="margin:4px">`;
+  document.getElementById('preview').innerHTML = html;
 }
 async function submit() {
   const amount = document.getElementById('amount').value;
@@ -75,8 +77,8 @@ async function submit() {
   const fd = new FormData();
   fd.append('type', type); fd.append('amount', amount); fd.append('date', date);
   fd.append('category', category); fd.append('detail', detail); fd.append('person', person);
-  const file = document.getElementById('receipt').files[0];
-  if (file) fd.append('receipt', file);
+  const files = document.getElementById('receipt').files;
+  for (const f of files) fd.append('receipts', f);
 
   try {
     const res = await fetch('/api/finance', { method: 'POST', body: fd });

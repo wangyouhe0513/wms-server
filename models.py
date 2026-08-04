@@ -145,8 +145,8 @@ class FinanceRecord(Base):
     category = Column(String(30), default="", comment="类别")
     detail = Column(String(200), default="", comment="明细")
     person = Column(String(30), default="", comment="责任人")
-    receipt = Column(String(500), default="", comment="凭证截图路径")
-    status = Column(String(10), default="待审核", comment="待审核/已审核")
+    receipt = Column(String(2000), default="", comment="凭证截图路径，逗号分隔多张")
+    status = Column(String(10), default="已审核", comment="已审核")
     created_at = Column(DateTime, default=datetime.now)
 
     __table_args__ = (Index("idx_finance_date", "date"), Index("idx_finance_type", "type"))

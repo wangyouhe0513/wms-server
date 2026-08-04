@@ -1261,38 +1261,69 @@ def finance_list(year: int = 0, month: int = 0, db: Session = Depends(get_db)):
 async def finance_create(
     type: str = Form(...), date: str = Form(...), amount: float = Form(...),
     category: str = Form(""), detail: str = Form(""), person: str = Form(""),
-    receipt: UploadFile = File(None), db: Session = Depends(get_db),
+    receipts: List[UploadFile] = File([]), db: Session = Depends(get_db),
 ):
-    """提交财务记录（无需登录，微信可用）"""
-    receipt_path = ""
-    if receipt and receipt.filename:
-        ext = _os.path.splitext(receipt.filename)[1] or ".jpg"
-        filename = f"{_uuid.uuid4().hex}{ext}"
-        filepath = _os.path.join(RECEIPT_DIR, filename)
-        with open(filepath, "wb") as f:
-            f.write(await receipt.read())
-        receipt_path = f"/static/receipts/{filename}"
+    """提交财务记录（无需登录，微信可用，支持多张凭证）"""
+    paths = []
+    for receipt in receipts:
+        if receipt and receipt.filename:
+            ext = _os.path.splitext(receipt.filename)[1] or ".jpg"
+            filename = f"{_uuid.uuid4().hex}{ext}"
+            filepath = _os.path.join(RECEIPT_DIR, filename)
+            with open(filepath, "wb") as f:
+                f.write(await receipt.read())
+            paths.append(f"/static/receipts/{filename}")
 
     r = FinanceRecord(
         type=type, date=datetime.strptime(date, "%Y-%m-%d").date(),
         amount=Decimal(str(amount)), category=category, detail=detail,
-        person=person, receipt=receipt_path, status="待审核",
+        person=person, receipt=",".join(paths),
     )
     db.add(r)
     db.commit()
     return {"ok": True, "id": r.id}
 
 
-@app.put("/api/finance/{record_id}/status")
-def finance_update_status(record_id: int, status: str, admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
-    """审核财务记录"""
-    r = db.query(FinanceRecord).filter(FinanceRecord.id == record_id).first()
-    if not r:
-        raise HTTPException(404, "记录不存在")
-    r.status = status
-    log_operation(db, admin.id, admin.username, "update", "finance", f"{status}财务记录 #{record_id}: {r.type} ¥{r.amount}")
+@app.get("/api/finance/export")
+def finance_export(year: int = 0, month: int = 0, db: Session = Depends(get_db)):
+    """导出财务记录为CSV"""
+    q = db.query(FinanceRecord).order_by(FinanceRecord.date.desc(), FinanceRecord.id.desc())
+    if year > 0:
+        q = q.filter(extract("year", FinanceRecord.date) == year)
+    if month > 0:
+        q = q.filter(extract("month", FinanceRecord.date) == month)
+    rows = q.all()
+
+    csv = "日期,类型,金额,类别,明细,责任人\n"
+    for r in rows:
+        csv += f"{r.date},{r.type},{r.amount},{r.category},{r.detail},{r.person}\n"
+
+    # 汇总
+    total_in = sum(float(r.amount) for r in rows if r.type == "收入")
+    total_out = sum(float(r.amount) for r in rows if r.type == "支出")
+    csv += f"\n总收入,{total_in:.2f}\n总支出,{total_out:.2f}\n余额,{total_in - total_out:.2f}\n"
+
+    return Response(
+        content=csv.encode('utf-8-sig'),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f"attachment; filename=finance_{year}{month:02d}.csv"}
+    )
+
+
+@app.post("/api/finance/init-balance")
+def finance_init_balance(secret: str = Form(""), amount: float = Form(0), person: str = Form(""),
+                          db: Session = Depends(get_db)):
+    """初始化余额（密钥保护）"""
+    if secret != "上山打老虎":
+        raise HTTPException(403, "密钥错误")
+
+    r = FinanceRecord(
+        type="收入", date=date.today(), amount=Decimal(str(amount)),
+        category="初始化", detail="期初余额", person=person,
+    )
+    db.add(r)
     db.commit()
-    return {"ok": True}
+    return {"ok": True, "id": r.id, "balance": amount}
 
 
 @app.get("/api/finance/summary")
