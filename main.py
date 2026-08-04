@@ -1261,18 +1261,19 @@ def finance_list(year: int = 0, month: int = 0, db: Session = Depends(get_db)):
 async def finance_create(
     type: str = Form(...), date: str = Form(...), amount: float = Form(...),
     category: str = Form(""), detail: str = Form(""), person: str = Form(""),
-    receipts: List[UploadFile] = File([]), db: Session = Depends(get_db),
+    receipts: List[UploadFile] = File(None), db: Session = Depends(get_db),
 ):
     """提交财务记录（无需登录，微信可用，支持多张凭证）"""
     paths = []
-    for receipt in receipts:
-        if receipt and receipt.filename:
-            ext = _os.path.splitext(receipt.filename)[1] or ".jpg"
-            filename = f"{_uuid.uuid4().hex}{ext}"
-            filepath = _os.path.join(RECEIPT_DIR, filename)
-            with open(filepath, "wb") as f:
-                f.write(await receipt.read())
-            paths.append(f"/static/receipts/{filename}")
+    if receipts:
+        for receipt in receipts:
+            if receipt and receipt.filename:
+                ext = _os.path.splitext(receipt.filename)[1] or ".jpg"
+                filename = f"{_uuid.uuid4().hex}{ext}"
+                filepath = _os.path.join(RECEIPT_DIR, filename)
+                with open(filepath, "wb") as f:
+                    f.write(await receipt.read())
+                paths.append(f"/static/receipts/{filename}")
 
     r = FinanceRecord(
         type=type, date=datetime.strptime(date, "%Y-%m-%d").date(),
