@@ -133,3 +133,20 @@ class SystemConfig(Base):
     key = Column(String(50), unique=True, nullable=False, comment="配置键")
     value = Column(String(200), nullable=False, comment="配置值")
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
+class FinanceRecord(Base):
+    __tablename__ = "finance_records"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    type = Column(String(10), nullable=False, comment="收入/支出")
+    date = Column(Date, nullable=False, comment="日期")
+    amount = Column(DECIMAL(12, 2), nullable=False, comment="金额")
+    category = Column(String(30), default="", comment="类别")
+    detail = Column(String(200), default="", comment="明细")
+    person = Column(String(30), default="", comment="责任人")
+    receipt = Column(String(500), default="", comment="凭证截图路径")
+    status = Column(String(10), default="待审核", comment="待审核/已审核")
+    created_at = Column(DateTime, default=datetime.now)
+
+    __table_args__ = (Index("idx_finance_date", "date"), Index("idx_finance_type", "type"))

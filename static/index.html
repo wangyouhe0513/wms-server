@@ -207,6 +207,12 @@ createApp({
     const sumMonth = ref(new Date().getMonth() + 1);
     const summary = ref(null);
 
+    // Finance
+    const finYear = ref(new Date().getFullYear());
+    const finMonth = ref(new Date().getMonth() + 1);
+    const finRecords = ref([]);
+    const finSummary = ref({total_in:0,total_out:0,balance:0});
+
     // Analysis
     const analysisYear = ref(new Date().getFullYear());
     const analysisMonth = ref(new Date().getMonth() + 1);
@@ -331,6 +337,18 @@ createApp({
 
     const loadSummary = async () => {
       summary.value = await api(`/api/reports/sales-summary?year=${sumYear.value}&month=${sumMonth.value}`);
+    };
+
+    const loadFinance = async () => {
+      const [records, summary] = await Promise.all([
+        api(`/api/finance?year=${finYear.value}&month=${finMonth.value}`),
+        api(`/api/finance/summary?year=${finYear.value}&month=${finMonth.value}`)
+      ]);
+      finRecords.value = records; finSummary.value = summary;
+    };
+    const approveFinance = async (id, status) => {
+      await api(`/api/finance/${id}/status?status=${status}`, {method:'PUT'});
+      loadFinance();
     };
 
     const loadAnalysis = async () => {
@@ -560,6 +578,7 @@ createApp({
       obSP, obYear, obMonth, obData,
       inYear, inMonth, inData,
       sumYear, sumMonth, summary,
+      finYear, finMonth, finRecords, finSummary, loadFinance, approveFinance,
       analysisYear, analysisMonth, analysisData, loadAnalysis,
       newSpec, newColor, newColorCode, newSP, newSPType, importResult,
       quickType, quickSpec, quickSP, quickSpecs, quickColors, quickAdd,
@@ -596,6 +615,7 @@ createApp({
       {key:'outbound', label:'📤 出库记录'},
       {key:'inbound', label:'📥 入库记录'},
       {key:'summary', label:'📊 销售汇总'},
+      {key:'finance', label:'💰 财务管理'},
       {key:'analysis', label:'📈 数据分析'},
       {key:'thresholds', label:'⚠️ 预警阈值'},
       {key:'settings', label:'⚙️ 基础数据'},
@@ -905,6 +925,52 @@ createApp({
     ]);
 
     // --- Summary ---
+    // --- Finance ---
+    const renderFinance = () => {
+      const years = [2024,2025,2026,2027,2028];
+      return h('div',{style:{display:'flex',flexDirection:'column',gap:'16px'}},[
+        // 统计卡片
+        h('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:'12px'}},[
+          h('div',{class:'stat-card',style:{background:'linear-gradient(135deg,#22c55e,#16a34a)'}},[
+            h('div',{class:'label'},'💰 总收入'),h('div',{class:'value'},'¥'+this.finSummary.total_in.toLocaleString())
+          ]),
+          h('div',{class:'stat-card',style:{background:'linear-gradient(135deg,#ef4444,#dc2626)'}},[
+            h('div',{class:'label'},'💸 总支出'),h('div',{class:'value'},'¥'+this.finSummary.total_out.toLocaleString())
+          ]),
+          h('div',{class:'stat-card',style:{background:this.finSummary.balance>=0?'linear-gradient(135deg,#4f6ef7,#3d5ce5)':'linear-gradient(135deg,#f59e0b,#d97706)'}},[
+            h('div',{class:'label'},'📊 余额'),h('div',{class:'value'},'¥'+this.finSummary.balance.toLocaleString())
+          ]),
+        ]),
+        // 筛选 + 报账链接
+        h('div',{class:'card'},[
+          h('div',{style:{display:'flex',gap:'10px',alignItems:'center',marginBottom:'16px',flexWrap:'wrap'}},[
+            h('span',{class:'card-title',style:{marginBottom:0}},'💰 财务记录'),
+            h('select',{value:this.finYear,onChange:e=>{this.finYear=parseInt(e.target.value);this.loadFinance();},style:{width:'90px'}},years.map(y=>h('option',{value:y},String(y)))),
+            h('span','年'),
+            h('select',{value:this.finMonth,onChange:e=>{this.finMonth=parseInt(e.target.value);this.loadFinance();},style:{width:'70px'}},Array.from({length:12},(_,i)=>h('option',{value:i+1},String(i+1)+'月'))),
+            h('button',{class:'btn-primary btn-sm',onClick:this.loadFinance},'查询'),
+            h('span',{style:{flex:1}}),
+            h('button',{class:'btn-success btn-sm',onClick:()=>window.open('/static/report.html','_blank')},'📋 报账链接'),
+          ]),
+          h('div',{class:'table-wrap'},h('table',[
+            h('thead',h('tr',[h('th','日期'),h('th','类型'),h('th','金额'),h('th','类别'),h('th','明细'),h('th','责任人'),h('th','凭证'),h('th','状态'),h('th','操作')])),
+            h('tbody',this.finRecords.length===0?[h('tr',h('td',{colSpan:9,style:{textAlign:'center',color:'#909399',padding:'24px'}},'暂无记录'))]:
+              this.finRecords.map(r=>h('tr',{key:r.id},[
+                h('td',{style:{fontSize:'12px'}},r.date),
+                h('td',h('span',{class:'tag '+(r.type==='收入'?'tag-in':'tag-out')},r.type)),
+                h('td',{style:{fontWeight:600,color:r.type==='收入'?'#22c55e':'#ef4444'}},'¥'+r.amount.toFixed(2)),
+                h('td',r.category),h('td',{style:{fontSize:'13px',maxWidth:'150px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},r.detail),
+                h('td',r.person),
+                h('td',r.receipt?h('a',{href:r.receipt,target:'_blank',style:{color:'#4f6ef7',fontSize:'12px'}},'查看'):'—'),
+                h('td',h('span',{class:'tag',style:{background:r.status==='已审核'?'#f0fdf4':'#fefce8',color:r.status==='已审核'?'#22c55e':'#f59e0b'}},r.status)),
+                h('td',r.status==='待审核'?h('button',{class:'btn-success btn-xs',onClick:()=>this.approveFinance(r.id,'已审核')},'✓ 审核'):h('button',{class:'btn-xs',style:{background:'#f1f5f9',color:'#94a3b8'}},'已审')),
+              ]))
+            )
+          ]))
+        ]),
+      ]);
+    };
+
     const renderSummary = () => h('div',{class:'card'},[
       h('div',{style:{display:'flex',gap:'12px',alignItems:'center',marginBottom:'16px',flexWrap:'wrap'}},[
         h('span',{class:'card-title'},'📊 销售额汇总'),
@@ -1172,7 +1238,7 @@ createApp({
         ]),
         h('div',{class:'sidebar-nav'},
           tabs.map(tab=>h('button',{key:tab.key, class:this.currentTab===tab.key?'active':'',
-            onClick:()=>{this.currentTab=tab.key;if(tab.key==='admin'){this.loadAdmins();this.loadLogs();}if(tab.key==='summary'){this.loadSummary();}if(tab.key==='analysis'){this.loadAnalysis();}}
+            onClick:()=>{this.currentTab=tab.key;if(tab.key==='admin'){this.loadAdmins();this.loadLogs();}if(tab.key==='finance'){this.loadFinance();}if(tab.key==='summary'){this.loadSummary();}if(tab.key==='analysis'){this.loadAnalysis();}}
           },tab.label))
         ),
         h('div',{class:'sidebar-footer'},[
@@ -1188,6 +1254,7 @@ createApp({
         this.currentTab === 'inventory' ? renderInventory() :
         this.currentTab === 'outbound' ? renderOutbound() :
         this.currentTab === 'inbound' ? renderInbound() :
+        this.currentTab === 'finance' ? renderFinance() :
         this.currentTab === 'summary' ? renderSummary() :
         this.currentTab === 'analysis' ? renderAnalysis() :
         this.currentTab === 'thresholds' ? renderThresholds() :

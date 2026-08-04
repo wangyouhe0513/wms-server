@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, extract
 
 from database import init_db, get_db
-from models import ProductSpec, Color, ProductSku, Salesperson, Transaction, InventoryLog, Admin, OperationLog, SystemConfig
+from models import ProductSpec, Color, ProductSku, Salesperson, Transaction, InventoryLog, Admin, OperationLog, SystemConfig, FinanceRecord
 
 app = FastAPI(title="工厂进销存管理系统")
 
@@ -1228,6 +1228,95 @@ def update_settings(threshold: int, admin: Admin = Depends(get_current_admin), d
     log_operation(db, admin.id, admin.username, "update", "settings", f"全局默认低库存阈值设为 {threshold}")
     db.commit()
     return {"ok": True, "low_stock_threshold": threshold}
+
+
+# ============================================================
+# 财务管理
+# ============================================================
+import os as _os
+import uuid as _uuid
+
+RECEIPT_DIR = "static/receipts"
+_os.makedirs(RECEIPT_DIR, exist_ok=True)
+
+
+@app.get("/api/finance")
+def finance_list(year: int = 0, month: int = 0, db: Session = Depends(get_db)):
+    """财务记录列表"""
+    q = db.query(FinanceRecord).order_by(FinanceRecord.date.desc(), FinanceRecord.id.desc())
+    if year > 0:
+        q = q.filter(extract("year", FinanceRecord.date) == year)
+    if month > 0:
+        q = q.filter(extract("month", FinanceRecord.date) == month)
+    rows = q.all()
+    return [{
+        "id": r.id, "type": r.type, "date": r.date.strftime("%Y-%m-%d"),
+        "amount": float(r.amount), "category": r.category, "detail": r.detail,
+        "person": r.person, "receipt": r.receipt, "status": r.status,
+        "created_at": r.created_at.strftime("%Y-%m-%d %H:%M") if r.created_at else "",
+    } for r in rows]
+
+
+@app.post("/api/finance")
+async def finance_create(
+    type: str = Form(...), date: str = Form(...), amount: float = Form(...),
+    category: str = Form(""), detail: str = Form(""), person: str = Form(""),
+    receipt: UploadFile = File(None), db: Session = Depends(get_db),
+):
+    """提交财务记录（无需登录，微信可用）"""
+    receipt_path = ""
+    if receipt and receipt.filename:
+        ext = _os.path.splitext(receipt.filename)[1] or ".jpg"
+        filename = f"{_uuid.uuid4().hex}{ext}"
+        filepath = _os.path.join(RECEIPT_DIR, filename)
+        with open(filepath, "wb") as f:
+            f.write(await receipt.read())
+        receipt_path = f"/static/receipts/{filename}"
+
+    r = FinanceRecord(
+        type=type, date=datetime.strptime(date, "%Y-%m-%d").date(),
+        amount=Decimal(str(amount)), category=category, detail=detail,
+        person=person, receipt=receipt_path, status="待审核",
+    )
+    db.add(r)
+    db.commit()
+    return {"ok": True, "id": r.id}
+
+
+@app.put("/api/finance/{record_id}/status")
+def finance_update_status(record_id: int, status: str, admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
+    """审核财务记录"""
+    r = db.query(FinanceRecord).filter(FinanceRecord.id == record_id).first()
+    if not r:
+        raise HTTPException(404, "记录不存在")
+    r.status = status
+    log_operation(db, admin.id, admin.username, "update", "finance", f"{status}财务记录 #{record_id}: {r.type} ¥{r.amount}")
+    db.commit()
+    return {"ok": True}
+
+
+@app.get("/api/finance/summary")
+def finance_summary(year: int = 0, month: int = 0, db: Session = Depends(get_db)):
+    """财务汇总"""
+    q = db.query(FinanceRecord)
+    if year > 0:
+        q = q.filter(extract("year", FinanceRecord.date) == year)
+    if month > 0:
+        q = q.filter(extract("month", FinanceRecord.date) == month)
+
+    total_in = float(db.query(func.sum(FinanceRecord.amount)).filter(
+        FinanceRecord.type == "收入",
+        *([extract("year", FinanceRecord.date) == year] if year > 0 else []),
+        *([extract("month", FinanceRecord.date) == month] if month > 0 else []),
+    ).scalar() or 0)
+
+    total_out = float(db.query(func.sum(FinanceRecord.amount)).filter(
+        FinanceRecord.type == "支出",
+        *([extract("year", FinanceRecord.date) == year] if year > 0 else []),
+        *([extract("month", FinanceRecord.date) == month] if month > 0 else []),
+    ).scalar() or 0)
+
+    return {"total_in": total_in, "total_out": total_out, "balance": total_in - total_out}
 
 
 # ============================================================
