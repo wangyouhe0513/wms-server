@@ -758,11 +758,11 @@ def inventory_snapshot_download(admin: Admin = Depends(get_current_admin), db: S
         rows_html += f'<tr><td style="padding:6px 10px;font-weight:600;white-space:nowrap">{spec}</td>{items_html}</tr>'
 
     # 生成铺满的水印网格
-    watermark_text = f"{admin.username} ｜ 淼伊库服饰有限公司 ｜ {today_str}"
+    watermark_text = f"{admin.username} ｜ {today_str}"
     cells = ""
-    for r in range(8):
-        for c in range(5):
-            cells += f'<span style="font-size:28px;color:#000;transform:rotate(-25deg);white-space:nowrap;padding:40px 30px;">{watermark_text}</span>'
+    for r in range(12):
+        for c in range(8):
+            cells += f'<span style="font-size:24px;color:#000;transform:rotate(-25deg);white-space:nowrap;padding:30px 20px;">{watermark_text}</span>'
 
     html = f"""<!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="UTF-8">
@@ -782,7 +782,7 @@ td {{ border:1px solid #ddd; }}
 <body>
 <div class="watermark">{cells}</div>
 <h1>📦 库存快照</h1>
-<div class="date">下载人：{admin.username} ｜ 下载日期：{today_str}</div>
+<div class="date">下载人：{admin.username} ｜ 日期：{today_str}</div>
 <table><thead><tr><th>规格</th>"""
     # 表头：取最大颜色数列
     max_colors = max(len(items) for items in groups.values()) if groups else 1

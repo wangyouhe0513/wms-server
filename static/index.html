@@ -426,6 +426,20 @@ createApp({
       invData.value = d.inventory; invLowStock.value = d.low_stock;
     };
 
+    const downloadSnapshot = async () => {
+      try {
+        const headers = token.value ? {'Authorization':'Bearer '+token.value} : {};
+        const res = await fetch('/api/inventory/snapshot', {headers});
+        if (!res.ok) { alert('下载失败，请先登录'); return; }
+        const html = await res.text();
+        const blob = new Blob([html], {type:'text/html;charset=utf-8'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `库存快照_${today}.html`; a.click();
+        URL.revokeObjectURL(url);
+      } catch(e) { alert('下载失败'); }
+    };
+
     const saveGlobalSettings = async () => {
       const v = parseInt(globalSettings.value.low_stock_threshold);
       if (isNaN(v) || v < 0) return alert('请输入有效数字（0 或正整数）');
@@ -545,7 +559,7 @@ createApp({
       analysisYear, analysisMonth, analysisData, loadAnalysis,
       newSpec, newColor, newColorCode, newSP, newSPType, importResult,
       quickType, quickSpec, quickSP, quickSpecs, quickColors, quickAdd,
-      addEntryRow, submitEntries, loadTodayRecords, deleteTransaction, loadOutbound, exportOutbound, loadInbound, exportInbound, loadSummary, renderCharts, loadInventory,
+      addEntryRow, submitEntries, loadTodayRecords, deleteTransaction, loadOutbound, exportOutbound, loadInbound, exportInbound, loadSummary, renderCharts, loadInventory, downloadSnapshot,
       saveSpec, deleteSpec, editSpec, saveColor, deleteColor, editColor,
       saveSP, deleteSP, importStock, fmt, entryOutTotal, entryInTotal, filteredInventory,
       globalSettings, saveGlobalSettings, skuThresholds, loadSkuThresholds, saveSkuThreshold,
@@ -620,7 +634,7 @@ createApp({
             h('button',{class:'btn-success',onClick:()=>this.currentTab='inventory',style:{padding:'12px',fontSize:'14px'}},'📦 实时库存'),
             h('button',{class:'btn-warning',onClick:()=>this.currentTab='outbound',style:{padding:'12px',fontSize:'14px'}},'📤 出库记录'),
             h('button',{style:{padding:'12px',fontSize:'14px',background:'#909399',color:'#fff',border:'none',borderRadius:'6px',cursor:'pointer'},
-              onClick:()=>window.open('/api/inventory/snapshot','_blank')},'📥 库存快照'),
+              onClick:()=>this.downloadSnapshot()},'📥 库存快照'),
           ]),
         ]),
         // System info
@@ -789,7 +803,7 @@ createApp({
       h('div',{style:{display:'flex',gap:'12px',alignItems:'center',marginBottom:'16px',flexWrap:'wrap'}},[
         h('span',{class:'card-title'},'📦 实时库存'),
         h('input',{value:this.invFilter,onInput:e=>this.invFilter=e.target.value,placeholder:'搜索规格...',style:{width:'200px'}}),
-        h('button',{class:'btn-warning btn-sm',onClick:()=>window.open('/api/inventory/snapshot','_blank')},'📥 下载快照'),
+        h('button',{class:'btn-warning btn-sm',onClick:()=>this.downloadSnapshot()},'📥 下载快照'),
       ]),
       this.invLowStock.length ? h('div',{style:{background:'#fef0f0',padding:'10px 16px',borderRadius:'8px',marginBottom:'16px'}},[
         '🔴 ',h('b','低库存预警：'),
