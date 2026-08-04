@@ -743,7 +743,10 @@ createApp({
             h('table',[
               h('thead',h('tr',[h('th','人员'),h('th','销售额')])),
               h('tbody',Object.entries(this.summary.by_salesperson).map(([name,amt])=>
-                h('tr',{key:name},[h('td',name),h('td',{style:{fontWeight:600}},'¥'+amt.toFixed(2))])))
+                h('tr',{key:name},[h('td',name),h('td',{style:{fontWeight:600}},'¥'+amt.toFixed(2))]))),
+              h('tfoot',h('tr',{style:{background:'#fafafa',fontWeight:700,borderTop:'2px solid #409eff'}},[
+                h('td','合计'),h('td',{style:{color:'#f56c6c'}},'¥'+Object.values(this.summary.by_salesperson).reduce((s,v)=>s+v,0).toFixed(2))
+              ]))
             ])
           ]),
           h('div',{style:{flex:1,minWidth:'300px'}},[
@@ -751,7 +754,10 @@ createApp({
             h('table',[
               h('thead',h('tr',[h('th','品类'),h('th','销售额')])),
               h('tbody',Object.entries(this.summary.by_spec).map(([name,amt])=>
-                h('tr',{key:name},[h('td',name),h('td',{style:{fontWeight:600}},'¥'+amt.toFixed(2))])))
+                h('tr',{key:name},[h('td',name),h('td',{style:{fontWeight:600}},'¥'+amt.toFixed(2))]))),
+              h('tfoot',h('tr',{style:{background:'#fafafa',fontWeight:700,borderTop:'2px solid #409eff'}},[
+                h('td','合计'),h('td',{style:{color:'#f56c6c'}},'¥'+Object.values(this.summary.by_spec).reduce((s,v)=>s+v,0).toFixed(2))
+              ]))
             ])
           ]),
         ]),
