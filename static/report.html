@@ -48,7 +48,7 @@ textarea { resize: vertical; min-height: 60px; }
 </div>
 <div class="row">
   <div><label>明细说明</label><input id="detail" placeholder="简要说明"></div>
-  <div><label>责任人</label><input id="person" placeholder="姓名"></div>
+  <div><label>责任人</label><select id="person"><option value="">请选择</option></select></div>
 </div>
 <div><label>凭证截图（可多选）</label><input type="file" id="receipt" accept="image/*" multiple onchange="previewImage()"></div>
 <div class="preview" id="preview"></div>
@@ -97,6 +97,11 @@ async function submit() {
   }
 }
 document.getElementById('date').value = new Date().toISOString().slice(0,10);
+// 加载销售人员列表
+fetch('/api/salespersons').then(r=>r.json()).then(list=>{
+  const sel = document.getElementById('person');
+  list.forEach(s=>{ const o = document.createElement('option'); o.value = s.name; o.textContent = s.name; sel.appendChild(o); });
+});
 </script>
 </body>
 </html>
