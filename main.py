@@ -718,8 +718,11 @@ def set_threshold(sku_id: int, threshold: int, admin: Admin = Depends(get_curren
 
 @app.get("/api/inventory/snapshot")
 def inventory_snapshot_download(admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
-    """生成带水印的库存快照 HTML，浏览器可直接打印为 PDF"""
+    """生成带水印的库存快照 PNG 图片"""
     from datetime import date as dt_date
+    from PIL import Image, ImageDraw, ImageFont
+    import os
+
     today_str = dt_date.today().strftime("%Y-%m-%d")
     default_threshold = get_low_stock_threshold(db)
 
@@ -744,57 +747,96 @@ def inventory_snapshot_download(admin: Admin = Depends(get_current_admin), db: S
             "threshold": sku.low_stock_threshold or default_threshold,
         })
 
-    # 构建表格行
-    rows_html = ""
-    for spec, items in groups.items():
-        items_html = ""
-        for item in items:
-            low = item["stock"] < item["threshold"]
-            items_html += (
-                f'<td style="padding:6px 10px;text-align:center;'
-                f'{"color:red;font-weight:bold" if low else ""}'
-                f'">{item["color"]}<br>{item["stock"]}</td>'
-            )
-        rows_html += f'<tr><td style="padding:6px 10px;font-weight:600;white-space:nowrap">{spec}</td>{items_html}</tr>'
-
-    # 生成铺满的水印网格
-    watermark_text = f"{admin.username} ｜ {today_str}"
-    cells = ""
-    for r in range(12):
-        for c in range(8):
-            cells += f'<span style="font-size:24px;color:#000;transform:rotate(-25deg);white-space:nowrap;padding:30px 20px;">{watermark_text}</span>'
-
-    html = f"""<!DOCTYPE html>
-<html lang="zh-CN"><head><meta charset="UTF-8">
-<title>库存快照 {today_str}</title>
-<style>
-@page {{ margin: 15mm; }}
-body {{ font-family: 'PingFang SC','Microsoft YaHei',sans-serif; margin:0; padding:20px; }}
-h1 {{ text-align:center; color:#333; margin-bottom:5px; }}
-.date {{ text-align:center; color:#999; font-size:13px; margin-bottom:20px; }}
-table {{ width:100%; border-collapse:collapse; font-size:12px; position:relative; z-index:1; background:rgba(255,255,255,0.85); }}
-th {{ background:#f5f5f5; padding:8px 10px; border:1px solid #ddd; }}
-td {{ border:1px solid #ddd; }}
-.watermark {{ position:fixed; top:-20px; left:-20px; width:calc(100% + 40px); height:calc(100% + 40px); pointer-events:none; z-index:0;
-  display:flex; flex-wrap:wrap; align-items:center; justify-content:center; align-content:center; opacity:0.06; }}
-@media print {{ .watermark {{ display:flex; }} }}
-</style></head>
-<body>
-<div class="watermark">{cells}</div>
-<h1>📦 库存快照</h1>
-<div class="date">下载人：{admin.username} ｜ 日期：{today_str}</div>
-<table><thead><tr><th>规格</th>"""
-    # 表头：取最大颜色数列
     max_colors = max(len(items) for items in groups.values()) if groups else 1
-    for i in range(max_colors):
-        html += f'<th>颜色/库存</th>'
-    html += '</tr></thead><tbody>' + rows_html + '</tbody></table>'
-    html += '</body></html>'
 
-    filename = f'inventory_snapshot_{today_str}.html'
+    # 尝试加载中文字体
+    font_paths = [
+        "/System/Library/Fonts/PingFang.ttc",
+        "/System/Library/Fonts/STHeiti Light.ttc",
+        "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+        "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+    ]
+    font = None
+    for fp in font_paths:
+        if os.path.exists(fp):
+            try:
+                font = ImageFont.truetype(fp, 13)
+                break
+            except:
+                pass
+    if font is None:
+        font = ImageFont.load_default()
+
+    font_small = ImageFont.truetype(font.path, 11) if hasattr(font, 'path') and os.path.exists(font.path) else font
+    font_title = ImageFont.truetype(font.path, 18) if hasattr(font, 'path') and os.path.exists(font.path) else font
+    font_watermark = ImageFont.truetype(font.path, 22) if hasattr(font, 'path') and os.path.exists(font.path) else font
+
+    # 计算尺寸
+    col_w = 90  # 颜色列宽
+    spec_w = 80  # 规格列宽
+    total_width = spec_w + max_colors * col_w + 2
+    row_height = 30
+    header_height = 100
+    total_height = header_height + (len(groups) + 1) * row_height + 20
+
+    # 创建白色背景
+    img = Image.new('RGB', (total_width, total_height), 'white')
+    draw = ImageDraw.Draw(img)
+
+    # 水印 — 铺满整图
+    watermark_text = f"{admin.username} | {today_str}"
+    wm_layer = Image.new('RGBA', (total_width, total_height), (255,255,255,0))
+    wm_draw = ImageDraw.Draw(wm_layer)
+    step_y, step_x = 70, 220
+    for y in range(-50, total_height + 50, step_y):
+        for x in range(-100, total_width + 100, step_x):
+            wm_draw.text((x, y), watermark_text, fill=(0, 0, 0, 20), font=font_watermark)
+    img = Image.alpha_composite(img.convert('RGBA'), wm_layer).convert('RGB')
+    draw = ImageDraw.Draw(img)
+
+    # 标题
+    title = "库存快照"
+    draw.text((total_width / 2 - 50, 14), title, fill='#333', font=font_title)
+    # 副标题
+    subtitle = f"下载人：{admin.username}  |  日期：{today_str}"
+    draw.text((total_width / 2 - 120, 44), subtitle, fill='#999', font=font_small)
+
+    # 表头
+    y = header_height - row_height
+    draw.rectangle([0, y, total_width, y + row_height], fill='#f5f5f5')
+    draw.text((5, y + 6), "规格", fill='#606266', font=font_small)
+    draw.line([(spec_w, y), (spec_w, y + row_height)], fill='#ddd')
+    for i in range(max_colors):
+        cx = spec_w + i * col_w
+        draw.text((cx + 5, y + 6), "颜色/库存", fill='#606266', font=font_small)
+        draw.line([(cx + col_w, y), (cx + col_w, y + row_height)], fill='#ddd')
+    draw.line([(0, y), (total_width, y)], fill='#ddd')
+    draw.line([(0, y + row_height), (total_width, y + row_height)], fill='#ddd')
+
+    # 数据行
+    for spec, items in groups.items():
+        y += row_height
+        draw.text((5, y + 6), spec, fill='#303133', font=font_small)
+        draw.line([(spec_w, y), (spec_w, y + row_height)], fill='#ddd')
+        for i, item in enumerate(items):
+            cx = spec_w + i * col_w
+            low = item["stock"] < item["threshold"]
+            fill_color = '#f56c6c' if low else '#303133'
+            draw.text((cx + 4, y + 1), item["color"], fill='#909399', font=ImageFont.truetype(font.path, 8) if hasattr(font, 'path') else font)
+            draw.text((cx + 4, y + 12), str(item["stock"]), fill=fill_color, font=font_small)
+            draw.line([(cx + col_w, y), (cx + col_w, y + row_height)], fill='#ddd')
+        draw.line([(0, y + row_height), (total_width, y + row_height)], fill='#ddd')
+
+    # 输出 PNG
+    buf = io.BytesIO()
+    img.save(buf, format='PNG')
+    buf.seek(0)
+
+    filename = f'inventory_snapshot_{today_str}.png'
     return Response(
-        content=html.encode('utf-8'),
-        media_type="text/html; charset=utf-8",
+        content=buf.getvalue(),
+        media_type="image/png",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )
 
