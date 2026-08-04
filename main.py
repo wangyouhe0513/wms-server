@@ -1390,17 +1390,23 @@ def finance_summary(year: int = 0, month: int = 0, db: Session = Depends(get_db)
 
     total_in = float(db.query(func.sum(FinanceRecord.amount)).filter(
         FinanceRecord.type == "收入",
+        FinanceRecord.category != "初始化",
         *([extract("year", FinanceRecord.date) == year] if year > 0 else []),
         *([extract("month", FinanceRecord.date) == month] if month > 0 else []),
     ).scalar() or 0)
 
     total_out = float(db.query(func.sum(FinanceRecord.amount)).filter(
         FinanceRecord.type == "支出",
+        FinanceRecord.category != "初始化",
         *([extract("year", FinanceRecord.date) == year] if year > 0 else []),
         *([extract("month", FinanceRecord.date) == month] if month > 0 else []),
     ).scalar() or 0)
 
-    return {"total_in": total_in, "total_out": total_out, "balance": total_in - total_out}
+    init_balance = float(db.query(func.sum(FinanceRecord.amount)).filter(
+        FinanceRecord.type == "收入", FinanceRecord.category == "初始化",
+    ).scalar() or 0)
+
+    return {"total_in": total_in, "total_out": total_out, "balance": init_balance + total_in - total_out}
 
 
 # ============================================================
