@@ -793,12 +793,13 @@ createApp({
       {key:'outbound', label:'📤 出库记录'},
       {key:'inbound', label:'📥 入库记录'},
       {key:'summary', label:'📊 销售汇总'},
+      {key:'analysis', label:'📈 数据分析'},
       {key:'salary', label:'💵 工资管理'},
       {key:'finance', label:'💰 财务管理'},
-      {key:'analysis', label:'📈 数据分析'},
       {key:'thresholds', label:'⚠️ 预警阈值'},
       {key:'settings', label:'⚙️ 基础数据'},
       {key:'admin', label:'👑 管理员'},
+      {key:'help', label:'📖 使用说明'},
     ];
 
     // --- Dashboard ---
@@ -1521,7 +1522,8 @@ createApp({
         ]),
         h('div',{class:'sidebar-nav'},
           tabs.map(tab=>h('button',{key:tab.key, class:this.currentTab===tab.key?'active':'',
-            onClick:()=>{this.currentTab=tab.key;if(tab.key==='admin'){this.loadAdmins();this.loadLogs();}if(tab.key==='salary'){this.loadSalary();}if(tab.key==='finance'){this.loadFinance();this.loadFinCategories();}if(tab.key==='summary'){this.loadSummary();}if(tab.key==='analysis'){this.loadAnalysis();}}
+            onClick:()=>{this.currentTab=tab.key;if(tab.key==='help'){window.open('/static/doc.html','_blank');this.currentTab='dashboard';return;}
+if(tab.key==='admin'){this.loadAdmins();this.loadLogs();}if(tab.key==='salary'){this.loadSalary();}if(tab.key==='finance'){this.loadFinance();this.loadFinCategories();}if(tab.key==='summary'){this.loadSummary();}if(tab.key==='analysis'){this.loadAnalysis();}}
           },tab.label))
         ),
         h('div',{class:'sidebar-footer'},[
