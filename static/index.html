@@ -183,10 +183,11 @@ createApp({
     // === Auth ===
     const token = ref(localStorage.getItem('wms_token') || '');
     const authUser = ref(JSON.parse(localStorage.getItem('wms_user') || 'null'));
-    const loginUsername = ref('');
-    const loginPassword = ref('');
+    const loginUsername = ref(localStorage.getItem('wms_remember_user') || '');
+    const loginPassword = ref(localStorage.getItem('wms_remember_pass') || '');
     const loginError = ref('');
     const loginLoading = ref(false);
+    const rememberMe = ref(!!localStorage.getItem('wms_remember_user'));
 
     const doLogin = async () => {
       loginError.value = ''; loginLoading.value = true;
@@ -201,6 +202,14 @@ createApp({
         authUser.value = {username: data.username, role: data.role};
         localStorage.setItem('wms_token', data.token);
         localStorage.setItem('wms_user', JSON.stringify(authUser.value));
+        // 记住密码
+        if (rememberMe.value) {
+          localStorage.setItem('wms_remember_user', loginUsername.value);
+          localStorage.setItem('wms_remember_pass', loginPassword.value);
+        } else {
+          localStorage.removeItem('wms_remember_user');
+          localStorage.removeItem('wms_remember_pass');
+        }
       } catch(e) { loginError.value = e.message; }
       loginLoading.value = false;
     };
@@ -733,7 +742,7 @@ createApp({
 
     return {
       // Auth
-      token, authUser, loginUsername, loginPassword, loginError, loginLoading,
+      token, authUser, loginUsername, loginPassword, loginError, loginLoading, rememberMe,
       doLogin, doLogout, showChangePwd, oldPwd, newPwd, changePwd,
       // Main
       currentTab, today, dash, entryDate, entryRows, submitting, msg, msgType, todayRecords,
@@ -768,6 +777,10 @@ createApp({
         this.loginError ? h('div',{class:'error-msg'},this.loginError) : null,
         h('input',{type:'text',value:this.loginUsername,onInput:e=>this.loginUsername=e.target.value,placeholder:'用户名',onKeyup:e=>e.key==='Enter'&&this.doLogin()}),
         h('input',{type:'password',value:this.loginPassword,onInput:e=>this.loginPassword=e.target.value,placeholder:'密码',onKeyup:e=>e.key==='Enter'&&this.doLogin()}),
+        h('div',{style:{display:'flex',alignItems:'center',gap:'6px',marginBottom:'16px',fontSize:'13px',color:'#64748b'}},[
+          h('input',{type:'checkbox',checked:this.rememberMe,onChange:e=>this.rememberMe=e.target.checked,style:{width:'auto',margin:0}}),
+          h('span','记住密码'),
+        ]),
         h('button',{class:'btn-primary',onClick:this.doLogin,disabled:this.loginLoading,style:{width:'100%',padding:'12px',fontSize:'16px'}},
           this.loginLoading?'登录中...':'登 录'),
       ]);
