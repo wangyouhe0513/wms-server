@@ -1659,9 +1659,14 @@ th{{background:#f5f5f5}}.total{{font-size:18px;font-weight:700;text-align:right;
 @media print{{body{{margin:0;padding:10px}}}}</style></head><body>
 <h2>💰 {worker} - {month} 工资单</h2><table><thead><tr><th>工序</th><th>数量</th><th>单价</th><th>金额</th><th>支付</th><th>录入时间</th></tr></thead><tbody>{rows_html}</tbody></table>
 <div class="total">合计: ¥{total:.2f} &nbsp;|&nbsp; 已付: ¥{paid:.2f} &nbsp;|&nbsp; 未付: ¥{total-paid:.2f}</div>
-<div style="background:#fefce8;border:1px solid #f59e0b;border-radius:8px;padding:12px;margin-bottom:20px;text-align:center;font-size:14px;">
-📱 <b>截图发送给厂长：</b> iPhone按<b>电源+音量+</b> | 安卓<b>电源+音量-</b>
+<div style="background:#fefce8;border:1px solid #f59e0b;border-radius:8px;padding:14px;margin-bottom:20px;text-align:center;font-size:15px;">
+📱 <b>截图发送给厂长</b><br>
+<span style="font-size:13px;color:#64748b;">iPhone同时按 <b>电源键+音量+</b> &nbsp;|&nbsp; 安卓同时按 <b>电源键+音量-</b></span>
 </div>
+<div style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#4f6ef7;color:#fff;padding:14px 28px;border-radius:30px;font-size:16px;font-weight:700;box-shadow:0 4px 16px rgba(79,110,247,.4);z-index:999;animation:pulse 2s infinite;pointer-events:none;">
+📸 按手机侧边键截图
+</div>
+<style>@keyframes pulse{0%,100%{opacity:1}50%{opacity:.7}}</style>
 <div class="footer">淼伊库服饰有限公司 · {month}工资单 · 生成时间: {date.today()}</div>
 </body></html>"""
     return Response(content=html, media_type="text/html; charset=utf-8")
