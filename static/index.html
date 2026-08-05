@@ -207,6 +207,13 @@ createApp({
     const sumMonth = ref(new Date().getMonth() + 1);
     const summary = ref(null);
 
+    // Salary
+    const salWorkers = ref([]); const salPrices = ref([]); const salRecords = ref([]);
+    const salSummary = ref([]); const salMonth = ref(new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0'));
+    const salNewWorker = ref(''); const salNewJobType = ref('机工');
+    const salNewItem = ref(''); const salNewPrice = ref('');
+    const salEditWorkerId = ref(0); const salEditItemId = ref(0);
+
     // Finance
     const finYear = ref(new Date().getFullYear());
     const finMonth = ref(new Date().getMonth() + 1);
@@ -340,6 +347,61 @@ createApp({
     const loadSummary = async () => {
       summary.value = await api(`/api/reports/sales-summary?year=${sumYear.value}&month=${sumMonth.value}`);
     };
+
+    // -- Salary functions --
+    const loadSalary = async () => {
+      const [workers, prices, records, summary] = await Promise.all([
+        api('/api/salary/workers'), api('/api/salary/prices'),
+        api(`/api/salary/records?month=${salMonth.value}`),
+        api(`/api/salary/summary?month=${salMonth.value}`)
+      ]);
+      salWorkers.value = workers; salPrices.value = prices;
+      salRecords.value = records; salSummary.value = summary;
+    };
+    const saveSalWorker = async () => {
+      if (!salNewWorker.value.trim()) return;
+      await api(`/api/salary/workers?name=${encodeURIComponent(salNewWorker.value.trim())}&job_type=${salNewJobType.value}`, {method:'POST'});
+      salNewWorker.value = ''; loadSalary();
+    };
+    const deleteSalWorker = async (id) => {
+      if (!confirm('确定删除？')) return;
+      await api(`/api/salary/workers/${id}`, {method:'DELETE'}); loadSalary();
+    };
+    const saveSalPrice = async () => {
+      if (!salNewItem.value.trim() || !salNewPrice.value) return;
+      await api(`/api/salary/prices?item_name=${encodeURIComponent(salNewItem.value.trim())}&unit_price=${salNewPrice.value}`, {method:'POST'});
+      salNewItem.value = ''; salNewPrice.value = ''; loadSalary();
+    };
+    const deleteSalPrice = async (id) => {
+      if (!confirm('确定删除？')) return;
+      await api(`/api/salary/prices/${id}`, {method:'DELETE'}); loadSalary();
+    };
+    const addSalRecord = async () => {
+      const wid = document.getElementById('salWorkerSelect')?.value;
+      const item = document.getElementById('salItemSelect')?.value;
+      const qty = parseInt(document.getElementById('salQty')?.value||0);
+      const price = parseFloat(document.getElementById('salPrice')?.value||0);
+      const method = document.getElementById('salMethod')?.value||'微信';
+      const remark = document.getElementById('salRemark')?.value||'';
+      if (!wid || !item || !qty || !price) return alert('请填写完整');
+      await api('/api/salary/records', {method:'POST', body:JSON.stringify({
+        worker_id: parseInt(wid), month: salMonth.value, item_name: item,
+        quantity: qty, unit_price: price, payment_method: method, remark
+      })});
+      loadSalary();
+    };
+    const deleteSalRecord = async (id) => {
+      if (!confirm('删除？')) return;
+      await api(`/api/salary/records/${id}`, {method:'DELETE'}); loadSalary();
+    };
+    const toggleSalPaid = async (r) => {
+      await api(`/api/salary/records/${r.id}`, {method:'PUT', body:JSON.stringify({
+        quantity: r.quantity, unit_price: r.unit_price,
+        payment_method: r.payment_method, paid: r.paid?0:1, remark: r.remark
+      })});
+      loadSalary();
+    };
+    const exportSalary = () => window.open(`/api/salary/export?month=${salMonth.value}`, '_blank');
 
     const loadFinance = async () => {
       const [records, summary] = await Promise.all([
@@ -601,6 +663,8 @@ createApp({
       obSP, obYear, obMonth, obData,
       inYear, inMonth, inData,
       sumYear, sumMonth, summary,
+      salWorkers, salPrices, salRecords, salSummary, salMonth, salNewWorker, salNewJobType, salNewItem, salNewPrice,
+      loadSalary, saveSalWorker, deleteSalWorker, saveSalPrice, deleteSalPrice, addSalRecord, deleteSalRecord, toggleSalPaid, exportSalary,
       finYear, finMonth, finRecords, finSummary, loadFinance, exportFinance, deleteFinance, finCategories, newFinCat, loadFinCategories, saveFinCat, deleteFinCat,
       analysisYear, analysisMonth, analysisData, loadAnalysis,
       newSpec, newColor, newColorCode, newSP, newSPType, importResult,
@@ -638,6 +702,7 @@ createApp({
       {key:'outbound', label:'📤 出库记录'},
       {key:'inbound', label:'📥 入库记录'},
       {key:'summary', label:'📊 销售汇总'},
+      {key:'salary', label:'💵 工资管理'},
       {key:'finance', label:'💰 财务管理'},
       {key:'analysis', label:'📈 数据分析'},
       {key:'thresholds', label:'⚠️ 预警阈值'},
@@ -948,6 +1013,88 @@ createApp({
     ]);
 
     // --- Summary ---
+    // --- Salary ---
+    const renderSalary = () => h('div',{style:{display:'flex',flexDirection:'column',gap:'16px'}},[
+      // 工人+工序管理行
+      h('div',{style:{display:'flex',gap:'12px',flexWrap:'wrap'}},[
+        h('div',{class:'card',style:{flex:1,minWidth:'280px'}},[
+          h('div',{class:'card-title'},'👷 工人管理'),
+          h('div',{style:{display:'flex',gap:'6px',flexWrap:'wrap'}},this.salWorkers.map(w=>h('span',{key:w.id,style:{background:'#f1f5f9',padding:'3px 10px',borderRadius:'4px',fontSize:'12px',display:'inline-flex',alignItems:'center',gap:'4px'}},
+            [w.name+'-'+w.job_type, h('span',{style:{cursor:'pointer',color:'#ef4444',fontWeight:700},onClick:()=>this.deleteSalWorker(w.id)},'×')]
+          ))),
+          h('div',{style:{display:'flex',gap:'6px',marginTop:'10px'}},[
+            h('input',{value:this.salNewWorker,onInput:e=>this.salNewWorker=e.target.value,placeholder:'姓名',style:{width:'80px',fontSize:'12px'}}),
+            h('select',{value:this.salNewJobType,onChange:e=>this.salNewJobType=e.target.value,style:{fontSize:'12px'}},[h('option','机工'),h('option','厂长'),h('option','辅工')]),
+            h('button',{class:'btn-primary btn-xs',onClick:this.saveSalWorker},'+'),
+          ]),
+        ]),
+        h('div',{class:'card',style:{flex:1,minWidth:'280px'}},[
+          h('div',{class:'card-title'},'📏 工序单价'),
+          h('div',{style:{display:'flex',gap:'6px',flexWrap:'wrap'}},this.salPrices.map(p=>h('span',{key:p.id,style:{background:'#f1f5f9',padding:'3px 10px',borderRadius:'4px',fontSize:'12px',display:'inline-flex',alignItems:'center',gap:'4px'}},
+            [p.item_name+' ¥'+p.unit_price, h('span',{style:{cursor:'pointer',color:'#ef4444',fontWeight:700},onClick:()=>this.deleteSalPrice(p.id)},'×')]
+          ))),
+          h('div',{style:{display:'flex',gap:'6px',marginTop:'10px'}},[
+            h('input',{value:this.salNewItem,onInput:e=>this.salNewItem=e.target.value,placeholder:'工序名',style:{width:'100px',fontSize:'12px'}}),
+            h('input',{type:'number',step:'0.1',value:this.salNewPrice,onInput:e=>this.salNewPrice=e.target.value,placeholder:'单价',style:{width:'70px',fontSize:'12px'}}),
+            h('button',{class:'btn-primary btn-xs',onClick:this.saveSalPrice},'+'),
+          ]),
+        ]),
+      ]),
+      // 录入行
+      h('div',{class:'card'},[
+        h('div',{class:'card-title'},'📝 录入工资'),
+        h('div',{style:{display:'flex',gap:'8px',alignItems:'center',flexWrap:'wrap',marginBottom:'12px'}},[
+          h('span',{style:{fontSize:'13px'}},'月份:'),
+          h('input',{type:'month',value:this.salMonth,onInput:e=>this.salMonth=e.target.value,style:{fontSize:'13px'}}),
+          h('button',{class:'btn-primary btn-sm',onClick:this.loadSalary},'查询'),
+          h('span',{style:{flex:1}}),
+          h('button',{class:'btn-warning btn-sm',onClick:this.exportSalary},'📥 导出Excel'),
+        ]),
+        h('div',{style:{display:'flex',gap:'8px',alignItems:'center',flexWrap:'wrap'}},[
+          h('select',{id:'salWorkerSelect',style:{flex:1,minWidth:'100px',fontSize:'13px'}},
+            [h('option',{value:''},'选工人'),...this.salWorkers.map(w=>h('option',{value:w.id},w.name))]),
+          h('select',{id:'salItemSelect',style:{flex:1,minWidth:'120px',fontSize:'13px'},onChange:e=>{
+            const p = this.salPrices.find(p=>p.item_name===e.target.value);
+            if(p) document.getElementById('salPrice').value = p.unit_price;
+          }},
+            [h('option',{value:''},'选工序'),...this.salPrices.map(p=>h('option',{value:p.item_name},p.item_name+' ¥'+p.unit_price))]),
+          h('input',{id:'salQty',type:'number',min:1,placeholder:'数量',style:{width:'70px',fontSize:'13px'},onChange:e=>{
+            const q=parseInt(e.target.value)||0; const p=parseFloat(document.getElementById('salPrice').value)||0;
+          }}),
+          h('input',{id:'salPrice',type:'number',step:'0.1',placeholder:'单价',style:{width:'80px',fontSize:'13px'}}),
+          h('select',{id:'salMethod',style:{width:'80px',fontSize:'13px'}},[h('option','微信'),h('option','现金')]),
+          h('input',{id:'salRemark',placeholder:'备注',style:{width:'80px',fontSize:'13px'}}),
+          h('button',{class:'btn-primary btn-sm',onClick:this.addSalRecord},'+ 添加'),
+        ]),
+        // 记录表格
+        this.salRecords.length > 0 ? h('div',{style:{marginTop:'16px'}},h('div',{class:'table-wrap'},h('table',[
+          h('thead',h('tr',[h('th','工人'),h('th','工序'),h('th','数量'),h('th','单价'),h('th','金额'),h('th','支付'),h('th','已付'),h('th','备注'),h('th','操作')])),
+          h('tbody',this.salRecords.map(r=>h('tr',{key:r.id},[
+            h('td',r.worker_name),h('td',r.item_name),
+            h('td',String(r.quantity)),h('td','¥'+r.unit_price),
+            h('td',{style:{fontWeight:600}},'¥'+r.amount.toFixed(2)),
+            h('td',r.payment_method),
+            h('td',{style:{cursor:'pointer'},onClick:()=>this.toggleSalPaid(r)},r.paid?'✅':'❌'),
+            h('td',{style:{fontSize:'12px',color:'#94a3b8'}},r.remark),
+            h('td',h('button',{class:'btn-danger btn-xs',onClick:()=>this.deleteSalRecord(r.id)},'✕')),
+          ])))
+        ]))) : null,
+      ]),
+      // 汇总
+      this.salSummary.length > 0 ? h('div',{class:'card'},[
+        h('div',{class:'card-title'},'📊 工资汇总'),
+        h('table',[
+          h('thead',h('tr',[h('th','工人'),h('th','合计'),h('th','已付'),h('th','未付')])),
+          h('tbody',this.salSummary.map(s=>h('tr',{key:s.worker_name},[
+            h('td',{style:{fontWeight:600}},s.worker_name),
+            h('td',{style:{fontWeight:700,color:'#4f6ef7'}},'¥'+s.total.toFixed(2)),
+            h('td',{style:{color:'#22c55e'}},'¥'+s.paid_amount.toFixed(2)),
+            h('td',{style:{color:'#ef4444'}},'¥'+(s.total-s.paid_amount).toFixed(2)),
+          ])))
+        ])
+      ]) : null,
+    ]);
+
     // --- Finance ---
     const renderFinance = () => {
       const years = [2024,2025,2026,2027,2028];
@@ -1272,7 +1419,7 @@ createApp({
         ]),
         h('div',{class:'sidebar-nav'},
           tabs.map(tab=>h('button',{key:tab.key, class:this.currentTab===tab.key?'active':'',
-            onClick:()=>{this.currentTab=tab.key;if(tab.key==='admin'){this.loadAdmins();this.loadLogs();}if(tab.key==='finance'){this.loadFinance();this.loadFinCategories();}if(tab.key==='summary'){this.loadSummary();}if(tab.key==='analysis'){this.loadAnalysis();}}
+            onClick:()=>{this.currentTab=tab.key;if(tab.key==='admin'){this.loadAdmins();this.loadLogs();}if(tab.key==='salary'){this.loadSalary();}if(tab.key==='finance'){this.loadFinance();this.loadFinCategories();}if(tab.key==='summary'){this.loadSummary();}if(tab.key==='analysis'){this.loadAnalysis();}}
           },tab.label))
         ),
         h('div',{class:'sidebar-footer'},[
@@ -1288,6 +1435,7 @@ createApp({
         this.currentTab === 'inventory' ? renderInventory() :
         this.currentTab === 'outbound' ? renderOutbound() :
         this.currentTab === 'inbound' ? renderInbound() :
+        this.currentTab === 'salary' ? renderSalary() :
         this.currentTab === 'finance' ? renderFinance() :
         this.currentTab === 'summary' ? renderSummary() :
         this.currentTab === 'analysis' ? renderAnalysis() :

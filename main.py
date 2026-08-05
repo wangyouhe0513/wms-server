@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, extract
 
 from database import init_db, get_db
-from models import ProductSpec, Color, ProductSku, Salesperson, Transaction, InventoryLog, Admin, OperationLog, SystemConfig, FinanceRecord, FinanceCategory
+from models import ProductSpec, Color, ProductSku, Salesperson, Transaction, InventoryLog, Admin, OperationLog, SystemConfig, FinanceRecord, FinanceCategory, SalaryWorker, SalaryPrice, SalaryRecord
 
 app = FastAPI(title="工厂进销存管理系统")
 
@@ -1412,6 +1412,168 @@ def finance_summary(year: int = 0, month: int = 0, db: Session = Depends(get_db)
     ).scalar() or 0)
 
     return {"total_in": total_in, "total_out": total_out, "balance": init_balance + total_in - total_out}
+
+
+# ============================================================
+# 工资管理
+# ============================================================
+
+# -- 工人 CRUD --
+@app.get("/api/salary/workers")
+def salary_workers(db: Session = Depends(get_db)):
+    rows = db.query(SalaryWorker).filter(SalaryWorker.is_active == 1).order_by(SalaryWorker.name).all()
+    return [{"id": w.id, "name": w.name, "job_type": w.job_type} for w in rows]
+
+@app.post("/api/salary/workers")
+def salary_worker_create(name: str, job_type: str = "机工", admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
+    if db.query(SalaryWorker).filter(SalaryWorker.name == name, SalaryWorker.is_active == 1).first():
+        raise HTTPException(400, "工人已存在")
+    w = SalaryWorker(name=name, job_type=job_type)
+    db.add(w); db.commit()
+    return {"ok": True, "id": w.id}
+
+@app.put("/api/salary/workers/{wid}")
+def salary_worker_update(wid: int, name: str, job_type: str = "机工", admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
+    w = db.query(SalaryWorker).filter(SalaryWorker.id == wid).first()
+    if not w: raise HTTPException(404, "工人不存在")
+    w.name = name; w.job_type = job_type
+    db.commit()
+    return {"ok": True}
+
+@app.delete("/api/salary/workers/{wid}")
+def salary_worker_delete(wid: int, admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
+    w = db.query(SalaryWorker).filter(SalaryWorker.id == wid).first()
+    if not w: raise HTTPException(404, "工人不存在")
+    w.is_active = 0; db.commit()
+    return {"ok": True}
+
+# -- 工序单价 CRUD --
+@app.get("/api/salary/prices")
+def salary_prices(db: Session = Depends(get_db)):
+    rows = db.query(SalaryPrice).filter(SalaryPrice.is_active == 1).order_by(SalaryPrice.item_name).all()
+    return [{"id": p.id, "item_name": p.item_name, "unit_price": float(p.unit_price)} for p in rows]
+
+@app.post("/api/salary/prices")
+def salary_price_create(item_name: str, unit_price: float, admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
+    if db.query(SalaryPrice).filter(SalaryPrice.item_name == item_name, SalaryPrice.is_active == 1).first():
+        raise HTTPException(400, "工序已存在")
+    p = SalaryPrice(item_name=item_name, unit_price=Decimal(str(unit_price)))
+    db.add(p); db.commit()
+    return {"ok": True, "id": p.id}
+
+@app.put("/api/salary/prices/{pid}")
+def salary_price_update(pid: int, item_name: str = "", unit_price: float = 0, admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
+    p = db.query(SalaryPrice).filter(SalaryPrice.id == pid).first()
+    if not p: raise HTTPException(404, "工序不存在")
+    if item_name: p.item_name = item_name
+    if unit_price > 0: p.unit_price = Decimal(str(unit_price))
+    db.commit()
+    return {"ok": True}
+
+@app.delete("/api/salary/prices/{pid}")
+def salary_price_delete(pid: int, admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
+    p = db.query(SalaryPrice).filter(SalaryPrice.id == pid).first()
+    if not p: raise HTTPException(404, "工序不存在")
+    p.is_active = 0; db.commit()
+    return {"ok": True}
+
+# -- 工资记录 --
+@app.get("/api/salary/records")
+def salary_records(month: str = "", worker_id: int = 0, db: Session = Depends(get_db)):
+    q = db.query(SalaryRecord).order_by(SalaryRecord.worker_id, SalaryRecord.id)
+    if month: q = q.filter(SalaryRecord.month == month)
+    if worker_id > 0: q = q.filter(SalaryRecord.worker_id == worker_id)
+    rows = q.all()
+    return [{"id": r.id, "worker_id": r.worker_id, "worker_name": r.worker.name if r.worker else "",
+             "month": r.month, "item_name": r.item_name, "quantity": r.quantity,
+             "unit_price": float(r.unit_price), "amount": float(r.amount),
+             "payment_method": r.payment_method, "paid": r.paid, "remark": r.remark} for r in rows]
+
+class SalaryRecordReq(PydanticBaseModel):
+    worker_id: int = 0
+    month: str = ""
+    item_name: str = ""
+    quantity: int = 0
+    unit_price: float = 0
+    payment_method: str = "微信"
+    paid: int = 0
+    remark: str = ""
+
+class SalaryRecordUpdateReq(PydanticBaseModel):
+    quantity: int = 0
+    unit_price: float = 0
+    payment_method: str = "微信"
+    paid: int = 0
+    remark: str = ""
+
+@app.post("/api/salary/records")
+def salary_record_create(req: SalaryRecordReq, admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
+    amount = Decimal(str(req.quantity)) * Decimal(str(req.unit_price))
+    r = SalaryRecord(worker_id=req.worker_id, month=req.month, item_name=req.item_name,
+                     quantity=req.quantity, unit_price=Decimal(str(req.unit_price)),
+                     amount=amount, payment_method=req.payment_method, paid=req.paid, remark=req.remark)
+    db.add(r); db.commit()
+    return {"ok": True, "id": r.id, "amount": float(amount)}
+
+@app.put("/api/salary/records/{rid}")
+def salary_record_update(rid: int, req: SalaryRecordUpdateReq, admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
+    r = db.query(SalaryRecord).filter(SalaryRecord.id == rid).first()
+    if not r: raise HTTPException(404, "记录不存在")
+    if req.quantity > 0: r.quantity = req.quantity
+    if req.unit_price > 0: r.unit_price = Decimal(str(req.unit_price))
+    r.amount = Decimal(str(r.quantity)) * r.unit_price
+    r.payment_method = req.payment_method; r.paid = req.paid; r.remark = req.remark
+    db.commit()
+    return {"ok": True, "amount": float(r.amount)}
+
+@app.delete("/api/salary/records/{rid}")
+def salary_record_delete(rid: int, admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
+    r = db.query(SalaryRecord).filter(SalaryRecord.id == rid).first()
+    if not r: raise HTTPException(404, "记录不存在")
+    db.delete(r); db.commit()
+    return {"ok": True}
+
+@app.get("/api/salary/summary")
+def salary_summary(month: str = "", db: Session = Depends(get_db)):
+    """按工人汇总工资"""
+    q = db.query(SalaryRecord)
+    if month: q = q.filter(SalaryRecord.month == month)
+    rows = q.all()
+    workers = {}
+    for r in rows:
+        wn = r.worker.name if r.worker else "未知"
+        if wn not in workers:
+            workers[wn] = {"worker_name": wn, "total": 0, "paid_amount": 0, "items": 0}
+        workers[wn]["total"] += float(r.amount)
+        workers[wn]["items"] += 1
+        if r.paid: workers[wn]["paid_amount"] += float(r.amount)
+    return sorted(workers.values(), key=lambda x: x["total"], reverse=True)
+
+@app.get("/api/salary/export")
+def salary_export(month: str = "", db: Session = Depends(get_db)):
+    """导出工资表为Excel"""
+    q = db.query(SalaryRecord).order_by(SalaryRecord.worker_id, SalaryRecord.id)
+    if month: q = q.filter(SalaryRecord.month == month)
+    rows = q.all()
+
+    wb = openpyxl.Workbook()
+    ws = wb.active; ws.title = "工资明细"
+    ws.append(["工人", "月份", "工序", "数量", "单价", "金额", "支付方式", "已付", "备注"])
+    for r in rows:
+        ws.append([r.worker.name if r.worker else "", r.month, r.item_name,
+                   r.quantity, float(r.unit_price), float(r.amount),
+                   r.payment_method, "是" if r.paid else "否", r.remark])
+    # 汇总
+    summary = salary_summary(month, db)
+    ws.append([])
+    ws.append(["工人", "", "", "", "", "合计", "", "", ""])
+    for s in summary:
+        ws.append([s["worker_name"], "", "", "", "", s["total"], "", "", ""])
+
+    buf = io.BytesIO(); wb.save(buf); buf.seek(0)
+    return Response(content=buf.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename=salary_{month}.xlsx"})
 
 
 # ============================================================

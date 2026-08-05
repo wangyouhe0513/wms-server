@@ -160,3 +160,44 @@ class FinanceCategory(Base):
     sort_order = Column(Integer, default=0)
     is_active = Column(Integer, default=1)
     created_at = Column(DateTime, default=datetime.now)
+
+
+# === 工资模块 ===
+class SalaryWorker(Base):
+    __tablename__ = "salary_workers"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(30), unique=True, nullable=False)
+    job_type = Column(String(20), default="机工", comment="工种")
+    is_active = Column(Integer, default=1)
+    created_at = Column(DateTime, default=datetime.now)
+
+
+class SalaryPrice(Base):
+    __tablename__ = "salary_prices"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    item_name = Column(String(60), unique=True, nullable=False, comment="工序名称")
+    unit_price = Column(DECIMAL(10, 2), default=0, comment="标准单价")
+    is_active = Column(Integer, default=1)
+    created_at = Column(DateTime, default=datetime.now)
+
+
+class SalaryRecord(Base):
+    __tablename__ = "salary_records"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    worker_id = Column(Integer, ForeignKey("salary_workers.id"), nullable=False)
+    month = Column(String(7), nullable=False, comment="月份 2026-08")
+    item_name = Column(String(60), default="", comment="工序")
+    quantity = Column(Integer, default=0, comment="数量")
+    unit_price = Column(DECIMAL(10, 2), default=0, comment="单价(可手动修改)")
+    amount = Column(DECIMAL(10, 2), default=0, comment="金额=数量×单价")
+    payment_method = Column(String(10), default="微信", comment="支付方式")
+    paid = Column(Integer, default=0, comment="0未付/1已付")
+    remark = Column(String(100), default="")
+    created_at = Column(DateTime, default=datetime.now)
+
+    worker = relationship("SalaryWorker")
+
+    __table_args__ = (Index("idx_salary_month", "month"),)
