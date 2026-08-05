@@ -10,6 +10,12 @@
 <meta name="x5-orientation" content="portrait">
 <meta name="x5-fullscreen" content="true">
 <meta name="x5-page-mode" content="app">
+<link rel="manifest" href="/static/manifest.json">
+<meta name="theme-color" content="#4f6ef7">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="进销存">
+<link rel="apple-touch-icon" href="/static/logo.jpg">
 <title>工厂进销存管理系统</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
@@ -125,6 +131,9 @@
 <body>
 <div id="app"></div>
 
+<script>
+if('serviceWorker' in navigator){navigator.serviceWorker.register('/static/sw.js');}
+</script>
 <script src="/static/vue.global.prod.js"></script>
 <script>
 const { createApp, ref, computed, onMounted, h } = Vue;
