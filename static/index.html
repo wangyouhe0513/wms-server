@@ -1190,13 +1190,16 @@ createApp({
             h('td',{style:{color:'#22c55e'}},'¥'+s.paid_amount.toFixed(2)),
             h('td',{style:{color:'#ef4444'}},'¥'+(s.total-s.paid_amount).toFixed(2)),
             h('td',h('button',{class:'btn-xs',style:{background:'#4f6ef7',color:'#fff'},onClick:()=>{
-        fetch(`/api/salary/share-image?month=${this.salMonth}&worker=${encodeURIComponent(s.worker_name)}`)
-          .then(r=>r.blob()).then(blob=>{
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.href = url; a.download = `${s.worker_name}_${this.salMonth}_工资单.png`; a.click();
-            URL.revokeObjectURL(url);
-          }).catch(()=>alert('下载失败'));
-      }},'📋 下载图片')),
+        const shareUrl = `/api/salary/share-image?month=${this.salMonth}&worker=${encodeURIComponent(s.worker_name)}`;
+        fetch(shareUrl).then(r=>{
+          const ct = r.headers.get('content-type')||'';
+          if(ct.includes('image/png')){
+            return r.blob().then(blob=>{ const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`${s.worker_name}_${this.salMonth}_工资单.png`; a.click(); URL.revokeObjectURL(url); });
+          } else {
+            return r.text().then(html=>{ const w=window.open('','_blank'); w.document.write(html); w.document.close(); });
+          }
+        }).catch(()=>alert('生成失败'));
+      }},'📋 工资单')),
           ])))
         ]))
       ]) : null,

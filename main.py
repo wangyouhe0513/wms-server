@@ -1568,15 +1568,16 @@ def salary_share_image(month: str = "", worker: str = "", db: Session = Depends(
     total = sum(float(r.amount) for r in worker_records)
     paid = sum(float(r.amount) for r in worker_records if r.paid)
 
-    # 加载字体（服务器常见中文字体路径）
-    font = PILFont.load_default()
-    font_title = font; font_small = font
+    # 加载中文字体
+    font = None
     font_paths = [
         "/System/Library/Fonts/PingFang.ttc",
         "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
         "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+        "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",
+        "/usr/share/fonts/truetype/arphic/uming.ttc",
+        "/usr/share/fonts/truetype/arphic/ukai.ttc",
     ]
     for fp in font_paths:
         if _os2.path.exists(fp):
@@ -1587,6 +1588,18 @@ def salary_share_image(month: str = "", worker: str = "", db: Session = Depends(
                 break
             except:
                 pass
+
+    if not font:
+        # 没有中文字体，回退到HTML方式
+        return Response(content=f"""<!DOCTYPE html><html><head><meta charset="UTF-8"><title>工资单</title>
+<style>body{{font-family:sans-serif;padding:20px}}table{{border-collapse:collapse;width:100%}}
+th,td{{border:1px solid #ddd;padding:8px 10px}}th{{background:#f5f5f5}}
+.total{{font-size:18px;font-weight:700;margin-top:16px;text-align:right}}</style></head><body>
+<h2>{worker} - {month} 工资单</h2><table><tr><th>工序</th><th>数量</th><th>单价</th><th>金额</th><th>支付</th></tr>
+{"".join(f"<tr><td>{r.item_name}</td><td>{r.quantity}</td><td>¥{float(r.unit_price):.2f}</td><td>¥{float(r.amount):.2f}</td><td>{r.payment_method}</td></tr>" for r in worker_records)}
+</table><div class="total">合计: ¥{total:.2f} | 已付: ¥{paid:.2f} | 未付: ¥{total-paid:.2f}</div>
+<p style="text-align:center;color:#999;margin-top:20px">长按截图分享 — 淼伊库服饰</p></body></html>""",
+            media_type="text/html; charset=utf-8")
 
     try:
         row_h = 30; w = 520; h = 120 + len(worker_records) * row_h + 50
