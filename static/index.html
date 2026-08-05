@@ -1191,8 +1191,10 @@ createApp({
             h('td',{style:{color:'#ef4444'}},'¥'+(s.total-s.paid_amount).toFixed(2)),
             h('td',h('button',{class:'btn-xs',style:{background:'#4f6ef7',color:'#fff'},onClick:()=>{
         const url = location.origin + `/api/salary/share?month=${this.salMonth}&worker=${encodeURIComponent(s.worker_name)}`;
-        if(navigator.clipboard){navigator.clipboard.writeText(url).then(()=>alert('链接已复制，发到微信打开即可查看工资单'));}
-        else{window.open(url,'_blank');}
+        // 尝试复制到剪贴板
+        const fallback = ()=>{ const input=document.createElement('textarea'); input.value=url; document.body.appendChild(input); input.select(); document.execCommand('copy'); document.body.removeChild(input); alert('链接已复制！📋\n\n打开微信→粘贴→发送\n对方打开长按截图即可'); };
+        if(navigator.clipboard){ navigator.clipboard.writeText(url).then(()=>alert('链接已复制！📋\n\n打开微信→粘贴→发送\n对方打开长按截图即可')).catch(fallback); }
+        else{ fallback(); }
       }},'📋 分享')),
           ])))
         ]))

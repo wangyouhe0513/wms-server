@@ -1575,7 +1575,10 @@ th{{background:#f5f5f5}}.total{{font-size:18px;font-weight:700;text-align:right;
 @media print{{body{{margin:0;padding:10px}}}}</style></head><body>
 <h2>💰 {worker} - {month} 工资单</h2><table><thead><tr><th>工序</th><th>数量</th><th>单价</th><th>金额</th><th>支付</th><th>录入时间</th></tr></thead><tbody>{rows_html}</tbody></table>
 <div class="total">合计: ¥{total:.2f} &nbsp;|&nbsp; 已付: ¥{paid:.2f} &nbsp;|&nbsp; 未付: ¥{total-paid:.2f}</div>
-<div class="footer">淼伊库服饰有限公司 · {month}工资单 · 生成时间: {date.today()}<br><small>长按屏幕截图发送给厂长</small></div>
+<div style="background:#fefce8;border:1px solid #f59e0b;border-radius:8px;padding:12px;margin-bottom:20px;text-align:center;font-size:14px;">
+📱 <b>微信分享步骤：</b> 长按本页面任意位置 → 截图 → 发送给厂长
+</div>
+<div class="footer">淼伊库服饰有限公司 · {month}工资单 · 生成时间: {date.today()}</div>
 </body></html>"""
     return Response(content=html, media_type="text/html; charset=utf-8")
 
