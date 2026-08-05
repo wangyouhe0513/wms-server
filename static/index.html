@@ -125,10 +125,8 @@
     .btn-xs { padding: 5px 10px; font-size: 11px; min-height: 28px; }
     .login-box { margin: 40px 12px; padding: 28px 20px; }
     .login-box h2 { font-size: 18px; }
-    .refresh-btn { position: fixed; top: 12px; right: 12px; z-index: 99; background: var(--primary); color: #fff; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 18px; box-shadow: 0 2px 8px rgba(0,0,0,.2); cursor: pointer; display: flex; align-items: center; justify-content: center; }
   }
   @media (min-width: 769px) {
-    .refresh-btn { display: none; }
     .login-box { margin: 100px auto; }
   }
   @media (min-width: 769px) {
@@ -141,8 +139,40 @@
 
 <script>
 if('serviceWorker' in navigator){navigator.serviceWorker.register('/static/sw.js');}
-// 双击标题栏刷新
-document.addEventListener('dblclick', function(e){if(e.clientY<80)location.reload();});
+</script>
+<style>
+/* 下拉刷新指示器 */
+.pull-indicator { position: fixed; top: -60px; left: 0; right: 0; height: 50px; z-index: 1000; display: flex; align-items: center; justify-content: center; transition: top .2s; font-size: 14px; color: #4f6ef7; background: #eef1ff; pointer-events: none; }
+.pull-indicator.show { top: 0; }
+.pull-indicator .spinner { width: 20px; height: 20px; border: 2px solid #4f6ef7; border-top-color: transparent; border-radius: 50%; animation: spin .6s linear infinite; margin-right: 8px; display: none; }
+.pull-indicator .spinner.show { display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+<div class="pull-indicator" id="pullIndicator"><span class="spinner" id="pullSpinner"></span><span id="pullText">下拉刷新</span></div>
+<script>
+(function(){
+  var startY=0, pulling=false, threshold=60;
+  var indicator=document.getElementById('pullIndicator');
+  var spinner=document.getElementById('pullSpinner');
+  var text=document.getElementById('pullText');
+  var main=document.querySelector('.main-content');
+
+  document.addEventListener('touchstart', function(e){ if(window.scrollY===0){startY=e.touches[0].clientY; pulling=true;} });
+  document.addEventListener('touchmove', function(e){
+    if(!pulling) return;
+    var dy=e.touches[0].clientY-startY;
+    if(dy>20){ indicator.classList.add('show'); text.textContent=dy>threshold?'松开刷新':'下拉刷新'; }
+  }, {passive: false});
+  document.addEventListener('touchend', function(e){
+    if(!pulling){ indicator.classList.remove('show'); return; }
+    pulling=false;
+    var dy=e.changedTouches[0].clientY-startY;
+    if(dy>threshold){
+      text.textContent='刷新中...'; spinner.classList.add('show');
+      setTimeout(function(){ location.reload(); }, 500);
+    } else { indicator.classList.remove('show'); }
+  });
+})();
 </script>
 <script src="/static/vue.global.prod.js"></script>
 <script>
@@ -1484,9 +1514,6 @@ createApp({
           h('button',{class:'btn-danger btn-sm',onClick:this.doLogout},'退出'),
         ]),
       ]),
-
-      // === 浮动刷新按钮（PWA用） ===
-      h('button',{class:'refresh-btn',onClick:this.refreshAll,title:'刷新页面'},'🔄'),
 
       // === 主内容区 ===
       h('div',{class:'main-content'},[
