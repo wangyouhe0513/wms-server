@@ -1552,57 +1552,72 @@ def salary_summary(month: str = "", db: Session = Depends(get_db)):
 @app.get("/api/salary/share-image")
 def salary_share_image(month: str = "", worker: str = "", db: Session = Depends(get_db)):
     """生成工资单PNG图片，可直接分享到微信"""
-    from PIL import Image, ImageDraw, ImageFont as PILFont
+    try:
+        from PIL import Image, ImageDraw, ImageFont as PILFont
+    except ImportError:
+        return Response(content=b"Pillow not installed", media_type="text/plain", status_code=500)
+
     import os as _os2
 
     q = db.query(SalaryRecord).filter(SalaryRecord.month == month)
     records = q.all()
     worker_records = [r for r in records if r.worker.name == worker]
     if not worker_records:
-        return Response(content=b"", media_type="image/png")
+        return Response(content=b"no data", media_type="image/png")
 
     total = sum(float(r.amount) for r in worker_records)
     paid = sum(float(r.amount) for r in worker_records if r.paid)
 
-    # 加载字体
+    # 加载字体（服务器常见中文字体路径）
     font = PILFont.load_default()
     font_title = font; font_small = font
-    font_paths = ["/System/Library/Fonts/PingFang.ttc", "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc", "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"]
+    font_paths = [
+        "/System/Library/Fonts/PingFang.ttc",
+        "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+    ]
     for fp in font_paths:
         if _os2.path.exists(fp):
-            try: font = PILFont.truetype(fp, 14); font_title = PILFont.truetype(fp, 22); font_small = PILFont.truetype(fp, 12); break
-            except: pass
+            try:
+                font = PILFont.truetype(fp, 14)
+                font_title = PILFont.truetype(fp, 22)
+                font_small = PILFont.truetype(fp, 12)
+                break
+            except:
+                pass
 
-    row_h = 30; w = 520; h = 120 + len(worker_records) * row_h + 50
-    img = Image.new('RGB', (w, h), 'white')
-    draw = ImageDraw.Draw(img)
+    try:
+        row_h = 30; w = 520; h = 120 + len(worker_records) * row_h + 50
+        img = Image.new('RGB', (w, h), 'white')
+        draw = ImageDraw.Draw(img)
 
-    # 标题
-    draw.text((w/2-80, 16), f"{worker} - {month}工资单", fill='#1e293b', font=font_title)
-    draw.text((w/2-60, 48), f"淼伊库服饰有限公司", fill='#64748b', font=font_small)
+        draw.text((w/2-80, 16), f"{worker} - {month}工资单", fill='#1e293b', font=font_title)
+        draw.text((w/2-60, 48), "淼伊库服饰有限公司", fill='#64748b', font=font_small)
 
-    # 表头
-    cols_x = [20, 180, 260, 340, 420]
-    headers = ["工序", "数量", "单价", "金额", "支付"]
-    y = 80
-    draw.rectangle([0, y, w, y+row_h], fill='#f8fafc')
-    for hdr, cx in zip(headers, cols_x):
-        draw.text((cx, y+7), hdr, fill='#64748b', font=font_small)
+        cols_x = [20, 180, 260, 340, 420]
+        headers = ["工序", "数量", "单价", "金额", "支付"]
+        y = 80
+        draw.rectangle([0, y, w, y+row_h], fill='#f8fafc')
+        for hdr, cx in zip(headers, cols_x):
+            draw.text((cx, y+7), hdr, fill='#64748b', font=font_small)
 
-    # 数据行
-    for r in worker_records:
+        for r in worker_records:
+            y += row_h
+            vals = [r.item_name, str(r.quantity), f"¥{float(r.unit_price):.2f}", f"¥{float(r.amount):.2f}", r.payment_method]
+            for v, cx in zip(vals, cols_x):
+                draw.text((cx, y+7), v, fill='#1e293b', font=font)
+
         y += row_h
-        vals = [r.item_name, str(r.quantity), f"¥{float(r.unit_price):.2f}", f"¥{float(r.amount):.2f}", r.payment_method]
-        for v, cx in zip(vals, cols_x):
-            draw.text((cx, y+7), v, fill='#1e293b', font=font)
+        draw.rectangle([0, y, w, y+row_h], fill='#f0fdf4')
+        draw.text((20, y+7), f"合计: ¥{total:.2f}  |  已付: ¥{paid:.2f}  |  未付: ¥{total-paid:.2f}", fill='#22c55e', font=font_title)
 
-    # 合计
-    y += row_h
-    draw.rectangle([0, y, w, y+row_h], fill='#f0fdf4')
-    draw.text((20, y+7), f"合计: ¥{total:.2f}  |  已付: ¥{paid:.2f}  |  未付: ¥{total-paid:.2f}", fill='#22c55e', font=font_title)
-
-    buf = io.BytesIO(); img.save(buf, format='PNG'); buf.seek(0)
-    return Response(content=buf.getvalue(), media_type="image/png")
+        buf = io.BytesIO(); img.save(buf, format='PNG'); buf.seek(0)
+        return Response(content=buf.getvalue(), media_type="image/png",
+                        headers={"Content-Disposition": f'inline; filename="salary_{worker}_{month}.png"'})
+    except Exception as e:
+        return Response(content=f"生成失败: {e}".encode(), media_type="text/plain", status_code=500)
 
 
 @app.get("/api/salary/share")
