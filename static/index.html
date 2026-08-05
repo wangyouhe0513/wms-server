@@ -107,21 +107,29 @@
   /* 移动端 */
   @media (max-width: 768px) {
     .app-layout { flex-direction: column; }
-    .sidebar { position: fixed; bottom: 0; top: auto; left: 0; right: 0; width: 100%; min-width: 100%; flex-direction: row; overflow-x: auto; overflow-y: hidden; border-right: none; border-top: 1px solid var(--border); z-index: 100; box-shadow: 0 -2px 8px rgba(0,0,0,.06); padding: 6px 2px calc(6px + env(safe-area-inset-bottom, 0px)); }
+    .sidebar { position: fixed; bottom: 0; top: auto; left: 0; right: 0; width: 100%; min-width: 100%; height: auto; flex-direction: row; overflow-x: auto; overflow-y: hidden; border-right: none; border-top: 1px solid var(--border); z-index: 100; box-shadow: 0 -3px 10px rgba(0,0,0,.1); padding: 8px 4px calc(8px + env(safe-area-inset-bottom, 10px)); background: #fff; }
     .sidebar-logo { display: none; }
-    .sidebar-nav { display: flex; flex: 1; padding: 0 2px; overflow-x: auto; -webkit-overflow-scrolling: touch; gap: 1px; }
-    .sidebar-nav button { flex-shrink: 0; width: auto; padding: 10px 12px; font-size: 13px; white-space: nowrap; border-radius: 8px; margin: 2px 1px; min-height: 40px; }
-    .sidebar-nav button.active { background: var(--primary-light); }
+    .sidebar-nav { display: flex; flex: 1; overflow-x: auto; -webkit-overflow-scrolling: touch; gap: 0; scrollbar-width: none; }
+    .sidebar-nav::-webkit-scrollbar { display: none; }
+    .sidebar-nav button { flex-shrink: 0; width: auto; padding: 12px 10px; font-size: 13px; font-weight: 600; white-space: nowrap; border-radius: 8px; margin: 0 1px; min-height: 44px; }
+    .sidebar-nav button.active { color: var(--primary); background: var(--primary-light); }
     .sidebar-footer { display: none; }
-    .main-content { margin-left: 0; padding: 12px 10px 90px 10px; }
+    .main-content { margin-left: 0; padding: 60px 10px 100px 10px; }
     .card { padding: 14px; border-radius: 8px; margin-bottom: 12px; }
     .stat-card { padding: 16px 14px; }
-    .stat-card .value { font-size: 24px; }
-    th, td { padding: 8px 10px; font-size: 12px; }
-    button { padding: 9px 14px; font-size: 13px; }
-    .btn-sm { padding: 5px 10px; font-size: 11px; }
+    .stat-card .value { font-size: 22px; }
+    th, td { padding: 6px 8px; font-size: 12px; }
+    input, select { font-size: 16px; padding: 10px 8px; }
+    button { padding: 10px 14px; font-size: 14px; min-height: 40px; }
+    .btn-sm { padding: 6px 10px; font-size: 12px; min-height: 32px; }
+    .btn-xs { padding: 5px 10px; font-size: 11px; min-height: 28px; }
     .login-box { margin: 40px 12px; padding: 28px 20px; }
     .login-box h2 { font-size: 18px; }
+    .refresh-btn { position: fixed; top: 12px; right: 12px; z-index: 99; background: var(--primary); color: #fff; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 18px; box-shadow: 0 2px 8px rgba(0,0,0,.2); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  }
+  @media (min-width: 769px) {
+    .refresh-btn { display: none; }
+    .login-box { margin: 100px auto; }
   }
   @media (min-width: 769px) {
     .login-box { margin: 100px auto; }
@@ -133,6 +141,8 @@
 
 <script>
 if('serviceWorker' in navigator){navigator.serviceWorker.register('/static/sw.js');}
+// 双击标题栏刷新
+document.addEventListener('dblclick', function(e){if(e.clientY<80)location.reload();});
 </script>
 <script src="/static/vue.global.prod.js"></script>
 <script>
@@ -1474,6 +1484,9 @@ createApp({
           h('button',{class:'btn-danger btn-sm',onClick:this.doLogout},'退出'),
         ]),
       ]),
+
+      // === 浮动刷新按钮（PWA用） ===
+      h('button',{class:'refresh-btn',onClick:this.refreshAll,title:'刷新页面'},'🔄'),
 
       // === 主内容区 ===
       h('div',{class:'main-content'},[
