@@ -1666,7 +1666,7 @@ th{{background:#f5f5f5}}.total{{font-size:18px;font-weight:700;text-align:right;
 <div style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#4f6ef7;color:#fff;padding:14px 28px;border-radius:30px;font-size:16px;font-weight:700;box-shadow:0 4px 16px rgba(79,110,247,.4);z-index:999;animation:pulse 2s infinite;pointer-events:none;">
 📸 按手机侧边键截图
 </div>
-<style>@keyframes pulse{0%,100%{opacity:1}50%{opacity:.7}}</style>
+<style>@keyframes pulse{{0%,100%{{opacity:1}}50%{{opacity:.7}}}}</style>
 <div class="footer">淼伊库服饰有限公司 · {month}工资单 · 生成时间: {date.today()}</div>
 </body></html>"""
     return Response(content=html, media_type="text/html; charset=utf-8")
