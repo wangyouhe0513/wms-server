@@ -1564,15 +1564,16 @@ def salary_share(month: str = "", worker: str = "", db: Session = Depends(get_db
 
     rows_html = ""
     for r in worker_records:
-        rows_html += f"<tr><td>{r.item_name}</td><td>{r.quantity}</td><td>¥{float(r.unit_price):.2f}</td><td>¥{float(r.amount):.2f}</td><td>{r.payment_method}</td></tr>"
+        t = r.created_at.strftime("%m-%d %H:%M") if r.created_at else ""
+        rows_html += f"<tr><td>{r.item_name}</td><td>{r.quantity}</td><td>¥{float(r.unit_price):.2f}</td><td>¥{float(r.amount):.2f}</td><td>{r.payment_method}</td><td style='font-size:11px;color:#94a3b8'>{t}</td></tr>"
 
     html = f"""<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><title>{worker} - {month}工资单</title>
-<style>body{{font-family:'PingFang SC','Microsoft YaHei',sans-serif;max-width:500px;margin:20px auto;padding:20px}}
+<style>body{{font-family:'PingFang SC','Microsoft YaHei',sans-serif;max-width:560px;margin:20px auto;padding:20px}}
 h2{{text-align:center}}table{{width:100%;border-collapse:collapse}}th,td{{padding:8px 10px;border:1px solid #ddd;text-align:left}}
 th{{background:#f5f5f5}}.total{{font-size:18px;font-weight:700;text-align:right;margin-top:16px}}
 .footer{{text-align:center;color:#999;font-size:12px;margin-top:30px}}
 @media print{{body{{margin:0;padding:10px}}}}</style></head><body>
-<h2>💰 {worker} - {month} 工资单</h2><table><thead><tr><th>工序</th><th>数量</th><th>单价</th><th>金额</th><th>支付</th></tr></thead><tbody>{rows_html}</tbody></table>
+<h2>💰 {worker} - {month} 工资单</h2><table><thead><tr><th>工序</th><th>数量</th><th>单价</th><th>金额</th><th>支付</th><th>录入时间</th></tr></thead><tbody>{rows_html}</tbody></table>
 <div class="total">合计: ¥{total:.2f} &nbsp;|&nbsp; 已付: ¥{paid:.2f} &nbsp;|&nbsp; 未付: ¥{total-paid:.2f}</div>
 <div class="footer">淼伊库服饰有限公司 · {month}工资单 · 生成时间: {date.today()}</div>
 </body></html>"""
