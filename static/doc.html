@@ -16,52 +16,47 @@ code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 13p
 li { margin: 4px 0; }
 .tip { background: #fefce8; border-left: 3px solid #f59e0b; padding: 10px 14px; margin: 12px 0; font-size: 14px; border-radius: 0 6px 6px 0; }
 .footer { text-align: center; color: #94a3b8; font-size: 12px; margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 20px; }
-@media print { body { margin: 20px; } .tip { background: #fff; } }
+@media print { body { margin: 20px; } }
 </style>
 </head>
 <body>
 
 <h1>📦 工厂进销存管理系统 — 使用说明</h1>
 
-<h2>一、登录</h2>
-<p>打开系统网址，输入用户名和密码。</p>
-<p>默认管理员：<code>admin</code> / <code>admin123</code>（首次登录后建议修改密码）。</p>
+<h2>一、登录与安装</h2>
+<p>打开系统网址，输入用户名和密码。默认管理员：<code>admin</code> / <code>admin123</code></p>
+<p><b>手机安装到桌面</b>：安卓浏览器自动弹窗「添加到桌面」；苹果 Safari 打开 → 分享 → 添加到主屏幕。安装后全屏打开就像原生 App。</p>
+<p><b>刷新页面</b>：手机在顶部往下拉即可下拉刷新。</p>
 
-<h2>二、首页</h2>
-<p>顶部四张统计卡片：今日出库金额、今日入库数量、本月销售额、低库存预警。点击卡片可跳转对应页面。</p>
+<h2>二、首页仪表盘</h2>
+<p>四张统计卡片：今日出库金额、今日入库数量、本月销售额、低库存预警。点击卡片可跳转对应页面。</p>
 <p>快捷操作按钮可快速跳转到常用功能。</p>
 
 <h2>三、每日录入</h2>
-<p>日常出入库在这里录入。</p>
 <h3>快速填写（推荐）</h3>
 <ol>
-<li>选择 <b>出库/入库</b></li>
-<li>选择 <b>销售人</b>（下拉框）</li>
-<li>点击 <b>规格</b> → 点击 <b>颜色</b> → 自动新增一行</li>
-<li>填写数量和单价</li>
-<li>点击 <b>✔ 提交录入</b></li>
+<li>选择 <b>出库/入库</b> → 选择 <b>销售人</b> → 点击 <b>规格</b> → 点击 <b>颜色</b> → 自动新增一行</li>
+<li>填写数量和单价 → 点击 <b>✔ 提交录入</b></li>
 </ol>
 <h3>手动添加</h3>
-<p>点击「+ 出库行」或「+ 入库行」，手动输入规格、颜色等信息。</p>
+<p>点击「+ 出库行」或「+ 入库行」，手动输入信息。</p>
 <h3>撤销误操作</h3>
 <p>下方「今日已录入」表格，点击 <b>✕ 撤销</b> 可删除错误记录并自动恢复库存。</p>
 
 <h2>四、实时库存</h2>
-<p>查看所有规格+颜色的当前库存，搜索框可筛选规格。</p>
-<p>点击库存数字可查看最近变动历史。</p>
-<p>点击 <b>📥 下载快照</b> 导出带水印的库存 HTML。</p>
+<p>查看所有规格+颜色的当前库存，搜索框可筛选。</p>
+<p>点击库存数字查看最近变动历史。</p>
+<p>点击 <b>📥 下载快照</b> 导出带水印的库存文件。</p>
 
 <h2>五、出库 / 入库记录</h2>
 <p>按人员/年月查询出库或入库明细，支持导出 Excel。</p>
 
 <h2>六、预警阈值</h2>
 <p><b>全局默认阈值</b>：低于此值触发低库存预警。</p>
-<p><b>各规格颜色阈值管理</b>：可为每个规格+颜色单独设置阈值，留空使用全局默认值。</p>
-<p>库存低于阈值的行会红色高亮。</p>
+<p><b>各规格颜色阈值管理</b>：可为每个规格+颜色单独设置阈值。库存低于阈值的行会红色高亮。</p>
 
 <h2>七、销售汇总</h2>
-<p>选择年月查询销售额，按人员和品类分别统计。</p>
-<p>底部合计行显示总销售额。</p>
+<p>选择年月查询销售额，按人员和品类分别统计，底部显示合计。</p>
 
 <h2>八、数据分析</h2>
 <p>选择月份查看三个图表：</p>
@@ -83,30 +78,42 @@ li { margin: 4px 0; }
 <h2>十、财务管理</h2>
 <table>
 <tr><th>功能</th><th>说明</th></tr>
-<tr><td>📋 报账</td><td>访问 <code>/static/report.html</code>，微信可用</td></tr>
-<tr><td>💰 管理</td><td>查看/筛选/导出/撤销财务记录</td></tr>
+<tr><td>📋 报账</td><td>访问 <code>/static/report.html</code>，微信可用，支持多图上传</td></tr>
+<tr><td>💰 管理</td><td>查看/筛选/导出Excel/撤销财务记录</td></tr>
 <tr><td>📂 类别</td><td>添加/删除财务类别</td></tr>
 <tr><td>初始余额</td><td>访问 <code>/static/init-balance.html</code>，密钥 <code>上山打老虎</code></td></tr>
 </table>
 <p>余额公式：<b>期初余额 + 收入 − 支出</b></p>
 
-<h2>十一、管理员</h2>
-<p>仅超级管理员可见。可添加/删除管理员、重置密码、查看操作日志。</p>
-
-<h2>十二、快捷链接</h2>
+<h2>十一、工资管理</h2>
 <table>
-<tr><th>功能</th><th>地址</th></tr>
-<tr><td>报账提交</td><td><code>/static/report.html</code></td></tr>
-<tr><td>初始化余额</td><td><code>/static/init-balance.html</code></td></tr>
-<tr><td>库存更新（Excel上传）</td><td><code>/static/upload.html</code></td></tr>
+<tr><th>功能</th><th>说明</th></tr>
+<tr><td>👷 工人管理</td><td>增删工人，支持机工/厂长/辅工</td></tr>
+<tr><td>📏 工序单价</td><td>增删工序及标准单价</td></tr>
+<tr><td>📝 录入工资</td><td>搜工人→搜工序自动填单价→填数量→金额自动算→添加<br>工序可从 Excel 导入</td></tr>
+<tr><td>📊 汇总</td><td>按工人统计合计/已付/未付</td></tr>
+<tr><td>📋 分享</td><td>一键复制工资单链接发微信，长按截图发给厂长</td></tr>
+<tr><td>📥 导出</td><td>按月份导出 Excel 明细+汇总</td></tr>
 </table>
 
-<div class="tip">⚠️ 以上三个页面为独立入口，其中「库存更新」和「初始化余额」需要密钥：<code>上山打老虎</code></div>
+<h2>十二、管理员</h2>
+<p>仅超级管理员可见。可添加/删除管理员、重置密码、查看操作日志。</p>
 
-<h2>十三、服务器运维</h2>
+<h2>十三、快捷链接</h2>
+<table>
+<tr><th>功能</th><th>地址</th><th>说明</th></tr>
+<tr><td>报账提交</td><td><code>/static/report.html</code></td><td>微信可用，无需登录</td></tr>
+<tr><td>初始化余额</td><td><code>/static/init-balance.html</code></td><td>密钥：上山打老虎</td></tr>
+<tr><td>库存更新</td><td><code>/static/upload.html</code></td><td>密钥：上山打老虎</td></tr>
+<tr><td>系统说明</td><td><code>/static/doc.html</code></td><td>本页面</td></tr>
+</table>
+
+<div class="tip">⚠️ 以上独立页面中，「库存更新」和「初始化余额」需要密钥：<code>上山打老虎</code></div>
+
+<h2>十四、服务器运维</h2>
 <ul>
 <li>更新代码并重启：<code>./restart.sh</code></li>
-<li>数据库备份：每天凌晨 2 点自动备份到 <code>backups/</code> 目录，保留 30 天</li>
+<li>数据库备份：每天凌晨 2 点自动备份到 <code>backups/</code> 目录</li>
 <li>手动备份：<code>./backup.sh</code></li>
 </ul>
 
