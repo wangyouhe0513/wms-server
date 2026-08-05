@@ -1058,7 +1058,7 @@ createApp({
             if(p) document.getElementById('salPrice').value = p.unit_price;
           }},
             [h('option',{value:''},'选工序'),...this.salPrices.map(p=>h('option',{value:p.item_name},p.item_name+' ¥'+p.unit_price))]),
-          h('input',{id:'salQty',type:'number',min:1,placeholder:'数量',style:{width:'70px',fontSize:'13px'},onChange:e=>{
+          h('input',{onInput:e=>{},style:{width:'70px',fontSize:'13px'},onChange:e=>{
             const q=parseInt(e.target.value)||0; const p=parseFloat(document.getElementById('salPrice').value)||0;
           }}),
           h('input',{id:'salPrice',type:'number',step:'0.1',placeholder:'单价',style:{width:'80px',fontSize:'13px'}}),
