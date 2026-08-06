@@ -1645,7 +1645,7 @@ def salary_share_image(month: str = "", worker: str = "", db: Session = Depends(
 
     import os as _os2
 
-    q = db.query(SalaryRecord).filter(SalaryRecord.month == month)
+    q = db.query(SalaryRecord).filter(SalaryRecord.month.like(month[:7] + '%'))
     records = q.all()
     worker_records = [r for r in records if r.worker.name == worker]
     if not worker_records:
@@ -1722,7 +1722,7 @@ th,td{{border:1px solid #ddd;padding:8px 10px}}th{{background:#f5f5f5}}
 @app.get("/api/salary/share")
 def salary_share(month: str = "", worker: str = "", db: Session = Depends(get_db)):
     """生成单个工人工资单（可分享/打印）"""
-    q = db.query(SalaryRecord).filter(SalaryRecord.month == month)
+    q = db.query(SalaryRecord).filter(SalaryRecord.month.like(month[:7] + '%'))
     records = q.all()
     worker_records = [r for r in records if r.worker.name == worker]
 
