@@ -106,7 +106,7 @@
     .sidebar-nav button { flex-shrink: 0; width: auto; padding: 10px 11px; font-size: 12px; font-weight: 600; white-space: nowrap; border-radius: 8px; margin: 0 1px; min-height: 40px; }
     .sidebar-nav button.active { color: var(--primary); background: var(--primary-light); }
     .sidebar-footer { display: none; }
-    .main-content { margin-left: 0; padding: 16px 10px 100px 10px; }
+    .main-content { margin-left: 0; padding: calc(16px + env(safe-area-inset-top, 0px)) 10px 100px 10px; }
     .card { padding: 14px; border-radius: 10px; margin-bottom: 10px; }
     .stat-card { padding: 14px 12px; }
     .stat-card .value { font-size: 20px; }
