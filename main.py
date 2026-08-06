@@ -1858,6 +1858,8 @@ def dashboard(db: Session = Depends(get_db)):
         "low_stock_count": low_skus,
         "total_specs": db.query(ProductSpec).filter(ProductSpec.is_active == 1).count(),
         "total_colors": db.query(Color).filter(Color.is_active == 1).count(),
+        "total_workers": db.query(SalaryWorker).filter(SalaryWorker.is_active == 1).count(),
+        "total_price_items": db.query(SalaryPrice).filter(SalaryPrice.is_active == 1).count(),
     }
 
 

@@ -215,7 +215,7 @@ createApp({
     const showLogs = ref(false);  // toggle for operation log modal
 
     // Dashboard
-    const dash = ref({today_out_amount:0,today_in_qty:0,month_total:0,month_in_qty:0,low_stock_count:0,total_specs:0,total_colors:0,salary_month_total:0});
+    const dash = ref({today_out_amount:0,today_in_qty:0,month_total:0,month_in_qty:0,low_stock_count:0,total_specs:0,total_colors:0,salary_month_total:0,total_workers:0,total_price_items:0});
     const dashBalance = ref(0);
 
     // Entry
@@ -899,6 +899,10 @@ createApp({
               [h('span','🎨 颜色种类'),h('b',String(this.dash.total_colors))]),
             h('div',{style:{display:'flex',justifyContent:'space-between',padding:'8px 0',borderBottom:'1px solid #ebeef5'}},
               [h('span','📦 SKU 总数'),h('b',String(this.dash.total_specs * this.dash.total_colors||'—'))]),
+            h('div',{style:{display:'flex',justifyContent:'space-between',padding:'8px 0',borderBottom:'1px solid #ebeef5'}},
+              [h('span','👷 在岗工人'),h('b',String(this.dash.total_workers||0))]),
+            h('div',{style:{display:'flex',justifyContent:'space-between',padding:'8px 0',borderBottom:'1px solid #ebeef5'}},
+              [h('span','🔧 产品工序'),h('b',String(this.dash.total_price_items||0))]),
             h('div',{style:{display:'flex',justifyContent:'space-between',padding:'8px 0'}},
               [h('span','📅 今日日期'),h('b',this.today)]),
           ]),
