@@ -824,21 +824,19 @@ def personal_bill(
     salesperson: str = "",
     year: int = 0,
     month: int = 0,
+    page: int = 1,
+    page_size: int = 30,
     db: Session = Depends(get_db),
 ):
-    q = db.query(Transaction).filter(
-        Transaction.trans_type == "出库",
-    )
+    q = db.query(Transaction).filter(Transaction.trans_type == "出库")
     if salesperson:
         sp = db.query(Salesperson).filter(Salesperson.name == salesperson).first()
-        if sp:
-            q = q.filter(Transaction.salesperson_id == sp.id)
-    if year > 0:
-        q = q.filter(extract("year", Transaction.trans_date) == year)
-    if month > 0:
-        q = q.filter(extract("month", Transaction.trans_date) == month)
+        if sp: q = q.filter(Transaction.salesperson_id == sp.id)
+    if year > 0: q = q.filter(extract("year", Transaction.trans_date) == year)
+    if month > 0: q = q.filter(extract("month", Transaction.trans_date) == month)
 
-    rows = q.order_by(Transaction.id.desc()).all()
+    total = q.count()
+    rows = q.order_by(Transaction.id.desc()).offset((page-1)*page_size).limit(page_size).all()
 
     items = []
     total_amount = Decimal("0")
@@ -861,12 +859,9 @@ def personal_bill(
         total_qty += t.quantity
 
     return {
-        "salesperson": salesperson or "全部",
-        "year": year,
-        "month": month,
-        "items": items,
-        "total_qty": total_qty,
-        "total_amount": float(total_amount),
+        "salesperson": salesperson or "全部", "year": year, "month": month,
+        "items": items, "total_qty": total_qty, "total_amount": float(total_amount),
+        "total": total, "page": page, "page_size": page_size
     }
 
 
@@ -874,19 +869,18 @@ def personal_bill(
 def inbound_records(
     year: int,
     month: int,
+    page: int = 1,
+    page_size: int = 30,
     db: Session = Depends(get_db),
 ):
     """入库记录列表，可按年月筛选"""
-    rows = (
-        db.query(Transaction)
-        .filter(
-            Transaction.trans_type == "入库",
-            extract("year", Transaction.trans_date) == year,
-            extract("month", Transaction.trans_date) == month,
-        )
-        .order_by(Transaction.id.desc())
-        .all()
+    q = db.query(Transaction).filter(
+        Transaction.trans_type == "入库",
+        extract("year", Transaction.trans_date) == year,
+        extract("month", Transaction.trans_date) == month,
     )
+    total = q.count()
+    rows = q.order_by(Transaction.id.desc()).offset((page-1)*page_size).limit(page_size).all()
 
     items = []
     total_qty = 0
@@ -906,10 +900,9 @@ def inbound_records(
         total_qty += t.quantity
 
     return {
-        "year": year,
-        "month": month,
-        "items": items,
-        "total_qty": total_qty,
+        "year": year, "month": month,
+        "items": items, "total_qty": total_qty,
+        "total": total, "page": page, "page_size": page_size
     }
 
 
@@ -1241,20 +1234,20 @@ _os.makedirs(RECEIPT_DIR, exist_ok=True)
 
 
 @app.get("/api/finance")
-def finance_list(year: int = 0, month: int = 0, db: Session = Depends(get_db)):
+def finance_list(year: int = 0, month: int = 0, page: int = 1, page_size: int = 30, db: Session = Depends(get_db)):
     """财务记录列表"""
     q = db.query(FinanceRecord).order_by(FinanceRecord.date.desc(), FinanceRecord.id.desc())
-    if year > 0:
-        q = q.filter(extract("year", FinanceRecord.date) == year)
-    if month > 0:
-        q = q.filter(extract("month", FinanceRecord.date) == month)
-    rows = q.all()
-    return [{
+    if year > 0: q = q.filter(extract("year", FinanceRecord.date) == year)
+    if month > 0: q = q.filter(extract("month", FinanceRecord.date) == month)
+    total = q.count()
+    rows = q.offset((page-1)*page_size).limit(page_size).all()
+    items = [{
         "id": r.id, "type": r.type, "date": r.date.strftime("%Y-%m-%d"),
         "amount": float(r.amount), "category": r.category, "detail": r.detail,
         "person": r.person, "receipt": r.receipt, "status": r.status,
         "created_at": r.created_at.strftime("%Y-%m-%d %H:%M") if r.created_at else "",
     } for r in rows]
+    return {"items": items, "total": total, "page": page, "page_size": page_size}
 
 
 @app.post("/api/finance")

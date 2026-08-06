@@ -289,7 +289,7 @@ createApp({
     // Finance
     const finYear = ref(new Date().getFullYear());
     const finMonth = ref(new Date().getMonth() + 1);
-    const finRecords = ref([]);
+    const finRecords = ref([]); const finPage = ref(1); const finTotal = ref(0);
     const finSummary = ref({total_in:0,total_out:0,balance:0});
     const finCategories = ref([]);
     const newFinCat = ref('');
@@ -388,9 +388,10 @@ createApp({
       } catch(e) { alert(e.message); }
     };
 
+    const obPage = ref(1); const obTotal = ref(0);
     const loadOutbound = async () => {
       const sp = obSP.value ? `&salesperson=${encodeURIComponent(obSP.value)}` : '';
-      obData.value = await api(`/api/bills/personal?year=${obYear.value}&month=${obMonth.value}${sp}`);
+      obData.value = await api(`/api/bills/personal?year=${obYear.value}&month=${obMonth.value}&page=${obPage.value}${sp}`);
     };
 
     const exportOutbound = () => {
@@ -403,8 +404,9 @@ createApp({
       a.download=`${obData.value.salesperson}_${obData.value.year}年${obData.value.month}月_出库.csv`; a.click();
     };
 
+    const inPage = ref(1); const inTotal = ref(0);
     const loadInbound = async () => {
-      inData.value = await api(`/api/bills/inbound?year=${inYear.value}&month=${inMonth.value}`);
+      inData.value = await api(`/api/bills/inbound?year=${inYear.value}&month=${inMonth.value}&page=${inPage.value}`);
     };
 
     const exportInbound = () => {
@@ -529,11 +531,11 @@ createApp({
     const exportSalary = () => window.open(`/api/salary/export?month=${salMonth.value}`, '_blank');
 
     const loadFinance = async () => {
-      const [records, summary] = await Promise.all([
-        api(`/api/finance?year=${finYear.value}&month=${finMonth.value}`),
+      const [data, summary] = await Promise.all([
+        api(`/api/finance?year=${finYear.value}&month=${finMonth.value}&page=${finPage.value}&page_size=30`),
         api(`/api/finance/summary?year=${finYear.value}&month=${finMonth.value}`)
       ]);
-      finRecords.value = records; finSummary.value = summary;
+      finRecords.value = data.items; finTotal.value = data.total; finSummary.value = summary;
     };
     const exportFinance = () => {
       window.open(`/api/finance/export?year=${finYear.value}&month=${finMonth.value}`, '_blank');
@@ -792,7 +794,8 @@ createApp({
       salWorkers, salPrices, salItemSpecs, salRecords, salSummary, salMonth, salPage, salPageSize, salTotal, salFilterSpec, salFilterColor, salQuickSpec, salQuickColor, salQuickWorker, salNewWorker, salNewJobType, salNewItem, salNewPrice,
       loadSalary, saveSalWorker, deleteSalWorker, saveSalPrice, deleteSalPrice, addSalRecord, deleteSalRecord, toggleSalPaid, exportSalary, showSalDropdown,
       salSpecItems, salNewLinkSpec, salNewLinkItem, salEditLinkId, salEditLinkItem, initSpecItems, saveSpecItem, updateSpecItem, deleteSpecItem,
-      finYear, finMonth, finRecords, finSummary, loadFinance, exportFinance, deleteFinance, finCategories, newFinCat, loadFinCategories, saveFinCat, deleteFinCat,
+      finYear, finMonth, finRecords, finPage, finTotal, finSummary, loadFinance, exportFinance, deleteFinance,
+      obPage, obTotal, inPage, inTotal, finCategories, newFinCat, loadFinCategories, saveFinCat, deleteFinCat,
       analysisYear, analysisMonth, analysisData, loadAnalysis,
       newSpec, newColor, newColorCode, newSP, newSPType, importResult,
       quickType, quickSpec, quickSP, quickSpecs, quickColors, quickAdd,
