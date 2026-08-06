@@ -1645,21 +1645,19 @@ createApp({
       // === 移动端子菜单弹层 ===
       (this.entrySubOpen || this.salarySubOpen) ? h('div',{class:'submenu-overlay',onClick:e=>{if(e.target===e.currentTarget){this.entrySubOpen=false;this.salarySubOpen=false;}}},[
         h('div',{class:'submenu-panel'},[
-          // 录入子菜单
-          this.entrySubOpen ? [
+          this.entrySubOpen ? h('div',{},[
             h('div',{style:{fontSize:'16px',fontWeight:700,marginBottom:'12px',textAlign:'center'}},'📝 每日录入'),
             h('button',{class:this.currentTab==='entry'?'active':'',onClick:()=>{this.currentTab='entry';this.entrySubOpen=false;}},'📝 录入表单'),
             h('button',{class:this.currentTab==='outbound'?'active':'',onClick:()=>{this.currentTab='outbound';this.entrySubOpen=false;this.loadOutbound();}},'📤 出库记录'),
             h('button',{class:this.currentTab==='inbound'?'active':'',onClick:()=>{this.currentTab='inbound';this.entrySubOpen=false;this.loadInbound();}},'📥 入库记录'),
-          ] : null,
-          // 工资子菜单
-          this.salarySubOpen ? [
+          ]) : null,
+          this.salarySubOpen ? h('div',{},[
             h('div',{style:{fontSize:'16px',fontWeight:700,marginBottom:'12px',textAlign:'center'}},'💵 工资管理'),
             h('button',{class:this.subTab==='enter'?'active':'',onClick:()=>{this.currentTab='salary';this.subTab='enter';this.salarySubOpen=false;this.loadSalary();}},'📝 工资录入'),
             h('button',{class:this.subTab==='records'?'active':'',onClick:()=>{this.currentTab='salary';this.subTab='records';this.salarySubOpen=false;this.loadSalary();}},'📋 工资记录'),
             h('button',{class:this.subTab==='workers'?'active':'',onClick:()=>{this.currentTab='salary';this.subTab='workers';this.salarySubOpen=false;this.loadSalary();}},'👷 工人管理'),
             h('button',{class:this.subTab==='items'?'active':'',onClick:()=>{this.currentTab='salary';this.subTab='items';this.salarySubOpen=false;this.loadSalary();}},'🔗 工序管理'),
-          ] : null,
+          ]) : null,
           h('div',{class:'submenu-close',onClick:()=>{this.entrySubOpen=false;this.salarySubOpen=false;}},'取消'),
         ]),
       ]) : null,
