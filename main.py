@@ -1453,7 +1453,7 @@ def salary_worker_delete(wid: int, admin: Admin = Depends(get_current_admin), db
 def salary_spec_items(db: Session = Depends(get_db)):
     """规格-工序关联列表"""
     rows = db.query(SalarySpecItem).filter(SalarySpecItem.is_active == 1).order_by(SalarySpecItem.spec_name, SalarySpecItem.item_name).all()
-    return [{"id": r.id, "spec_name": r.spec_name, "item_name": r.item_name} for r in rows]
+    return [{"id": r.id, "spec_name": r.spec_name, "item_name": r.item_name, "unit_price": float(r.unit_price)} for r in rows]
 
 @app.post("/api/salary/spec-items/init")
 def salary_spec_items_init(admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
@@ -1469,30 +1469,31 @@ def salary_spec_items_init(admin: Admin = Depends(get_current_admin), db: Sessio
                 exists = db.query(SalarySpecItem).filter(
                     SalarySpecItem.spec_name == sn, SalarySpecItem.item_name == p.item_name).first()
                 if not exists:
-                    db.add(SalarySpecItem(spec_name=sn, item_name=p.item_name))
+                    db.add(SalarySpecItem(spec_name=sn, item_name=p.item_name, unit_price=p.unit_price))
                     count += 1
                 break
     db.commit()
     return {"ok": True, "imported": count}
 
 @app.post("/api/salary/spec-items")
-def salary_spec_item_create(spec_name: str, item_name: str, admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
+def salary_spec_item_create(spec_name: str, item_name: str, unit_price: float = 0, admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
     exists = db.query(SalarySpecItem).filter(SalarySpecItem.spec_name == spec_name, SalarySpecItem.item_name == item_name).first()
     if exists:
         if exists.is_active == 0:
-            exists.is_active = 1; db.commit()
+            exists.is_active = 1; exists.unit_price = Decimal(str(unit_price)); db.commit()
             return {"ok": True, "reactivated": True}
         raise HTTPException(400, "关联已存在")
-    db.add(SalarySpecItem(spec_name=spec_name, item_name=item_name))
+    db.add(SalarySpecItem(spec_name=spec_name, item_name=item_name, unit_price=Decimal(str(unit_price))))
     db.commit()
     return {"ok": True}
 
 @app.put("/api/salary/spec-items/{siid}")
-def salary_spec_item_update(siid: int, item_name: str = "", spec_name: str = "", admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
+def salary_spec_item_update(siid: int, item_name: str = "", spec_name: str = "", unit_price: float = 0, admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
     r = db.query(SalarySpecItem).filter(SalarySpecItem.id == siid).first()
     if not r: raise HTTPException(404, "不存在")
     if item_name: r.item_name = item_name
     if spec_name: r.spec_name = spec_name
+    if unit_price > 0: r.unit_price = Decimal(str(unit_price))
     db.commit()
     return {"ok": True}
 

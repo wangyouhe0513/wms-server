@@ -210,6 +210,7 @@ class SalarySpecItem(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     spec_name = Column(String(40), nullable=False, comment="产品规格")
     item_name = Column(String(60), nullable=False, comment="工序名称")
+    unit_price = Column(DECIMAL(10, 2), default=0, comment="工序单价")
     is_active = Column(Integer, default=1)
     created_at = Column(DateTime, default=datetime.now)
 
