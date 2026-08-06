@@ -843,43 +843,35 @@ createApp({
 
     // --- Dashboard ---
     const renderDashboard = () => h('div',{style:{display:'flex',flexDirection:'column',gap:'20px'}},[
-      // Summary stats row
-      h('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:'16px'}},[
-        h('div',{class:'stat-card',style:{background:'linear-gradient(135deg,#409eff,#337ecc)',cursor:'pointer'},
-          onClick:()=>this.currentTab='outbound'},[
-          h('div',{class:'label'},'📤 今日出库金额'),
-          h('div',{class:'value'},'¥'+this.fmt(this.dash.today_out_amount)),
+      // 指标卡片
+      h('div',{style:{marginBottom:'16px'}},[
+        h('div',{style:{fontSize:'13px',fontWeight:700,color:'var(--text-secondary)',marginBottom:'8px',textTransform:'uppercase',letterSpacing:'1px'}},'📦 产品指标'),
+        h('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:'10px',marginBottom:'16px'}},[
+          h('div',{class:'stat-card',style:{background:'linear-gradient(135deg,#67c23a,#529b2e)',cursor:'pointer'},onClick:()=>this.currentTab='inbound'},[
+            h('div',{class:'label'},'📥 今日入库'),h('div',{class:'value'},String(this.dash.today_in_qty)+' 件'),
+          ]),
+          h('div',{class:'stat-card',style:{background:'linear-gradient(135deg,#10b981,#059669)',cursor:'pointer'},onClick:()=>this.currentTab='inbound'},[
+            h('div',{class:'label'},'📦 本月入库'),h('div',{class:'value'},String(this.dash.month_in_qty||0)+' 件'),
+          ]),
+          h('div',{class:'stat-card',style:{background:'linear-gradient(135deg,#f56c6c,#c0392b)',cursor:'pointer'},onClick:()=>this.currentTab='thresholds'},[
+            h('div',{class:'label'},'🔴 低库存预警'),h('div',{class:'value'},String(this.dash.low_stock_count)+' SKU'),
+          ]),
         ]),
-        h('div',{class:'stat-card',style:{background:'linear-gradient(135deg,#67c23a,#529b2e)',cursor:'pointer'},
-          onClick:()=>this.currentTab='inbound'},[
-          h('div',{class:'label'},'📥 今日入库数量'),
-          h('div',{class:'value'},String(this.dash.today_in_qty)+' 件'),
-        ]),
-        h('div',{class:'stat-card',style:{background:'linear-gradient(135deg,#10b981,#059669)',cursor:'pointer'},
-          onClick:()=>this.currentTab='inbound'},[
-          h('div',{class:'label'},'📦 本月累计入库'),
-          h('div',{class:'value'},String(this.dash.month_in_qty||0)+' 件'),
-        ]),
-        h('div',{class:'stat-card',style:{background:'linear-gradient(135deg,#e6a23c,#d4880f)',cursor:'pointer'},
-          onClick:()=>this.currentTab='summary'},[
-          h('div',{class:'label'},'💰 本月销售额'),
-          h('div',{class:'value'},'¥'+this.fmt(this.dash.month_total)),
-          h('div',{style:{fontSize:'11px',opacity:.8,marginTop:'4px'}},'完成率 '+(this.dash.month_total/600000*100).toFixed(1)+'%'),
-        ]),
-        h('div',{class:'stat-card',style:{background:'linear-gradient(135deg,#f56c6c,#c0392b)',cursor:'pointer'},
-          onClick:()=>this.currentTab='thresholds'},[
-          h('div',{class:'label'},'🔴 低库存预警'),
-          h('div',{class:'value'},String(this.dash.low_stock_count)+' SKU'),
-        ]),
-        h('div',{class:'stat-card',style:{background:this.dashBalance>=0?'linear-gradient(135deg,#8b5cf6,#7c3aed)':'linear-gradient(135deg,#f59e0b,#d97706)',cursor:'pointer'},
-          onClick:()=>this.currentTab='finance'},[
-          h('div',{class:'label'},'💰 当前余额'),
-          h('div',{class:'value'},'¥'+this.dashBalance.toLocaleString()),
-        ]),
-        h('div',{class:'stat-card',style:{background:'linear-gradient(135deg,#06b6d4,#0891b2)',cursor:'pointer'},
-          onClick:()=>this.currentTab='salary'},[
-          h('div',{class:'label'},'💵 本月工资'),
-          h('div',{class:'value'},'¥'+Number(this.dash.salary_month_total||0).toLocaleString()),
+        h('div',{style:{fontSize:'13px',fontWeight:700,color:'var(--text-secondary)',marginBottom:'8px',textTransform:'uppercase',letterSpacing:'1px'}},'💰 金额指标'),
+        h('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:'10px'}},[
+          h('div',{class:'stat-card',style:{background:'linear-gradient(135deg,#409eff,#337ecc)',cursor:'pointer'},onClick:()=>this.currentTab='outbound'},[
+            h('div',{class:'label'},'📤 今日出库'),h('div',{class:'value',style:{fontSize:'22px'}},'¥'+this.fmt(this.dash.today_out_amount)),
+          ]),
+          h('div',{class:'stat-card',style:{background:'linear-gradient(135deg,#e6a23c,#d4880f)',cursor:'pointer'},onClick:()=>this.currentTab='summary'},[
+            h('div',{class:'label'},'💰 本月销售额'),h('div',{class:'value',style:{fontSize:'22px'}},'¥'+this.fmt(this.dash.month_total)),
+            h('div',{style:{fontSize:'10px',opacity:.8,marginTop:'2px',background:'rgba(255,255,255,.2)',borderRadius:'4px',padding:'1px 8px',display:'inline-block'}},'完成率 '+(this.dash.month_total/600000*100).toFixed(1)+'%'),
+          ]),
+          h('div',{class:'stat-card',style:{background:this.dashBalance>=0?'linear-gradient(135deg,#8b5cf6,#7c3aed)':'linear-gradient(135deg,#f59e0b,#d97706)',cursor:'pointer'},onClick:()=>this.currentTab='finance'},[
+            h('div',{class:'label'},'💰 当前余额'),h('div',{class:'value',style:{fontSize:'22px'}},'¥'+this.dashBalance.toLocaleString()),
+          ]),
+          h('div',{class:'stat-card',style:{background:'linear-gradient(135deg,#06b6d4,#0891b2)',cursor:'pointer'},onClick:()=>this.currentTab='salary'},[
+            h('div',{class:'label'},'💵 本月工资'),h('div',{class:'value',style:{fontSize:'22px'}},'¥'+Number(this.dash.salary_month_total||0).toLocaleString()),
+          ]),
         ]),
       ]),
 
