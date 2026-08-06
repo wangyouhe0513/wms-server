@@ -1832,6 +1832,13 @@ def dashboard(db: Session = Depends(get_db)):
     ).all()
     month_total = sum(float(t.amount) for t in month_rows if not t.salesperson_id or t.salesperson_id in active_sp_ids)
 
+    # 本月累计入库
+    month_in = db.query(func.sum(Transaction.quantity)).filter(
+        Transaction.trans_date >= month_start,
+        Transaction.trans_date <= today,
+        Transaction.trans_type == "入库",
+    ).scalar() or 0
+
     # 低库存
     low_skus = db.query(ProductSku).filter(
         ProductSku.current_stock < func.coalesce(ProductSku.low_stock_threshold, default_threshold)
@@ -1846,6 +1853,7 @@ def dashboard(db: Session = Depends(get_db)):
         "today_out_amount": today_out,
         "today_in_qty": today_in,
         "month_total": month_total,
+        "month_in_qty": int(month_in),
         "salary_month_total": float(salary_month),
         "low_stock_count": low_skus,
         "total_specs": db.query(ProductSpec).filter(ProductSpec.is_active == 1).count(),
