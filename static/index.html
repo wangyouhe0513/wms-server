@@ -222,7 +222,9 @@ createApp({
 
     // === Main app state ===
     const currentTab = ref('dashboard');
+    const subTab = ref('');  // salary子栏目
     const entrySubOpen = ref(false);
+    const salarySubOpen = ref(false);
     const today = new Date().toISOString().slice(0, 10);
     const showLogs = ref(false);  // toggle for operation log modal
 
@@ -783,7 +785,7 @@ createApp({
       token, authUser, loginUsername, loginPassword, loginError, loginLoading, rememberMe,
       doLogin, doLogout, showChangePwd, oldPwd, newPwd, changePwd,
       // Main
-      currentTab, entrySubOpen, today, dash, dashBalance, entryDate, entryRows, submitting, msg, msgType, todayRecords,
+      currentTab, subTab, entrySubOpen, salarySubOpen, today, dash, dashBalance, entryDate, entryRows, submitting, msg, msgType, todayRecords,
       specs, colors, salespersons, invData, invFilter, invLowStock,
       obSP, obYear, obMonth, obData,
       inYear, inMonth, inData,
@@ -1150,9 +1152,11 @@ createApp({
 
     // --- Summary ---
     // --- Salary ---
-    const renderSalary = () => h('div',{style:{display:'flex',flexDirection:'column',gap:'16px'}},[
+    const renderSalary = () => {
+      const sub = subTab.value || 'enter';
+      return h('div',{style:{display:'flex',flexDirection:'column',gap:'16px'}},[
       // ===== 0. 快速填写（按规格→颜色→工序→工人） =====
-      h('div',{class:'card',style:{background:'#eef1ff',border:'2px solid #4f6ef7'}},[
+      (sub==='enter'||sub==='records') ? h('div',{class:'card',style:{background:'#eef1ff',border:'2px solid #4f6ef7'}},[
         h('div',{class:'card-title',style:{color:'#4f6ef7'}},'⚡ 快速填写（规格→颜色→工序→工人）'),
         h('div',{style:{display:'flex',gap:'6px',alignItems:'center',flexWrap:'wrap'}},[
           h('select',{value:this.salQuickSpec,onChange:e=>{this.salQuickSpec=e.target.value;this.salQuickColor='';},style:{flex:'1 1 100px',fontSize:'14px'}},
@@ -1207,7 +1211,7 @@ createApp({
       ]),
 
       // ===== 2. 工人+工序管理 =====
-      h('div',{style:{display:'flex',gap:'12px',flexWrap:'wrap'}},[
+      (sub==='workers'||sub==='items') ? h('div',{style:{display:'flex',gap:'12px',flexWrap:'wrap'}},[
         h('div',{class:'card',style:{flex:1,minWidth:'260px'}},[
           h('div',{class:'card-title'},'👷 工人管理'),
           h('input',{placeholder:'🔍 筛选→点击填入录入框',onInput:e=>{document.querySelectorAll('.worker-tag').forEach(el=>{const v=e.target.value.toLowerCase();el.style.display=!v||el.textContent.toLowerCase().includes(v)?'':'none';})},style:{fontSize:'12px',marginBottom:'6px',width:'100%'}}),
@@ -1264,9 +1268,10 @@ createApp({
           ) : h('div',{style:{textAlign:'center',color:'#94a3b8',padding:'20px',fontSize:'13px'}},'← 请先选择一个规格'),
           h('datalist',{id:'allItemsList'},this.salPrices.map(p=>h('option',{value:p.item_name}))),
         ]),
-      ]),
+      ]) : null,
 
       // ===== 3. 记录表格 =====
+      (sub==='records'||sub==='enter') ? [
       this.salRecords.length > 0 ? h('div',{class:'card'},[
         h('div',{class:'card-title'},'📋 工资明细 ('+this.salRecords.length+'条)'),
         h('div',{class:'table-wrap'},h('table',[
@@ -1298,8 +1303,9 @@ createApp({
       }},'📋 工资单')),
           ])))
         ]))
-      ]) : null,
+      ]) : null] : null,
     ]);
+    };
 
     // --- Finance ---
     const renderFinance = () => {
@@ -1633,16 +1639,16 @@ createApp({
           tabs.flatMap(tab=>{
             const btns = [h('button',{key:tab.key, class:this.currentTab===tab.key&&!this.entrySubOpen?'active':'',
               onClick:()=>{
-                if(tab.key==='entry'){this.entrySubOpen=!this.entrySubOpen;return;}
-                this.entrySubOpen=false; this.currentTab=tab.key;
+                if(tab.key==='entry'){this.entrySubOpen=!this.entrySubOpen;this.salarySubOpen=false;return;}
+                if(tab.key==='salary'){this.salarySubOpen=!this.salarySubOpen;this.entrySubOpen=false;return;}
+                this.entrySubOpen=false;this.salarySubOpen=false; this.currentTab=tab.key;
                 if(tab.key==='help'){window.open('/static/doc.html','_blank');this.currentTab='dashboard';return;}
                 if(tab.key==='admin'){this.loadAdmins();this.loadLogs();}
-                if(tab.key==='salary'){this.loadSalary();}
                 if(tab.key==='finance'){this.loadFinance();this.loadFinCategories();}
                 if(tab.key==='summary'){this.loadSummary();}
                 if(tab.key==='analysis'){this.loadAnalysis();}
               }
-            },tab.key==='entry'&&this.entrySubOpen?tab.label.replace('📝 ','📂 '):tab.label)];
+            },(tab.key==='entry'&&this.entrySubOpen)||(tab.key==='salary'&&this.salarySubOpen)?tab.label.replace(/^[^ ]+ /,'📂 '):tab.label)];
             if(tab.key==='entry' && this.entrySubOpen){
               btns.push(
                 h('button',{key:'entry-main',class:this.currentTab==='entry'?'active':'',style:{paddingLeft:'32px',fontSize:'12px'}},
@@ -1651,6 +1657,18 @@ createApp({
                   onClick:()=>{this.currentTab='outbound';this.loadOutbound();}},'📤 出库记录'),
                 h('button',{key:'inbound',class:this.currentTab==='inbound'?'active':'',style:{paddingLeft:'32px',fontSize:'12px'}},
                   onClick:()=>{this.currentTab='inbound';this.loadInbound();}},'📥 入库记录'),
+              );
+            }
+            if(tab.key==='salary' && this.salarySubOpen){
+              btns.push(
+                h('button',{key:'salary-enter',class:this.currentTab==='salary'&&this.subTab==='enter'?'active':'',style:{paddingLeft:'32px',fontSize:'12px'}},
+                  onClick:()=>{this.currentTab='salary';this.subTab='enter';this.loadSalary();}},'📝 工资录入'),
+                h('button',{key:'salary-records',class:this.currentTab==='salary'&&this.subTab==='records'?'active':'',style:{paddingLeft:'32px',fontSize:'12px'}},
+                  onClick:()=>{this.currentTab='salary';this.subTab='records';this.loadSalary();}},'📋 工资记录'),
+                h('button',{key:'salary-workers',class:this.currentTab==='salary'&&this.subTab==='workers'?'active':'',style:{paddingLeft:'32px',fontSize:'12px'}},
+                  onClick:()=>{this.currentTab='salary';this.subTab='workers';this.loadSalary();}},'👷 工人管理'),
+                h('button',{key:'salary-items',class:this.currentTab==='salary'&&this.subTab==='items'?'active':'',style:{paddingLeft:'32px',fontSize:'12px'}},
+                  onClick:()=>{this.currentTab='salary';this.subTab='items';this.loadSalary();}},'🔗 工序管理'),
               );
             }
             return btns;
