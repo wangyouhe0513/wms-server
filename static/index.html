@@ -1648,7 +1648,7 @@ createApp({
                 if(tab.key==='summary'){this.loadSummary();}
                 if(tab.key==='analysis'){this.loadAnalysis();}
               }
-            },((tab.key==='entry'&&this.entrySubOpen)||(tab.key==='salary'&&this.salarySubOpen))?tab.label.replace(/^\S+ /,'📂 '):tab.label)];
+            },(tab.key==='entry'&&this.entrySubOpen)?'📂 每日录入':(tab.key==='salary'&&this.salarySubOpen)?'📂 工资管理':tab.label)];
             if(tab.key==='entry' && this.entrySubOpen){
               btns.push(
                 h('button',{key:'entry-main',class:this.currentTab==='entry'?'active':'',style:{paddingLeft:'32px',fontSize:'12px'},onClick:()=>{this.currentTab='entry';this.entrySubOpen=false;}},'📝 录入表单'),
