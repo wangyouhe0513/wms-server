@@ -1790,18 +1790,21 @@ def dashboard(db: Session = Depends(get_db)):
     today = date.today()
     default_threshold = get_low_stock_threshold(db)
 
+    # 在职销售人员ID集合
+    active_sp_ids = set(s.id for s in db.query(Salesperson.id).filter(Salesperson.is_active == 1).all())
+
     today_rows = db.query(Transaction).filter(Transaction.trans_date == today).all()
-    today_out = sum(float(t.amount) for t in today_rows if t.trans_type == "出库")
+    today_out = sum(float(t.amount) for t in today_rows if t.trans_type == "出库" and (not t.salesperson_id or t.salesperson_id in active_sp_ids))
     today_in = sum(t.quantity for t in today_rows if t.trans_type == "入库")
 
-    # 本月累计
+    # 本月累计（只统计在职销售人员）
     month_start = today.replace(day=1)
     month_rows = db.query(Transaction).filter(
         Transaction.trans_date >= month_start,
         Transaction.trans_date <= today,
         Transaction.trans_type == "出库",
     ).all()
-    month_total = sum(float(t.amount) for t in month_rows)
+    month_total = sum(float(t.amount) for t in month_rows if not t.salesperson_id or t.salesperson_id in active_sp_ids)
 
     # 低库存
     low_skus = db.query(ProductSku).filter(
