@@ -1234,11 +1234,13 @@ _os.makedirs(RECEIPT_DIR, exist_ok=True)
 
 
 @app.get("/api/finance")
-def finance_list(year: int = 0, month: int = 0, page: int = 1, page_size: int = 30, db: Session = Depends(get_db)):
+def finance_list(year: int = 0, month: int = 0, person: str = "", category: str = "", page: int = 1, page_size: int = 30, db: Session = Depends(get_db)):
     """财务记录列表"""
     q = db.query(FinanceRecord).order_by(FinanceRecord.date.desc(), FinanceRecord.id.desc())
     if year > 0: q = q.filter(extract("year", FinanceRecord.date) == year)
     if month > 0: q = q.filter(extract("month", FinanceRecord.date) == month)
+    if person: q = q.filter(FinanceRecord.person.like(f"%{person}%"))
+    if category: q = q.filter(FinanceRecord.category == category)
     total = q.count()
     rows = q.offset((page-1)*page_size).limit(page_size).all()
     items = [{

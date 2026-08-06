@@ -291,6 +291,7 @@ createApp({
     const finYear = ref(new Date().getFullYear());
     const finMonth = ref(new Date().getMonth() + 1);
     const finRecords = ref([]); const finPage = ref(1); const finTotal = ref(0);
+    const finPerson = ref(''); const finCat = ref('');
     const finSummary = ref({total_in:0,total_out:0,balance:0});
     const finCategories = ref([]);
     const newFinCat = ref('');
@@ -539,7 +540,7 @@ createApp({
 
     const loadFinance = async () => {
       const [data, summary] = await Promise.all([
-        api(`/api/finance?year=${finYear.value}&month=${finMonth.value}&page=${finPage.value}&page_size=30`),
+        api(`/api/finance?year=${finYear.value}&month=${finMonth.value}&person=${encodeURIComponent(finPerson.value)}&category=${encodeURIComponent(finCat.value)}&page=${finPage.value}&page_size=30`),
         api(`/api/finance/summary?year=${finYear.value}&month=${finMonth.value}`)
       ]);
       finRecords.value = data.items; finTotal.value = data.total; finSummary.value = summary;
@@ -801,7 +802,7 @@ createApp({
       salWorkers, salPrices, salItemSpecs, salRecords, salSummary, salMonth, salPage, salPageSize, salTotal, salKeyword, salDateFrom, salDateTo, salFilterSpec, salFilterColor, salQuickSpec, salQuickColor, salQuickWorker, salNewWorker, salNewJobType, salNewItem, salNewPrice,
       loadSalary, saveSalWorker, deleteSalWorker, saveSalPrice, deleteSalPrice, addSalRecord, deleteSalRecord, toggleSalPaid, exportSalary, batchPaid, showSalDropdown,
       salSpecItems, salNewLinkSpec, salNewLinkItem, salEditLinkId, salEditLinkItem, initSpecItems, saveSpecItem, updateSpecItem, deleteSpecItem,
-      finYear, finMonth, finRecords, finPage, finTotal, finSummary, loadFinance, exportFinance, deleteFinance,
+      finYear, finMonth, finRecords, finPage, finTotal, finPerson, finCat, finSummary, loadFinance, exportFinance, deleteFinance,
       obPage, obTotal, inPage, inTotal, finCategories, newFinCat, loadFinCategories, saveFinCat, deleteFinCat,
       analysisYear, analysisMonth, analysisData, loadAnalysis,
       newSpec, newColor, newColorCode, newSP, newSPType, importResult,
@@ -1375,7 +1376,10 @@ createApp({
             h('select',{value:this.finYear,onChange:e=>{this.finYear=parseInt(e.target.value);this.loadFinance();},style:{width:'90px'}},years.map(y=>h('option',{value:y},String(y)))),
             h('span','年'),
             h('select',{value:this.finMonth,onChange:e=>{this.finMonth=parseInt(e.target.value);this.loadFinance();},style:{width:'70px'}},Array.from({length:12},(_,i)=>h('option',{value:i+1},String(i+1)+'月'))),
-            h('button',{class:'btn-primary btn-sm',onClick:this.loadFinance},'查询'),
+            h('button',{class:'btn-primary btn-sm',onClick:()=>{this.finPage=1;this.loadFinance();}},'查询'),
+            h('input',{value:this.finPerson,onInput:e=>this.finPerson=e.target.value,placeholder:'🔍 责任人',style:{width:'80px',fontSize:'12px'},onKeyup:e=>{if(e.key==='Enter'){this.finPage=1;this.loadFinance();}}}),
+            h('select',{value:this.finCat,onChange:e=>{this.finCat=e.target.value;this.finPage=1;this.loadFinance();},style:{width:'80px',fontSize:'12px'}},
+              [h('option',{value:''},'全部类别'),...this.finCategories.map(c=>h('option',{value:c.name},c.name))]),
             h('span',{style:{flex:1}}),
             h('button',{class:'btn-success btn-sm',onClick:()=>window.open('/static/report.html','_blank')},'📋 报账链接'),
             h('button',{class:'btn-warning btn-sm',onClick:this.exportFinance},'📥 导出CSV'),
