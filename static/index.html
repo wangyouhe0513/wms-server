@@ -222,7 +222,6 @@ createApp({
 
     // === Main app state ===
     const currentTab = ref('dashboard');
-    const salSub = ref('enter');
     const today = new Date().toISOString().slice(0, 10);
     const showLogs = ref(false);  // toggle for operation log modal
 
@@ -783,7 +782,7 @@ createApp({
       token, authUser, loginUsername, loginPassword, loginError, loginLoading, rememberMe,
       doLogin, doLogout, showChangePwd, oldPwd, newPwd, changePwd,
       // Main
-      currentTab, salSub, today, dash, dashBalance, entryDate, entryRows, submitting, msg, msgType, todayRecords,
+      currentTab, today, dash, dashBalance, entryDate, entryRows, submitting, msg, msgType, todayRecords,
       specs, colors, salespersons, invData, invFilter, invLowStock,
       obSP, obYear, obMonth, obData,
       inYear, inMonth, inData,
@@ -1153,15 +1152,7 @@ createApp({
     // --- Summary ---
     // --- Salary ---
     const renderSalary = () => h('div',{style:{display:'flex',flexDirection:'column',gap:'16px'}},[
-      // 子栏目Tab栏
-      h('div',{style:{display:'flex',gap:'6px',flexWrap:'wrap'}},[
-        h('button',{class:this.salSub==='enter'?'btn-primary btn-sm':'btn-sm',onClick:()=>this.salSub='enter'},'📝 工资录入'),
-        h('button',{class:this.salSub==='records'?'btn-primary btn-sm':'btn-sm',onClick:()=>this.salSub='records'},'📋 工资记录'),
-        h('button',{class:this.salSub==='workers'?'btn-primary btn-sm':'btn-sm',onClick:()=>this.salSub='workers'},'👷 工人管理'),
-        h('button',{class:this.salSub==='items'?'btn-primary btn-sm':'btn-sm',onClick:()=>this.salSub='items'},'🔗 工序管理'),
-      ]),
-      // ===== 0. 快速填写 =====
-      (this.salSub==='enter'||this.salSub==='records') && h('div',{class:'card',style:{background:'#eef1ff',border:'2px solid #4f6ef7'}},[
+      // ===== 0. 快速填写（按规格→颜色→工序→工人） =====
       h('div',{class:'card',style:{background:'#eef1ff',border:'2px solid #4f6ef7'}},[
         h('div',{class:'card-title',style:{color:'#4f6ef7'}},'⚡ 快速填写（规格→颜色→工序→工人）'),
         h('div',{style:{display:'flex',gap:'6px',alignItems:'center',flexWrap:'wrap'}},[
@@ -1186,7 +1177,6 @@ createApp({
       ]),
 
       // ===== 1. 录入区域（置顶） =====
-      this.salSub==='enter' && h('div',{class:'card',style:{background:'#f8fafc',border:'2px solid #4f6ef7'}},[
       h('div',{class:'card',style:{background:'#f8fafc',border:'2px solid #4f6ef7'}},[
         h('div',{class:'card-title',style:{color:'#4f6ef7'}},'📝 录入工资'),
         h('div',{style:{display:'flex',gap:'8px',alignItems:'center',flexWrap:'wrap',marginBottom:'10px'}},[
@@ -1217,8 +1207,7 @@ createApp({
         h('script',{},'setInterval(function(){var q=parseInt(document.getElementById("salQty")?.value)||0;var p=parseFloat(document.getElementById("salPrice")?.value)||0;var el=document.getElementById("salAmountPreview");if(el)el.textContent="¥"+(q*p).toFixed(2)},200)'),
       ]),
 
-      // ===== 2. 工人+工序 =====
-      (this.salSub==='workers'||this.salSub==='items') && h('div',{style:{display:'flex',gap:'12px',flexWrap:'wrap'}},[
+      // ===== 2. 工人+工序管理 =====
       h('div',{style:{display:'flex',gap:'12px',flexWrap:'wrap'}},[
         h('div',{class:'card',style:{flex:1,minWidth:'260px'}},[
           h('div',{class:'card-title'},'👷 工人管理'),
@@ -1279,7 +1268,7 @@ createApp({
       ]),
 
       // ===== 3. 记录表格 =====
-      (this.salSub==='records'||this.salSub==='enter') && this.salRecords.length > 0 ? h('div',{class:'card'},[
+      this.salRecords.length > 0 ? h('div',{class:'card'},[
         h('div',{class:'card-title'},'📋 工资明细 ('+this.salRecords.length+'条)'),
         h('div',{class:'table-wrap'},h('table',[
           h('thead',h('tr',[h('th','工人'),h('th','规格'),h('th','工序'),h('th','数量'),h('th','单价'),h('th','金额'),h('th','支付'),h('th','已付'),h('th','备注'),h('th','')])),
@@ -1296,7 +1285,7 @@ createApp({
       ]) : null,
 
       // ===== 4. 汇总 + 分享 =====
-      (this.salSub==='records'||this.salSub==='enter') && this.salSummary.length > 0 ? h('div',{class:'card'},[
+      this.salSummary.length > 0 ? h('div',{class:'card'},[
         h('div',{class:'card-title'},'📊 工资汇总'),
         h('div',{class:'table-wrap'},h('table',[
           h('thead',h('tr',[h('th','工人'),h('th','合计'),h('th','已付'),h('th','未付'),h('th','分享')])),
