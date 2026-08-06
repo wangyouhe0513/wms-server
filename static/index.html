@@ -129,8 +129,8 @@
   @media (min-width: 769px) {
     .login-box { margin: 100px auto; }
     /* 移动端子菜单 — 底部弹出 */
-    .submenu-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.35); z-index: 300; }
-    .submenu-panel { position: fixed; bottom: 55px; left: 10px; right: 10px; background: #fff; border-radius: 14px; z-index: 301; overflow: hidden; box-shadow: 0 -4px 20px rgba(0,0,0,.2); animation: popIn .2s ease; padding-bottom: env(safe-area-inset-bottom, 0px); }
+    .submenu-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.4); z-index: 999; }
+    .submenu-panel { position: fixed; bottom: 55px; left: 8px; right: 8px; background: #fff; border-radius: 14px; z-index: 1000; overflow: hidden; box-shadow: 0 -4px 20px rgba(0,0,0,.25); animation: popIn .2s ease; padding-bottom: env(safe-area-inset-bottom, 0px); }
     @keyframes popIn { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     .sidebar-nav button[style*=\"paddingLeft:32\"] { display: none; }
   }
