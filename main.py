@@ -838,7 +838,7 @@ def personal_bill(
             extract("year", Transaction.trans_date) == year,
             extract("month", Transaction.trans_date) == month,
         )
-        .order_by(Transaction.trans_date, Transaction.id)
+        .order_by(Transaction.id.desc())
         .all()
     )
 
@@ -884,7 +884,7 @@ def inbound_records(
             extract("year", Transaction.trans_date) == year,
             extract("month", Transaction.trans_date) == month,
         )
-        .order_by(Transaction.trans_date, Transaction.id)
+        .order_by(Transaction.id.desc())
         .all()
     )
 

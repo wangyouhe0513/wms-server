@@ -227,6 +227,7 @@ createApp({
 
     // Dashboard
     const dash = ref({today_out_amount:0,today_in_qty:0,month_total:0,low_stock_count:0,total_specs:0,total_colors:0});
+    const dashBalance = ref(0);
 
     // Entry
     const entryDate = ref(today);
@@ -318,6 +319,7 @@ createApp({
       try { globalSettings.value = await api('/api/settings'); } catch(e) {}
       try { skuThresholds.value = await api('/api/skus'); } catch(e) {}
       try { loadTodayRecords(); } catch(e) {}
+      try { const fs = await api('/api/finance/summary'); dashBalance.value = fs.balance; } catch(e) {}
       if (authUser.value?.role === 'superadmin') loadAdmins();
     };
 
@@ -563,10 +565,11 @@ createApp({
         });
       }
 
-      // 2. 柱状图 - 按销售人
+      // 2. 柱状图 - 按销售人（过滤已删除的）
       const spCtx = document.getElementById('chartSalesperson');
       if (spCtx) {
-        const sps = Object.entries(s.by_salesperson);
+        const activeNames = new Set(this.salespersons.map(s=>s.name));
+        const sps = Object.entries(s.by_salesperson).filter(([n])=>activeNames.has(n));
         new Chart(spCtx, {
           type: 'bar',
           data: {
@@ -745,7 +748,7 @@ createApp({
       token, authUser, loginUsername, loginPassword, loginError, loginLoading, rememberMe,
       doLogin, doLogout, showChangePwd, oldPwd, newPwd, changePwd,
       // Main
-      currentTab, today, dash, entryDate, entryRows, submitting, msg, msgType, todayRecords,
+      currentTab, today, dash, dashBalance, entryDate, entryRows, submitting, msg, msgType, todayRecords,
       specs, colors, salespersons, invData, invFilter, invLowStock,
       obSP, obYear, obMonth, obData,
       inYear, inMonth, inData,
@@ -825,6 +828,11 @@ createApp({
           onClick:()=>this.currentTab='thresholds'},[
           h('div',{class:'label'},'🔴 低库存预警'),
           h('div',{class:'value'},String(this.dash.low_stock_count)+' SKU'),
+        ]),
+        h('div',{class:'stat-card',style:{background:this.dashBalance>=0?'linear-gradient(135deg,#8b5cf6,#7c3aed)':'linear-gradient(135deg,#f59e0b,#d97706)',cursor:'pointer'},
+          onClick:()=>this.currentTab='finance'},[
+          h('div',{class:'label'},'💰 当前余额'),
+          h('div',{class:'value'},'¥'+this.dashBalance.toLocaleString()),
         ]),
       ]),
 
@@ -1523,6 +1531,7 @@ createApp({
         h('div',{class:'sidebar-nav'},
           tabs.map(tab=>h('button',{key:tab.key, class:this.currentTab===tab.key?'active':'',
             onClick:()=>{this.currentTab=tab.key;if(tab.key==='help'){window.open('/static/doc.html','_blank');this.currentTab='dashboard';return;}
+if(tab.key==='outbound'){this.loadOutbound();}if(tab.key==='inbound'){this.loadInbound();}
 if(tab.key==='admin'){this.loadAdmins();this.loadLogs();}if(tab.key==='salary'){this.loadSalary();}if(tab.key==='finance'){this.loadFinance();this.loadFinCategories();}if(tab.key==='summary'){this.loadSummary();}if(tab.key==='analysis'){this.loadAnalysis();}}
           },tab.label))
         ),
