@@ -270,6 +270,10 @@ createApp({
     const salWorkers = ref([]); const salPrices = ref([]); const salItemSpecs = ref([]); const salRecords = ref([]);
     const salSummary = ref([]); const salMonth = ref(new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0'));
     const salFilterSpec = ref('');
+    const salFilterColor = ref('');
+    const salQuickSpec = ref('');
+    const salQuickColor = ref('');
+    const salQuickWorker = ref('');
     const salNewWorker = ref(''); const salNewJobType = ref('机工');
     const salNewItem = ref(''); const salNewPrice = ref('');
     const salEditWorkerId = ref(0); const salEditItemId = ref(0);
@@ -755,7 +759,7 @@ createApp({
       obSP, obYear, obMonth, obData,
       inYear, inMonth, inData,
       sumYear, sumMonth, summary,
-      salWorkers, salPrices, salItemSpecs, salRecords, salSummary, salMonth, salFilterSpec, salNewWorker, salNewJobType, salNewItem, salNewPrice,
+      salWorkers, salPrices, salItemSpecs, salRecords, salSummary, salMonth, salFilterSpec, salFilterColor, salQuickSpec, salQuickColor, salQuickWorker, salNewWorker, salNewJobType, salNewItem, salNewPrice,
       loadSalary, saveSalWorker, deleteSalWorker, saveSalPrice, deleteSalPrice, addSalRecord, deleteSalRecord, toggleSalPaid, exportSalary, showSalDropdown,
       finYear, finMonth, finRecords, finSummary, loadFinance, exportFinance, deleteFinance, finCategories, newFinCat, loadFinCategories, saveFinCat, deleteFinCat,
       analysisYear, analysisMonth, analysisData, loadAnalysis,
@@ -1118,6 +1122,30 @@ createApp({
     // --- Summary ---
     // --- Salary ---
     const renderSalary = () => h('div',{style:{display:'flex',flexDirection:'column',gap:'16px'}},[
+      // ===== 0. 快速填写（按规格→颜色→工序→工人） =====
+      h('div',{class:'card',style:{background:'#eef1ff',border:'2px solid #4f6ef7'}},[
+        h('div',{class:'card-title',style:{color:'#4f6ef7'}},'⚡ 快速填写（规格→颜色→工序→工人）'),
+        h('div',{style:{display:'flex',gap:'6px',alignItems:'center',flexWrap:'wrap'}},[
+          h('select',{value:this.salQuickSpec,onChange:e=>{this.salQuickSpec=e.target.value;this.salQuickColor='';},style:{flex:'1 1 100px',fontSize:'14px'}},
+            [h('option',{value:''},'① 选规格'),...this.specs.map(s=>h('option',{value:s.name},s.name))]),
+          h('select',{value:this.salQuickColor,onChange:e=>{this.salQuickColor=e.target.value;},style:{flex:'1 1 100px',fontSize:'14px'}},
+            [h('option',{value:''},'② 选颜色'),...this.colors.map(c=>h('option',{value:c.name},c.name))]),
+          h('input',{value:this.salQuickWorker,onInput:e=>this.salQuickWorker=e.target.value,list:'salQuickWorkerList',placeholder:'③ 选工人',style:{flex:'1 1 100px',fontSize:'14px'},autocomplete:'off'}),
+          h('datalist',{id:'salQuickWorkerList'},this.salWorkers.map(w=>h('option',{value:w.name}))),
+          h('span',{style:{fontWeight:600,fontSize:'13px'}},'→'),
+          h('div',{style:{flex:'2 1 280px',display:'flex',gap:'4px',flexWrap:'wrap',maxHeight:'90px',overflowY:'auto'}},
+            this.salQuickSpec ? this.salItemSpecs.filter(p=>p.spec_name===this.salQuickSpec).map(p=>h('button',{class:'btn-xs',key:p.id,
+              style:{background:'#fff',border:'1px solid #4f6ef7',color:'#4f6ef7',marginBottom:'2px'},
+              onClick:()=>{
+                document.getElementById('salWorkerInput').value=this.salQuickWorker;
+                document.getElementById('salItemInput').value=p.item_name;
+                document.getElementById('salPrice').value=p.unit_price;
+                document.getElementById('salQty').focus();
+              }},p.item_name+' ¥'+p.unit_price)) : h('span',{style:{color:'#94a3b8',fontSize:'13px'}},'← 选规格后这里显示工序按钮')
+          ),
+        ]),
+      ]),
+
       // ===== 1. 录入区域（置顶） =====
       h('div',{class:'card',style:{background:'#f8fafc',border:'2px solid #4f6ef7'}},[
         h('div',{class:'card-title',style:{color:'#4f6ef7'}},'📝 录入工资'),
