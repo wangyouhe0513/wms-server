@@ -1279,7 +1279,7 @@ createApp({
       this.salRecords.length > 0 ? h('div',{class:'card'},[
         h('div',{class:'card-title'},'📋 工资明细 ('+this.salRecords.length+'条)'),
         h('div',{class:'table-wrap'},h('table',[
-          h('thead',h('tr',[h('th','工人'),h('th','规格'),h('th','工序'),h('th','数量'),h('th','单价'),h('th','金额'),h('th','支付'),h('th','已付'),h('th','备注'),h('th','')])),
+          h('thead',h('tr',[h('th','工人'),h('th','规格'),h('th','工序'),h('th','数量'),h('th','单价'),h('th','金额'),h('th','支付'),h('th','已付'),h('th','备注'),h('th','时间'),h('th','')])),
           h('tbody',this.salRecords.map(r=>h('tr',{key:r.id},[
             h('td',{style:{fontWeight:500}},r.worker_name),h('td',{style:{fontSize:'12px',color:'#94a3b8'}},r.spec_name||'—'),h('td',r.item_name),
             h('td',String(r.quantity)),h('td','¥'+Number(r.unit_price).toFixed(2)),
@@ -1287,6 +1287,7 @@ createApp({
             h('td',r.payment_method),
             h('td',{style:{cursor:'pointer',fontSize:'16px'},onClick:()=>this.toggleSalPaid(r),title:'点击切换已付/未付'},r.paid?'✅':'⬜'),
             h('td',{style:{fontSize:'12px',color:'#94a3b8',maxWidth:'100px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},r.remark),
+            h('td',{style:{fontSize:'11px',color:'#94a3b8'}},r.created_at||''),
             h('td',h('button',{class:'btn-danger btn-xs',onClick:()=>this.deleteSalRecord(r.id)},'✕')),
           ])))
         ]))
