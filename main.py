@@ -1511,21 +1511,21 @@ def salary_spec_item_delete(siid: int, admin: Admin = Depends(get_current_admin)
 
 @app.get("/api/salary/item-specs")
 def salary_item_specs(db: Session = Depends(get_db)):
-    """返回工序→规格的映射表"""
-    prices = db.query(SalaryPrice).filter(SalaryPrice.is_active == 1).all()
-    specs = db.query(ProductSpec).filter(ProductSpec.is_active == 1).all()
-    spec_names = [s.name for s in specs]
-
-    # 为每个工序匹配规格
+    """返回工序→规格的映射表（基于关联表）"""
+    links = db.query(SalarySpecItem).filter(SalarySpecItem.is_active == 1).all()
+    # 从关联表获取规格，再从prices表获取价格
     result = []
-    for p in prices:
-        matched = ""
-        # 按规格名长度降序匹配，优先匹配长的（如"无钢丝"优先于"钢丝"）
-        for sn in sorted(spec_names, key=len, reverse=True):
-            if sn in p.item_name:
-                matched = sn
-                break
-        result.append({"id": p.id, "item_name": p.item_name, "unit_price": float(p.unit_price), "spec_name": matched})
+    seen = set()
+    for link in links:
+        key = (link.spec_name, link.item_name)
+        if key in seen: continue
+        seen.add(key)
+        # 优先使用关联表价格，无则从prices取
+        price = float(link.unit_price) if float(link.unit_price or 0) > 0 else 0
+        if price == 0:
+            p = db.query(SalaryPrice).filter(SalaryPrice.item_name == link.item_name, SalaryPrice.is_active == 1).first()
+            if p: price = float(p.unit_price)
+        result.append({"id": link.id, "item_name": link.item_name, "unit_price": price, "spec_name": link.spec_name})
 
     return result
 
