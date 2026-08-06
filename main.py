@@ -13,7 +13,7 @@ from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, Que
 from fastapi.responses import StreamingResponse, FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import func, extract
+from sqlalchemy import func, extract, or_
 
 from database import init_db, get_db
 from models import ProductSpec, Color, ProductSku, Salesperson, Transaction, InventoryLog, Admin, OperationLog, SystemConfig, FinanceRecord, FinanceCategory, SalaryWorker, SalaryPrice, SalaryRecord, SalarySpecItem
@@ -1554,10 +1554,16 @@ def salary_price_delete(pid: int, admin: Admin = Depends(get_current_admin), db:
 
 # -- 工资记录 --
 @app.get("/api/salary/records")
-def salary_records(month: str = "", worker_id: int = 0, page: int = 1, page_size: int = 30, db: Session = Depends(get_db)):
+def salary_records(month: str = "", worker_id: int = 0, keyword: str = "", date_from: str = "", date_to: str = "",
+                    page: int = 1, page_size: int = 30, db: Session = Depends(get_db)):
     q = db.query(SalaryRecord).order_by(SalaryRecord.id.desc())
     if month: q = q.filter(SalaryRecord.month.like(month[:7] + '%'))
     if worker_id > 0: q = q.filter(SalaryRecord.worker_id == worker_id)
+    if keyword:
+        kw = f"%{keyword}%"
+        q = q.filter(or_(SalaryRecord.spec_name.like(kw), SalaryRecord.item_name.like(kw), SalaryRecord.color_name.like(kw)))
+    if date_from: q = q.filter(SalaryRecord.month >= date_from)
+    if date_to: q = q.filter(SalaryRecord.month <= date_to)
     total = q.count()
     rows = q.offset((page-1)*page_size).limit(page_size).all()
     items = [{"id": r.id, "worker_id": r.worker_id, "worker_name": r.worker.name if r.worker else "",
