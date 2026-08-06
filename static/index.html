@@ -138,12 +138,6 @@
     .submenu-overlay { display: none; }
     .login-box { margin: 100px auto; }
   }
-  @media (min-width: 769px) {
-    .login-box { margin: 100px auto; }
-  }
-  @media (min-width: 769px) {
-    .login-box { margin: 100px auto; }
-  }
 </style>
 </head>
 <body>
@@ -1235,7 +1229,8 @@ createApp({
             h('select',{value:this.salNewJobType,onChange:e=>this.salNewJobType=e.target.value,style:{fontSize:'12px',width:'70px'}},[h('option','机工'),h('option','厂长'),h('option','辅工')]),
             h('button',{class:'btn-primary btn-xs',onClick:this.saveSalWorker},'+'),
           ]),
-        ]) : null,
+        ]),
+      ]) : null,
         // ===== 2b. 工序管理 =====
         sub==='items' ? h('div',{style:{display:'flex',gap:'12px',flexWrap:'wrap'}},[
         h('div',{class:'card',style:{flex:1,minWidth:'260px'}},[
@@ -1300,7 +1295,7 @@ createApp({
             h('td',h('button',{class:'btn-danger btn-xs',onClick:()=>this.deleteSalRecord(r.id)},'✕')),
           ])))
         ]))
-      ]) : null,
+      ]) : null] : null,
 
       // ===== 4. 汇总 + 分享 =====
       this.salSummary.length > 0 ? h('div',{class:'card'},[
