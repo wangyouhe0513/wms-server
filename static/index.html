@@ -1235,7 +1235,7 @@ createApp({
           h('div',{class:'card-title'},'🔗 规格→工序关联'),
           h('div',{style:{display:'flex',gap:'6px',alignItems:'center',marginBottom:'8px',flexWrap:'wrap'}},[
             h('button',{class:'btn-xs',style:{background:'#f59e0b',color:'#fff'},onClick:this.initSpecItems},'🔄 自动匹配'),
-            h('select',{value:this.salNewLinkSpec,onChange:e=>{this.salNewLinkSpec=e.target.value;loadSpecItems();},style:{fontSize:'12px',fontWeight:600}},
+            h('select',{value:this.salNewLinkSpec,onChange:e=>{this.salNewLinkSpec=e.target.value;this.loadSpecItems();},style:{fontSize:'12px',fontWeight:600}},
               [h('option',{value:''},'选择规格▼'),...this.specs.map(s=>h('option',{value:s.name},s.name))]),
           ]),
           // 关联列表
