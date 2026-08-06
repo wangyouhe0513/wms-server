@@ -1180,7 +1180,7 @@ createApp({
       ]) : null,
 
       // ===== 1. 录入区域（置顶） =====
-      h('div',{class:'card',style:{background:'#f8fafc',border:'2px solid #4f6ef7'}},[
+      sub==='enter' ? h('div',{class:'card',style:{background:'#f8fafc',border:'2px solid #4f6ef7'}},[
         h('div',{class:'card-title',style:{color:'#4f6ef7'}},'📝 录入工资'),
         h('div',{style:{display:'flex',gap:'8px',alignItems:'center',flexWrap:'wrap',marginBottom:'10px'}},[
           h('input',{type:'month',value:this.salMonth,onInput:e=>this.salMonth=e.target.value,style:{fontSize:'13px',fontWeight:600}}),
@@ -1208,10 +1208,10 @@ createApp({
         ]),
         // 实时预览金额
         h('script',{},'setInterval(function(){var q=parseInt(document.getElementById("salQty")?.value)||0;var p=parseFloat(document.getElementById("salPrice")?.value)||0;var el=document.getElementById("salAmountPreview");if(el)el.textContent="¥"+(q*p).toFixed(2)},200)'),
-      ]),
+      ]) : null,
 
-      // ===== 2. 工人+工序管理 =====
-      (sub==='workers'||sub==='items') ? h('div',{style:{display:'flex',gap:'12px',flexWrap:'wrap'}},[
+      // ===== 2. 工人管理 =====
+      sub==='workers' ? h('div',{style:{display:'flex',gap:'12px',flexWrap:'wrap'}},[
         h('div',{class:'card',style:{flex:1,minWidth:'260px'}},[
           h('div',{class:'card-title'},'👷 工人管理'),
           h('input',{placeholder:'🔍 筛选→点击填入录入框',onInput:e=>{document.querySelectorAll('.worker-tag').forEach(el=>{const v=e.target.value.toLowerCase();el.style.display=!v||el.textContent.toLowerCase().includes(v)?'':'none';})},style:{fontSize:'12px',marginBottom:'6px',width:'100%'}}),
@@ -1223,7 +1223,9 @@ createApp({
             h('select',{value:this.salNewJobType,onChange:e=>this.salNewJobType=e.target.value,style:{fontSize:'12px',width:'70px'}},[h('option','机工'),h('option','厂长'),h('option','辅工')]),
             h('button',{class:'btn-primary btn-xs',onClick:this.saveSalWorker},'+'),
           ]),
-        ]),
+        ]) : null,
+        // ===== 2b. 工序管理 =====
+        sub==='items' ? h('div',{style:{display:'flex',gap:'12px',flexWrap:'wrap'}},[
         h('div',{class:'card',style:{flex:1,minWidth:'260px'}},[
           h('div',{class:'card-title'},'📏 工序单价'),
           h('div',{style:{display:'flex',gap:'4px',flexWrap:'wrap',maxHeight:'120px',overflowY:'auto'}},this.salPrices.map(p=>h('span',{key:p.id,style:{background:'#f1f5f9',padding:'2px 8px',borderRadius:'4px',fontSize:'11px',display:'inline-flex',alignItems:'center',gap:'3px'}},
