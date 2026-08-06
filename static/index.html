@@ -1245,19 +1245,25 @@ createApp({
             h('button',{class:'btn-success btn-sm',onClick:()=>window.open('/static/report.html','_blank')},'📋 报账链接'),
             h('button',{class:'btn-warning btn-sm',onClick:this.exportFinance},'📥 导出CSV'),
           ]),
-          h('div',{class:'table-wrap'},h('table',[
-            h('thead',h('tr',[h('th','日期'),h('th','类型'),h('th','金额'),h('th','类别'),h('th','明细'),h('th','责任人'),h('th','凭证'),h('th','操作')])),
-            h('tbody',this.finRecords.length===0?[h('tr',h('td',{colSpan:8,style:{textAlign:'center',color:'#909399',padding:'24px'}},'暂无记录'))]:
-              this.finRecords.map(r=>h('tr',{key:r.id},[
-                h('td',{style:{fontSize:'12px'}},r.date),
-                h('td',h('span',{class:'tag '+(r.type==='收入'?'tag-in':'tag-out')},r.type)),
-                h('td',{style:{fontWeight:600,color:r.type==='收入'?'#22c55e':'#ef4444'}},'¥'+r.amount.toFixed(2)),
-                h('td',r.category),h('td',{style:{fontSize:'13px',maxWidth:'150px'}},r.detail),
-                h('td',r.person),
-                h('td',r.receipt?r.receipt.split(',').map((p,i)=>h('a',{href:p.trim(),target:'_blank',style:{color:'#4f6ef7',fontSize:'12px',marginRight:'6px'}},'图'+(i+1))):'—'),
-                h('td',h('button',{class:'btn-danger btn-xs',onClick:()=>this.deleteFinance(r.id)},'✕')),
+          h('div',{class:'table-wrap'},h('table',{style:{fontSize:'13px'}},[
+            h('thead',h('tr',[h('th',{style:{width:'90px'}},'日期'),h('th',{style:{width:'60px'}},'类型'),h('th',{style:{width:'100px',textAlign:'right'}},'金额'),h('th',{style:{width:'70px'}},'类别'),h('th','明细'),h('th',{style:{width:'80px'}},'责任人'),h('th',{style:{width:'70px'}},'凭证'),h('th',{style:{width:'50px'}},'')])),
+            h('tbody',this.finRecords.length===0?[h('tr',h('td',{colSpan:8,style:{textAlign:'center',color:'#909399',padding:'32px'}},'暂无记录'))]:
+              this.finRecords.map(r=>h('tr',{key:r.id,style:{background:r.type==='收入'?'#fafdfa':'#fefafa'}},[
+                h('td',{style:{fontSize:'12px',color:'#94a3b8'}},r.date),
+                h('td',h('span',{class:'tag',style:{background:r.type==='收入'?'#dcfce7':'#fef2f2',color:r.type==='收入'?'#16a34a':'#ef4444',fontWeight:600,fontSize:'11px'}},r.type)),
+                h('td',{style:{textAlign:'right',fontWeight:700,color:r.type==='收入'?'#16a34a':'#ef4444',fontSize:'14px'}},(r.type==='收入'?'+':'−')+' ¥'+Number(r.amount).toFixed(2)),
+                h('td',h('span',{style:{fontSize:'12px',background:'#f1f5f9',padding:'2px 8px',borderRadius:'4px'}},r.category)),
+                h('td',{style:{fontSize:'13px',maxWidth:'180px'}},r.detail),
+                h('td',{style:{fontSize:'13px',fontWeight:500}},r.person),
+                h('td',r.receipt?r.receipt.split(',').map((p,i)=>h('a',{href:p.trim(),target:'_blank',style:{display:'inline-block',background:'#eef1ff',color:'#4f6ef7',padding:'2px 8px',borderRadius:'4px',fontSize:'11px',marginRight:'4px',textDecoration:'none'}},'📷'+(i+1))):h('span',{style:{color:'#cbd5e1',fontSize:'11px'}},'—')),
+                h('td',h('button',{class:'btn-danger btn-xs',style:{padding:'2px 8px',fontSize:'11px'},onClick:()=>this.deleteFinance(r.id)},'✕')),
               ]))
-            )
+            ),
+            h('tfoot',h('tr',{style:{background:'#f8fafc',fontWeight:700,borderTop:'2px solid #4f6ef7'}},[
+              h('td',{colSpan:2,style:{textAlign:'right',fontSize:'13px'}},'合计'),
+              h('td',{style:{textAlign:'right',fontSize:'15px',color:this.finSummary.balance>=0?'#16a34a':'#ef4444'}},'¥'+this.finSummary.balance.toFixed(2)),
+              h('td',{colSpan:5},'收入 ¥'+this.finSummary.total_in.toLocaleString()+'  −  支出 ¥'+this.finSummary.total_out.toLocaleString()),
+            ]))
           ]))
         ]),
       ]);
