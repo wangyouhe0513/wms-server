@@ -1679,8 +1679,8 @@ def salary_share_image(month: str = "", worker: str = "", db: Session = Depends(
 <style>body{{font-family:sans-serif;padding:20px;-webkit-user-select:none;user-select:none}}table{{border-collapse:collapse;width:100%}}
 th,td{{border:1px solid #ddd;padding:8px 10px}}th{{background:#f5f5f5}}
 .total{{font-size:18px;font-weight:700;margin-top:16px;text-align:right}}</style></head><body>
-<h2>{worker} - {month} 工资单</h2><table><tr><th>规格</th><th>规格</th><th>工序</th><th>数量</th><th>单价</th><th>金额</th><th>支付</th><th>时间</th><th>时间</th></tr>
-{"".join(f"<tr><td>{r.spec_name or ''}</td><td>{r.spec_name or ''}</td><td>{r.item_name}</td><td>{r.quantity}</td><td>¥{float(r.unit_price):.2f}</td><td>¥{float(r.amount):.2f}</td><td>{r.payment_method}</td><td style='font-size:11px'>{r.created_at.strftime('%m-%d %H:%M') if r.created_at else ''}</td><td style='font-size:11px'>{r.created_at.strftime('%m-%d %H:%M') if r.created_at else ''}</td></tr>" for r in worker_records)}
+<h2>{worker} - {month} 工资单</h2><table><tr><th>规格</th><th>工序</th><th>数量</th><th>单价</th><th>金额</th><th>支付</th><th>时间</th></tr>
+{"".join(f"<tr><td>{r.spec_name or ''}</td><td>{r.item_name}</td><td>{r.quantity}</td><td>¥{float(r.unit_price):.2f}</td><td>¥{float(r.amount):.2f}</td><td>{r.payment_method}</td><td style='font-size:11px'>{r.created_at.strftime('%m-%d %H:%M') if r.created_at else ''}</td></tr>" for r in worker_records)}
 </table><div class="total">合计: ¥{total:.2f} | 已付: ¥{paid:.2f} | 未付: ¥{total-paid:.2f}</div>
 <p style="text-align:center;color:#999;margin-top:20px">iPhone: 电源+音量+ | 安卓: 电源+音量- — 淼伊库服饰</p></body></html>""",
             media_type="text/html; charset=utf-8")
@@ -1733,7 +1733,7 @@ def salary_share(month: str = "", worker: str = "", db: Session = Depends(get_db
     rows_html = ""
     for r in worker_records:
         t = r.created_at.strftime("%m-%d %H:%M") if r.created_at else ""
-        rows_html += f"<tr><td>{r.spec_name or ''}</td><td>{r.spec_name or ''}</td><td>{r.item_name}</td><td>{r.quantity}</td><td>¥{float(r.unit_price):.2f}</td><td>¥{float(r.amount):.2f}</td><td>{r.payment_method}</td><td style='font-size:11px'>{r.created_at.strftime('%m-%d %H:%M') if r.created_at else ''}</td><td style='font-size:11px'>{r.created_at.strftime('%m-%d %H:%M') if r.created_at else ''}</td><td style='font-size:11px;color:#94a3b8'>{t}</td></tr>"
+        rows_html += f"<tr><td>{r.spec_name or ''}</td><td>{r.item_name}</td><td>{r.quantity}</td><td>¥{float(r.unit_price):.2f}</td><td>¥{float(r.amount):.2f}</td><td>{r.payment_method}</td><td style='font-size:11px'>{r.created_at.strftime('%m-%d %H:%M') if r.created_at else ''}</td><td style='font-size:11px;color:#94a3b8'>{t}</td></tr>"
 
     html = f"""<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><title>{worker} - {month}工资单</title>
 <style>body{{font-family:'PingFang SC','Microsoft YaHei',sans-serif;max-width:560px;margin:20px auto;padding:20px;-webkit-user-select:none;user-select:none}}
@@ -1741,7 +1741,7 @@ h2{{text-align:center}}table{{width:100%;border-collapse:collapse}}th,td{{paddin
 th{{background:#f5f5f5}}.total{{font-size:18px;font-weight:700;text-align:right;margin-top:16px}}
 .footer{{text-align:center;color:#999;font-size:12px;margin-top:30px}}
 @media print{{body{{margin:0;padding:10px}}}}</style></head><body>
-<h2>💰 {worker} - {month} 工资单</h2><table><thead><tr><th>规格</th><th>工序</th><th>数量</th><th>单价</th><th>金额</th><th>支付</th><th>时间</th><th>录入时间</th></tr></thead><tbody>{rows_html}</tbody></table>
+<h2>💰 {worker} - {month} 工资单</h2><table><thead><tr><th>规格</th><th>工序</th><th>数量</th><th>单价</th><th>金额</th><th>支付</th><th>时间</th></tr></thead><tbody>{rows_html}</tbody></table>
 <div class="total">合计: ¥{total:.2f} &nbsp;|&nbsp; 已付: ¥{paid:.2f} &nbsp;|&nbsp; 未付: ¥{total-paid:.2f}</div>
 <div style="background:#fefce8;border:1px solid #f59e0b;border-radius:8px;padding:14px;margin-bottom:20px;text-align:center;font-size:15px;">
 📱 <b>截图发送给厂长</b><br>
