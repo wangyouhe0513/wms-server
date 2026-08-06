@@ -1648,27 +1648,20 @@ createApp({
                 if(tab.key==='summary'){this.loadSummary();}
                 if(tab.key==='analysis'){this.loadAnalysis();}
               }
-            },(tab.key==='entry'&&this.entrySubOpen)||(tab.key==='salary'&&this.salarySubOpen)?tab.label.replace(/^[^ ]+ /,'📂 '):tab.label)];
+            },((tab.key==='entry'&&this.entrySubOpen)||(tab.key==='salary'&&this.salarySubOpen))?tab.label.replace(/^\S+ /,'📂 '):tab.label)];
             if(tab.key==='entry' && this.entrySubOpen){
               btns.push(
-                h('button',{key:'entry-main',class:this.currentTab==='entry'?'active':'',style:{paddingLeft:'32px',fontSize:'12px'}},
-                  onClick:()=>{this.currentTab='entry';this.entrySubOpen=false;}},'📝 录入表单'),
-                h('button',{key:'outbound',class:this.currentTab==='outbound'?'active':'',style:{paddingLeft:'32px',fontSize:'12px'}},
-                  onClick:()=>{this.currentTab='outbound';this.loadOutbound();}},'📤 出库记录'),
-                h('button',{key:'inbound',class:this.currentTab==='inbound'?'active':'',style:{paddingLeft:'32px',fontSize:'12px'}},
-                  onClick:()=>{this.currentTab='inbound';this.loadInbound();}},'📥 入库记录'),
+                h('button',{key:'entry-main',class:this.currentTab==='entry'?'active':'',style:{paddingLeft:'32px',fontSize:'12px'},onClick:()=>{this.currentTab='entry';this.entrySubOpen=false;}},'📝 录入表单'),
+                h('button',{key:'outbound',class:this.currentTab==='outbound'?'active':'',style:{paddingLeft:'32px',fontSize:'12px'},onClick:()=>{this.currentTab='outbound';this.loadOutbound();}},'📤 出库记录'),
+                h('button',{key:'inbound',class:this.currentTab==='inbound'?'active':'',style:{paddingLeft:'32px',fontSize:'12px'},onClick:()=>{this.currentTab='inbound';this.loadInbound();}},'📥 入库记录'),
               );
             }
             if(tab.key==='salary' && this.salarySubOpen){
               btns.push(
-                h('button',{key:'salary-enter',class:this.currentTab==='salary'&&this.subTab==='enter'?'active':'',style:{paddingLeft:'32px',fontSize:'12px'}},
-                  onClick:()=>{this.currentTab='salary';this.subTab='enter';this.loadSalary();}},'📝 工资录入'),
-                h('button',{key:'salary-records',class:this.currentTab==='salary'&&this.subTab==='records'?'active':'',style:{paddingLeft:'32px',fontSize:'12px'}},
-                  onClick:()=>{this.currentTab='salary';this.subTab='records';this.loadSalary();}},'📋 工资记录'),
-                h('button',{key:'salary-workers',class:this.currentTab==='salary'&&this.subTab==='workers'?'active':'',style:{paddingLeft:'32px',fontSize:'12px'}},
-                  onClick:()=>{this.currentTab='salary';this.subTab='workers';this.loadSalary();}},'👷 工人管理'),
-                h('button',{key:'salary-items',class:this.currentTab==='salary'&&this.subTab==='items'?'active':'',style:{paddingLeft:'32px',fontSize:'12px'}},
-                  onClick:()=>{this.currentTab='salary';this.subTab='items';this.loadSalary();}},'🔗 工序管理'),
+                h('button',{key:'salary-enter',class:this.currentTab==='salary'&&this.subTab==='enter'?'active':'',style:{paddingLeft:'32px',fontSize:'12px'},onClick:()=>{this.currentTab='salary';this.subTab='enter';this.loadSalary();}},'📝 工资录入'),
+                h('button',{key:'salary-records',class:this.currentTab==='salary'&&this.subTab==='records'?'active':'',style:{paddingLeft:'32px',fontSize:'12px'},onClick:()=>{this.currentTab='salary';this.subTab='records';this.loadSalary();}},'📋 工资记录'),
+                h('button',{key:'salary-workers',class:this.currentTab==='salary'&&this.subTab==='workers'?'active':'',style:{paddingLeft:'32px',fontSize:'12px'},onClick:()=>{this.currentTab='salary';this.subTab='workers';this.loadSalary();}},'👷 工人管理'),
+                h('button',{key:'salary-items',class:this.currentTab==='salary'&&this.subTab==='items'?'active':'',style:{paddingLeft:'32px',fontSize:'12px'},onClick:()=>{this.currentTab='salary';this.subTab='items';this.loadSalary();}},'🔗 工序管理'),
               );
             }
             return btns;
