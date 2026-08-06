@@ -1619,6 +1619,19 @@ def salary_record_delete(rid: int, admin: Admin = Depends(get_current_admin), db
     db.delete(r); db.commit()
     return {"ok": True}
 
+@app.post("/api/salary/batch-paid")
+def salary_batch_paid(month: str = "", worker_name: str = "", admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
+    """批量标记已付（按月份+可选工人）"""
+    q = db.query(SalaryRecord)
+    if month: q = q.filter(SalaryRecord.month.like(month[:7] + '%'))
+    if worker_name:
+        w = db.query(SalaryWorker).filter(SalaryWorker.name == worker_name).first()
+        if w: q = q.filter(SalaryRecord.worker_id == w.id)
+    count = q.filter(SalaryRecord.paid == 0).update({"paid": 1}, synchronize_session=False)
+    db.commit()
+    return {"ok": True, "updated": count}
+
+
 @app.get("/api/salary/summary")
 def salary_summary(month: str = "", db: Session = Depends(get_db)):
     """按工人汇总工资"""

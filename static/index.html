@@ -531,6 +531,11 @@ createApp({
       loadSalary();
     };
     const exportSalary = () => window.open(`/api/salary/export?month=${salMonth.value}`, '_blank');
+    const batchPaid = async () => {
+      if (!confirm('确定将本月所有工资标记为已付？')) return;
+      const r = await api(`/api/salary/batch-paid?month=${salMonth.value}`, {method:'POST'});
+      alert(`已标记 ${r.updated} 条记录为已付`); loadSalary();
+    };
 
     const loadFinance = async () => {
       const [data, summary] = await Promise.all([
@@ -794,7 +799,7 @@ createApp({
       inYear, inMonth, inData,
       sumYear, sumMonth, summary,
       salWorkers, salPrices, salItemSpecs, salRecords, salSummary, salMonth, salPage, salPageSize, salTotal, salKeyword, salDateFrom, salDateTo, salFilterSpec, salFilterColor, salQuickSpec, salQuickColor, salQuickWorker, salNewWorker, salNewJobType, salNewItem, salNewPrice,
-      loadSalary, saveSalWorker, deleteSalWorker, saveSalPrice, deleteSalPrice, addSalRecord, deleteSalRecord, toggleSalPaid, exportSalary, showSalDropdown,
+      loadSalary, saveSalWorker, deleteSalWorker, saveSalPrice, deleteSalPrice, addSalRecord, deleteSalRecord, toggleSalPaid, exportSalary, batchPaid, showSalDropdown,
       salSpecItems, salNewLinkSpec, salNewLinkItem, salEditLinkId, salEditLinkItem, initSpecItems, saveSpecItem, updateSpecItem, deleteSpecItem,
       finYear, finMonth, finRecords, finPage, finTotal, finSummary, loadFinance, exportFinance, deleteFinance,
       obPage, obTotal, inPage, inTotal, finCategories, newFinCat, loadFinCategories, saveFinCat, deleteFinCat,
@@ -1317,7 +1322,10 @@ createApp({
 
       // ===== 4. 汇总 + 分享 =====
       this.salSummary.length > 0 ? h('div',{class:'card'},[
-        h('div',{class:'card-title'},'📊 工资汇总'),
+        h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center'}},[
+          h('span',{class:'card-title',style:{marginBottom:0}},'📊 工资汇总'),
+          h('button',{class:'btn-success btn-sm',onClick:this.batchPaid,style:{fontSize:'12px'}},'✅ 批量已付'),
+        ]),
         h('div',{class:'table-wrap'},h('table',[
           h('thead',h('tr',[h('th','工人'),h('th','合计'),h('th','已付'),h('th','未付'),h('th','分享')])),
           h('tbody',this.salSummary.map(s=>h('tr',{key:s.worker_name},[
