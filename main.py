@@ -927,14 +927,20 @@ def sales_summary(year: int, month: int = 0, db: Session = Depends(get_db)):
     total = Decimal("0")
 
     for t in rows:
-        # 金额
         amt = t.amount
+
+        # 跳过已删除的销售人员
+        if t.salesperson_id:
+            sp_active = db.query(Salesperson).filter(Salesperson.id == t.salesperson_id, Salesperson.is_active == 1).first()
+            if not sp_active:
+                continue
+
         total += amt
 
-        # 按人员（只统计在职的）
-        sp = db.query(Salesperson).filter(Salesperson.id == t.salesperson_id, Salesperson.is_active == 1).first()
-        if sp:
-            by_sp[sp.name] = by_sp.get(sp.name, 0) + float(amt)
+        # 按人员
+        sp = db.query(Salesperson).filter(Salesperson.id == t.salesperson_id).first()
+        sp_name = sp.name if sp else "未知"
+        by_sp[sp_name] = by_sp.get(sp_name, 0) + float(amt)
 
         # 按规格
         sku = db.query(ProductSku).filter(ProductSku.id == t.sku_id).first()
