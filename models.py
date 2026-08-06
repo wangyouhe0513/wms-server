@@ -190,6 +190,7 @@ class SalaryRecord(Base):
     worker_id = Column(Integer, ForeignKey("salary_workers.id"), nullable=False)
     month = Column(String(10), nullable=False, comment="日期 2026-08-05")
     spec_name = Column(String(40), default="", comment="产品规格")
+    color_name = Column(String(30), default="", comment="产品颜色")
     item_name = Column(String(60), default="", comment="工序")
     quantity = Column(Integer, default=0, comment="数量")
     unit_price = Column(DECIMAL(10, 2), default=0, comment="单价(可手动修改)")

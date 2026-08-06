@@ -1561,7 +1561,7 @@ def salary_records(month: str = "", worker_id: int = 0, page: int = 1, page_size
     total = q.count()
     rows = q.offset((page-1)*page_size).limit(page_size).all()
     items = [{"id": r.id, "worker_id": r.worker_id, "worker_name": r.worker.name if r.worker else "",
-             "month": r.month, "spec_name": r.spec_name or "", "item_name": r.item_name, "quantity": r.quantity,
+             "month": r.month, "spec_name": r.spec_name or "", "color_name": r.color_name or "", "item_name": r.item_name, "quantity": r.quantity,
              "unit_price": float(r.unit_price), "amount": float(r.amount),
              "payment_method": r.payment_method, "paid": r.paid, "remark": r.remark,
              "created_at": r.created_at.strftime("%m-%d %H:%M") if r.created_at else ""} for r in rows]
@@ -1571,6 +1571,7 @@ class SalaryRecordReq(PydanticBaseModel):
     worker_id: int = 0
     month: str = ""
     spec_name: str = ""
+    color_name: str = ""
     item_name: str = ""
     quantity: int = 0
     unit_price: float = 0
@@ -1588,7 +1589,7 @@ class SalaryRecordUpdateReq(PydanticBaseModel):
 @app.post("/api/salary/records")
 def salary_record_create(req: SalaryRecordReq, admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
     amount = Decimal(str(req.quantity)) * Decimal(str(req.unit_price))
-    r = SalaryRecord(worker_id=req.worker_id, month=req.month, spec_name=req.spec_name, item_name=req.item_name,
+    r = SalaryRecord(worker_id=req.worker_id, month=req.month, spec_name=req.spec_name, color_name=req.color_name, item_name=req.item_name,
                      quantity=req.quantity, unit_price=Decimal(str(req.unit_price)),
                      amount=amount, payment_method=req.payment_method, paid=req.paid, remark=req.remark)
     db.add(r); db.commit()
@@ -1674,8 +1675,8 @@ def salary_share_image(month: str = "", worker: str = "", db: Session = Depends(
 <style>body{{font-family:sans-serif;padding:20px;-webkit-user-select:none;user-select:none}}table{{border-collapse:collapse;width:100%}}
 th,td{{border:1px solid #ddd;padding:8px 10px}}th{{background:#f5f5f5}}
 .total{{font-size:18px;font-weight:700;margin-top:16px;text-align:right}}</style></head><body>
-<h2>{worker} - {month} 工资单</h2><table><tr><th>规格</th><th>工序</th><th>数量</th><th>单价</th><th>金额</th><th>支付</th><th>时间</th></tr>
-{"".join(f"<tr><td>{r.spec_name or ''}</td><td>{r.item_name}</td><td>{r.quantity}</td><td>¥{float(r.unit_price):.2f}</td><td>¥{float(r.amount):.2f}</td><td>{r.payment_method}</td><td style='font-size:11px'>{r.created_at.strftime('%m-%d %H:%M') if r.created_at else ''}</td></tr>" for r in worker_records)}
+<h2>{worker} - {month} 工资单</h2><table><tr><th>规格</th><th>颜色</th><th>工序</th><th>数量</th><th>单价</th><th>金额</th><th>支付</th><th>时间</th></tr>
+{"".join(f"<tr><td>{r.spec_name or ''}</td><td>{r.color_name or ''}</td><td>{r.item_name}</td><td>{r.quantity}</td><td>¥{float(r.unit_price):.2f}</td><td>¥{float(r.amount):.2f}</td><td>{r.payment_method}</td><td style='font-size:11px'>{r.created_at.strftime('%m-%d %H:%M') if r.created_at else ''}</td></tr>" for r in worker_records)}
 </table><div class="total">合计: ¥{total:.2f} | 已付: ¥{paid:.2f} | 未付: ¥{total-paid:.2f}</div>
 <p style="text-align:center;color:#999;margin-top:20px">iPhone: 电源+音量+ | 安卓: 电源+音量- — 淼伊库服饰</p></body></html>""",
             media_type="text/html; charset=utf-8")
@@ -1728,7 +1729,7 @@ def salary_share(month: str = "", worker: str = "", db: Session = Depends(get_db
     rows_html = ""
     for r in worker_records:
         t = r.created_at.strftime("%m-%d %H:%M") if r.created_at else ""
-        rows_html += f"<tr><td>{r.spec_name or ''}</td><td>{r.item_name}</td><td>{r.quantity}</td><td>¥{float(r.unit_price):.2f}</td><td>¥{float(r.amount):.2f}</td><td>{r.payment_method}</td><td style='font-size:11px'>{r.created_at.strftime('%m-%d %H:%M') if r.created_at else ''}</td><td style='font-size:11px;color:#94a3b8'>{t}</td></tr>"
+        rows_html += f"<tr><td>{r.spec_name or ''}</td><td>{r.color_name or ''}</td><td>{r.item_name}</td><td>{r.quantity}</td><td>¥{float(r.unit_price):.2f}</td><td>¥{float(r.amount):.2f}</td><td>{r.payment_method}</td><td style='font-size:11px'>{r.created_at.strftime('%m-%d %H:%M') if r.created_at else ''}</td><td style='font-size:11px;color:#94a3b8'>{t}</td></tr>"
 
     html = f"""<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{worker} - {month}工资单</title>
 <style>body{{font-family:'PingFang SC','Microsoft YaHei',sans-serif;max-width:600px;margin:0 auto;padding:16px;color:#1e293b;-webkit-user-select:none;user-select:none;background:#fff}}
@@ -1745,7 +1746,7 @@ tr:nth-child(even) td{{background:#fafbfd}}
 @media print{{body{{margin:0;padding:10px}}}}
 </style></head><body>
 <div class="header"><h2>💰 {worker} 工资单</h2><div class="sub">{month} &nbsp;|&nbsp; 淼伊库服饰有限公司</div></div>
-<table><thead><tr><th>规格</th><th>工序</th><th>数量</th><th>单价</th><th>金额</th><th>支付</th><th>时间</th></tr></thead><tbody>{rows_html}</tbody></table>
+<table><thead><tr><th>规格</th><th>颜色</th><th>工序</th><th>数量</th><th>单价</th><th>金额</th><th>支付</th><th>时间</th></tr></thead><tbody>{rows_html}</tbody></table>
 <div class="total">合计 <span>¥{total:.2f}</span> &nbsp; 已付 <span>¥{paid:.2f}</span> &nbsp; 未付 <span style="color:#ef4444">¥{total-paid:.2f}</span></div>
 <div class="tip">📱 iPhone按 <b>电源+音量+</b> &nbsp;|&nbsp; 安卓按 <b>电源+音量-</b> 截图发给厂长</div>
 <div class="footer">生成时间: {date.today()}</div>
