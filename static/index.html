@@ -128,10 +128,10 @@
   }
   @media (min-width: 769px) {
     .login-box { margin: 100px auto; }
-    /* 移动端子菜单 — 从右滑出 */
-    .submenu-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.3); z-index: 200; display: flex; justify-content: flex-end; }
-    .submenu-panel { background: #fff; width: 75%; max-width: 300px; height: 100%; overflow-y: auto; padding: 20px 16px; animation: slideRight .25s ease; }
-    @keyframes slideRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
+    /* 移动端子菜单 — 底部弹出浮层 */
+    .submenu-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.2); z-index: 200; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 65px; }
+    .submenu-panel { background: #fff; border-radius: 12px; width: 90%; max-width: 360px; overflow: hidden; box-shadow: 0 8px 30px rgba(0,0,0,.15); animation: popIn .2s ease; }
+    @keyframes popIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
   }
   @media (min-width: 769px) {
     .submenu-overlay { display: none; }
@@ -1631,21 +1631,18 @@ createApp({
 
       // === 移动端子菜单弹层(从右滑出) ===
       (this.entrySubOpen || this.salarySubOpen) ? h('div',{class:'submenu-overlay',onClick:e=>{if(e.target===e.currentTarget){this.entrySubOpen=false;this.salarySubOpen=false;}}},[
-        h('div',{class:'submenu-panel'},[
-          this.entrySubOpen ? h('div',{},[
-            h('div',{style:{fontSize:'16px',fontWeight:700,marginBottom:'12px'}},'📝 出入库'),
-            h('button',{class:this.currentTab==='entry'?'active':'',onClick:()=>{this.currentTab='entry';this.entrySubOpen=false;}},'📝 录入表单'),
-            h('button',{class:this.currentTab==='outbound'?'active':'',onClick:()=>{this.currentTab='outbound';this.entrySubOpen=false;this.loadOutbound();}},'📤 出库记录'),
-            h('button',{class:this.currentTab==='inbound'?'active':'',onClick:()=>{this.currentTab='inbound';this.entrySubOpen=false;this.loadInbound();}},'📥 入库记录'),
+        h('div',{class:'submenu-panel',onClick:e=>e.stopPropagation()},[
+          this.entrySubOpen ? h('div',{style:{padding:'8px 0'}},[
+            h('button',{class:this.currentTab==='entry'?'active':'',style:{display:'block',width:'100%',textAlign:'left',padding:'14px 20px',fontSize:'16px',border:'none',background:'none',borderBottom:'1px solid #f1f5f9'},onClick:()=>{this.currentTab='entry';this.entrySubOpen=false;}},'📝 录入表单'),
+            h('button',{class:this.currentTab==='outbound'?'active':'',style:{display:'block',width:'100%',textAlign:'left',padding:'14px 20px',fontSize:'16px',border:'none',background:'none',borderBottom:'1px solid #f1f5f9'},onClick:()=>{this.currentTab='outbound';this.entrySubOpen=false;this.loadOutbound();}},'📤 出库记录'),
+            h('button',{class:this.currentTab==='inbound'?'active':'',style:{display:'block',width:'100%',textAlign:'left',padding:'14px 20px',fontSize:'16px',border:'none',background:'none'},onClick:()=>{this.currentTab='inbound';this.entrySubOpen=false;this.loadInbound();}},'📥 入库记录'),
           ]) : null,
-          this.salarySubOpen ? h('div',{},[
-            h('div',{style:{fontSize:'16px',fontWeight:700,marginBottom:'12px'}},'💵 工资管理'),
-            h('button',{class:this.subTab==='enter'?'active':'',onClick:()=>{this.currentTab='salary';this.subTab='enter';this.salarySubOpen=false;this.loadSalary();}},'📝 工资录入'),
-            h('button',{class:this.subTab==='records'?'active':'',onClick:()=>{this.currentTab='salary';this.subTab='records';this.salarySubOpen=false;this.loadSalary();}},'📋 工资记录'),
-            h('button',{class:this.subTab==='workers'?'active':'',onClick:()=>{this.currentTab='salary';this.subTab='workers';this.salarySubOpen=false;this.loadSalary();}},'👷 工人管理'),
-            h('button',{class:this.subTab==='items'?'active':'',onClick:()=>{this.currentTab='salary';this.subTab='items';this.salarySubOpen=false;this.loadSalary();}},'🔗 工序管理'),
+          this.salarySubOpen ? h('div',{style:{padding:'8px 0'}},[
+            h('button',{class:this.subTab==='enter'?'active':'',style:{display:'block',width:'100%',textAlign:'left',padding:'14px 20px',fontSize:'16px',border:'none',background:'none',borderBottom:'1px solid #f1f5f9'},onClick:()=>{this.currentTab='salary';this.subTab='enter';this.salarySubOpen=false;this.loadSalary();}},'📝 工资录入'),
+            h('button',{class:this.subTab==='records'?'active':'',style:{display:'block',width:'100%',textAlign:'left',padding:'14px 20px',fontSize:'16px',border:'none',background:'none',borderBottom:'1px solid #f1f5f9'},onClick:()=>{this.currentTab='salary';this.subTab='records';this.salarySubOpen=false;this.loadSalary();}},'📋 工资记录'),
+            h('button',{class:this.subTab==='workers'?'active':'',style:{display:'block',width:'100%',textAlign:'left',padding:'14px 20px',fontSize:'16px',border:'none',background:'none',borderBottom:'1px solid #f1f5f9'},onClick:()=>{this.currentTab='salary';this.subTab='workers';this.salarySubOpen=false;this.loadSalary();}},'👷 工人管理'),
+            h('button',{class:this.subTab==='items'?'active':'',style:{display:'block',width:'100%',textAlign:'left',padding:'14px 20px',fontSize:'16px',border:'none',background:'none'},onClick:()=>{this.currentTab='salary';this.subTab='items';this.salarySubOpen=false;this.loadSalary();}},'🔗 工序管理'),
           ]) : null,
-          h('div',{style:{textAlign:'center',padding:'12px',color:'#94a3b8',borderTop:'1px solid #e2e8f0',marginTop:'8px',cursor:'pointer'},onClick:()=>{this.entrySubOpen=false;this.salarySubOpen=false;}},'取消'),
         ]),
       ]) : null,
 
