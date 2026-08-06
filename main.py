@@ -821,26 +821,24 @@ def inventory_history(sku_id: int, limit: int = 50, db: Session = Depends(get_db
 # ============================================================
 @app.get("/api/bills/personal")
 def personal_bill(
-    salesperson: str,
-    year: int,
-    month: int,
+    salesperson: str = "",
+    year: int = 0,
+    month: int = 0,
     db: Session = Depends(get_db),
 ):
-    sp = db.query(Salesperson).filter(Salesperson.name == salesperson).first()
-    if not sp:
-        raise HTTPException(404, "销售人员不存在")
-
-    rows = (
-        db.query(Transaction)
-        .filter(
-            Transaction.salesperson_id == sp.id,
-            Transaction.trans_type == "出库",
-            extract("year", Transaction.trans_date) == year,
-            extract("month", Transaction.trans_date) == month,
-        )
-        .order_by(Transaction.id.desc())
-        .all()
+    q = db.query(Transaction).filter(
+        Transaction.trans_type == "出库",
     )
+    if salesperson:
+        sp = db.query(Salesperson).filter(Salesperson.name == salesperson).first()
+        if sp:
+            q = q.filter(Transaction.salesperson_id == sp.id)
+    if year > 0:
+        q = q.filter(extract("year", Transaction.trans_date) == year)
+    if month > 0:
+        q = q.filter(extract("month", Transaction.trans_date) == month)
+
+    rows = q.order_by(Transaction.id.desc()).all()
 
     items = []
     total_amount = Decimal("0")
@@ -849,6 +847,7 @@ def personal_bill(
         sku = db.query(ProductSku).filter(ProductSku.id == t.sku_id).first()
         spec = db.query(ProductSpec).filter(ProductSpec.id == sku.spec_id).first()
         color = db.query(Color).filter(Color.id == sku.color_id).first()
+        sp = db.query(Salesperson).filter(Salesperson.id == t.salesperson_id).first() if t.salesperson_id else None
         items.append({
             "date": t.trans_date.strftime("%Y-%m-%d"),
             "spec": spec.name if spec else "",
@@ -856,12 +855,13 @@ def personal_bill(
             "quantity": t.quantity,
             "unit_price": float(t.unit_price),
             "amount": float(t.amount),
+            "salesperson": sp.name if sp else "",
         })
         total_amount += t.amount
         total_qty += t.quantity
 
     return {
-        "salesperson": salesperson,
+        "salesperson": salesperson or "全部",
         "year": year,
         "month": month,
         "items": items,

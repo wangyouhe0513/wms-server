@@ -376,8 +376,8 @@ createApp({
     };
 
     const loadOutbound = async () => {
-      if (!obSP.value) return alert('请选择人员');
-      obData.value = await api(`/api/bills/personal?salesperson=${encodeURIComponent(obSP.value)}&year=${obYear.value}&month=${obMonth.value}`);
+      const sp = obSP.value ? `&salesperson=${encodeURIComponent(obSP.value)}` : '';
+      obData.value = await api(`/api/bills/personal?year=${obYear.value}&month=${obMonth.value}${sp}`);
     };
 
     const exportOutbound = () => {
@@ -1053,8 +1053,8 @@ createApp({
     const renderOutbound = () => h('div',{class:'card'},[
       h('div',{style:{display:'flex',gap:'12px',alignItems:'center',marginBottom:'16px',flexWrap:'wrap'}},[
         h('span',{class:'card-title'},'📤 出库记录'),
-        h('select',{value:this.obSP,onChange:e=>this.obSP=e.target.value,style:{width:'140px'}},[
-          h('option',{value:''},'选择人员'),
+        h('select',{value:this.obSP,onChange:e=>{this.obSP=e.target.value;this.loadOutbound();},style:{width:'140px'}},[
+          h('option',{value:''},'全部人员'),
           ...this.salespersons.map(s=>h('option',{value:s.name},s.name))
         ]),
         h('select',{value:this.obYear,onChange:e=>this.obYear=parseInt(e.target.value),style:{width:'100px'}},
@@ -1069,10 +1069,11 @@ createApp({
       this.obData ? [
         h('h3',{style:{marginBottom:'12px'}},`${this.obData.salesperson} — ${this.obData.year}年${this.obData.month}月`),
         h('div',{class:'table-wrap'},h('table',[
-          h('thead',h('tr',[h('th','日期'),h('th','规格'),h('th','颜色'),h('th','数量'),h('th','单价'),h('th','金额')])),
+          h('thead',h('tr',[h('th','日期'),h('th','规格'),h('th','颜色'),h('th','数量'),h('th','单价'),h('th','金额'),h('th','销售人')])),
           h('tbody',this.obData.items.map(i=>h('tr',{key:i.date+i.spec+i.color},[
             h('td',i.date),h('td',i.spec),h('td',i.color),
-            h('td',String(i.quantity)),h('td',String(i.unit_price)),h('td',i.amount.toFixed(2))
+            h('td',String(i.quantity)),h('td',String(i.unit_price)),h('td',i.amount.toFixed(2)),
+            h('td',i.salesperson||''),
           ])))
         ])),
         h('div',{style:{marginTop:'16px',fontSize:'16px',fontWeight:600,color:'#303133'}},[
