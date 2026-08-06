@@ -277,6 +277,8 @@ createApp({
     const salSpecItems = ref([]);
     const salNewLinkSpec = ref('');
     const salNewLinkItem = ref('');
+    const salEditLinkId = ref(0);
+    const salEditLinkItem = ref('');
     const salNewWorker = ref(''); const salNewJobType = ref('机工');
     const salNewItem = ref(''); const salNewPrice = ref('');
     const salEditWorkerId = ref(0); const salEditItemId = ref(0);
@@ -450,7 +452,12 @@ createApp({
     const saveSpecItem = async () => {
       if (!salNewLinkSpec.value || !salNewLinkItem.value) return;
       await api(`/api/salary/spec-items?spec_name=${encodeURIComponent(salNewLinkSpec.value)}&item_name=${encodeURIComponent(salNewLinkItem.value)}`, {method:'POST'});
-      salNewLinkSpec.value=''; salNewLinkItem.value=''; loadSpecItems();
+      salNewLinkItem.value=''; loadSpecItems();
+    };
+    const updateSpecItem = async (id) => {
+      if (!salEditLinkItem.value) return;
+      await api(`/api/salary/spec-items/${id}?item_name=${encodeURIComponent(salEditLinkItem.value)}`, {method:'PUT'});
+      salEditLinkId.value=0; salEditLinkItem.value=''; loadSpecItems();
     };
     const deleteSpecItem = async (id) => {
       if (!confirm('删除关联？')) return;
@@ -780,7 +787,7 @@ createApp({
       sumYear, sumMonth, summary,
       salWorkers, salPrices, salItemSpecs, salRecords, salSummary, salMonth, salFilterSpec, salFilterColor, salQuickSpec, salQuickColor, salQuickWorker, salNewWorker, salNewJobType, salNewItem, salNewPrice,
       loadSalary, saveSalWorker, deleteSalWorker, saveSalPrice, deleteSalPrice, addSalRecord, deleteSalRecord, toggleSalPaid, exportSalary, showSalDropdown,
-      salSpecItems, salNewLinkSpec, salNewLinkItem, initSpecItems, saveSpecItem, deleteSpecItem,
+      salSpecItems, salNewLinkSpec, salNewLinkItem, salEditLinkId, salEditLinkItem, initSpecItems, saveSpecItem, updateSpecItem, deleteSpecItem,
       finYear, finMonth, finRecords, finSummary, loadFinance, exportFinance, deleteFinance, finCategories, newFinCat, loadFinCategories, saveFinCat, deleteFinCat,
       analysisYear, analysisMonth, analysisData, loadAnalysis,
       newSpec, newColor, newColorCode, newSP, newSPType, importResult,
@@ -1222,19 +1229,39 @@ createApp({
             h('button',{class:'btn-primary btn-xs',onClick:this.saveSalPrice},'+'),
           ]),
         ]),
-        h('div',{class:'card',style:{flex:1,minWidth:'280px'}},[
+        h('div',{class:'card',style:{flex:1,minWidth:'300px'}},[
           h('div',{class:'card-title'},'🔗 规格→工序关联'),
-          h('div',{style:{display:'flex',gap:'4px',flexWrap:'wrap',maxHeight:'100px',overflowY:'auto',marginBottom:'8px'}},this.salSpecItems.map(si=>h('span',{key:si.id,style:{background:'#eef1ff',padding:'2px 8px',borderRadius:'4px',fontSize:'11px',display:'inline-flex',alignItems:'center',gap:'3px'}},
-            [si.spec_name+' → '+si.item_name, h('span',{style:{cursor:'pointer',color:'#ef4444',fontWeight:700},onClick:()=>this.deleteSpecItem(si.id)},'×')]
-          ))),
-          h('div',{style:{display:'flex',gap:'4px'}},[
+          h('div',{style:{display:'flex',gap:'6px',alignItems:'center',marginBottom:'8px',flexWrap:'wrap'}},[
             h('button',{class:'btn-xs',style:{background:'#f59e0b',color:'#fff'},onClick:this.initSpecItems},'🔄 自动匹配'),
-            h('select',{value:this.salNewLinkSpec,onChange:e=>this.salNewLinkSpec=e.target.value,style:{width:'90px',fontSize:'11px'}},
-              [h('option',{value:''},'规格'),...this.specs.map(s=>h('option',{value:s.name},s.name))]),
-            h('input',{value:this.salNewLinkItem,onInput:e=>this.salNewLinkItem=e.target.value,list:'allItemsList',placeholder:'工序',style:{width:'100px',fontSize:'11px'}}),
-            h('datalist',{id:'allItemsList'},this.salPrices.map(p=>h('option',{value:p.item_name}))),
-            h('button',{class:'btn-primary btn-xs',onClick:this.saveSpecItem},'+'),
+            h('select',{value:this.salNewLinkSpec,onChange:e=>{this.salNewLinkSpec=e.target.value;loadSpecItems();},style:{fontSize:'12px',fontWeight:600}},
+              [h('option',{value:''},'选择规格▼'),...this.specs.map(s=>h('option',{value:s.name},s.name))]),
           ]),
+          // 关联列表
+          this.salNewLinkSpec ? h('div',{style:{maxHeight:'200px',overflowY:'auto'}},
+            h('table',{style:{fontSize:'12px'}},[
+              h('tbody',[
+                ...this.salSpecItems.filter(si=>si.spec_name===this.salNewLinkSpec).map(si=>h('tr',{key:si.id},[
+                  h('td',{style:{padding:'4px 6px'}},
+                    this.salEditLinkId===si.id
+                    ? [h('input',{value:this.salEditLinkItem,onInput:e=>this.salEditLinkItem=e.target.value,style:{width:'120px',fontSize:'12px',padding:'2px 6px'},onKeyup:e=>{if(e.key==='Enter')this.updateSpecItem(si.id);}}),
+                       h('button',{class:'btn-success btn-xs',style:{marginLeft:'4px'},onClick:()=>this.updateSpecItem(si.id)},'✓'),
+                       h('button',{class:'btn-xs',style:{marginLeft:'2px',background:'#f1f5f9'},onClick:()=>{this.salEditLinkId=0;}},'✗')]
+                    : si.item_name),
+                  this.salEditLinkId!==si.id ? h('td',{style:{padding:'4px 2px',width:'40px'}},[
+                    h('button',{class:'btn-xs',style:{background:'#f1f5f9',marginRight:'2px'},onClick:()=>{this.salEditLinkId=si.id;this.salEditLinkItem=si.item_name;}},'✏️'),
+                    h('button',{class:'btn-danger btn-xs',onClick:()=>this.deleteSpecItem(si.id)},'✕'),
+                  ]) : null,
+                ])),
+                // 新增行
+                h('tr',{key:'new'},[
+                  h('td',{style:{padding:'4px 6px'}},
+                    h('input',{value:this.salNewLinkItem,onInput:e=>this.salNewLinkItem=e.target.value,list:'allItemsList',placeholder:'新工序名',style:{width:'140px',fontSize:'12px',padding:'2px 6px'},onKeyup:e=>{if(e.key==='Enter')this.saveSpecItem();}})),
+                  h('td',{style:{padding:'4px 2px'}},h('button',{class:'btn-primary btn-xs',onClick:this.saveSpecItem},'+ 新增')),
+                ]),
+              ])
+            ])
+          ) : h('div',{style:{textAlign:'center',color:'#94a3b8',padding:'20px',fontSize:'13px'}},'← 请先选择一个规格'),
+          h('datalist',{id:'allItemsList'},this.salPrices.map(p=>h('option',{value:p.item_name}))),
         ]),
       ]),
 

@@ -1487,6 +1487,15 @@ def salary_spec_item_create(spec_name: str, item_name: str, admin: Admin = Depen
     db.commit()
     return {"ok": True}
 
+@app.put("/api/salary/spec-items/{siid}")
+def salary_spec_item_update(siid: int, item_name: str = "", spec_name: str = "", admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
+    r = db.query(SalarySpecItem).filter(SalarySpecItem.id == siid).first()
+    if not r: raise HTTPException(404, "不存在")
+    if item_name: r.item_name = item_name
+    if spec_name: r.spec_name = spec_name
+    db.commit()
+    return {"ok": True}
+
 @app.delete("/api/salary/spec-items/{siid}")
 def salary_spec_item_delete(siid: int, admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
     r = db.query(SalarySpecItem).filter(SalarySpecItem.id == siid).first()
