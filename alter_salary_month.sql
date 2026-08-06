@@ -1,0 +1,1 @@
+ALTER TABLE salary_records MODIFY COLUMN month VARCHAR(10) NOT NULL COMMENT '日期';
