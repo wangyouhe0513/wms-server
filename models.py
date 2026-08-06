@@ -1,7 +1,7 @@
 """
 数据模型定义
 """
-from sqlalchemy import Column, Integer, String, DECIMAL, Date, DateTime, ForeignKey, Enum, Index
+from sqlalchemy import Column, Integer, String, DECIMAL, Date, DateTime, ForeignKey, Enum, Index, UniqueConstraint
 from sqlalchemy.orm import relationship
 from database import Base
 from datetime import datetime
@@ -202,3 +202,15 @@ class SalaryRecord(Base):
     worker = relationship("SalaryWorker")
 
     __table_args__ = (Index("idx_salary_month", "month"),)
+
+
+class SalarySpecItem(Base):
+    __tablename__ = "salary_spec_items"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    spec_name = Column(String(40), nullable=False, comment="产品规格")
+    item_name = Column(String(60), nullable=False, comment="工序名称")
+    is_active = Column(Integer, default=1)
+    created_at = Column(DateTime, default=datetime.now)
+
+    __table_args__ = (Index("idx_ssi_spec", "spec_name"), UniqueConstraint("spec_name", "item_name"))

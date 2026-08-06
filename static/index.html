@@ -274,6 +274,9 @@ createApp({
     const salQuickSpec = ref('');
     const salQuickColor = ref('');
     const salQuickWorker = ref('');
+    const salSpecItems = ref([]);
+    const salNewLinkSpec = ref('');
+    const salNewLinkItem = ref('');
     const salNewWorker = ref(''); const salNewJobType = ref('机工');
     const salNewItem = ref(''); const salNewPrice = ref('');
     const salEditWorkerId = ref(0); const salEditItemId = ref(0);
@@ -422,6 +425,7 @@ createApp({
       ]);
       salWorkers.value = workers; salPrices.value = prices; salItemSpecs.value = itemSpecs;
       salRecords.value = records; salSummary.value = summary;
+      try { salSpecItems.value = await api('/api/salary/spec-items'); } catch(e) {}
     };
     const saveSalWorker = async () => {
       if (!salNewWorker.value.trim()) return;
@@ -436,6 +440,21 @@ createApp({
       if (!salNewItem.value.trim() || !salNewPrice.value) return;
       await api(`/api/salary/prices?item_name=${encodeURIComponent(salNewItem.value.trim())}&unit_price=${salNewPrice.value}`, {method:'POST'});
       salNewItem.value = ''; salNewPrice.value = ''; loadSalary();
+    };
+    const loadSpecItems = async () => { try { salSpecItems.value = await api('/api/salary/spec-items'); } catch(e) {} };
+    const initSpecItems = async () => {
+      if (!confirm('自动匹配工序→规格并导入关联表？')) return;
+      const r = await api('/api/salary/spec-items/init', {method:'POST'});
+      alert(`导入了 ${r.imported} 条关联`); loadSpecItems();
+    };
+    const saveSpecItem = async () => {
+      if (!salNewLinkSpec.value || !salNewLinkItem.value) return;
+      await api(`/api/salary/spec-items?spec_name=${encodeURIComponent(salNewLinkSpec.value)}&item_name=${encodeURIComponent(salNewLinkItem.value)}`, {method:'POST'});
+      salNewLinkSpec.value=''; salNewLinkItem.value=''; loadSpecItems();
+    };
+    const deleteSpecItem = async (id) => {
+      if (!confirm('删除关联？')) return;
+      await api(`/api/salary/spec-items/${id}`, {method:'DELETE'}); loadSpecItems();
     };
     const deleteSalPrice = async (id) => {
       if (!confirm('确定删除？')) return;
@@ -761,6 +780,7 @@ createApp({
       sumYear, sumMonth, summary,
       salWorkers, salPrices, salItemSpecs, salRecords, salSummary, salMonth, salFilterSpec, salFilterColor, salQuickSpec, salQuickColor, salQuickWorker, salNewWorker, salNewJobType, salNewItem, salNewPrice,
       loadSalary, saveSalWorker, deleteSalWorker, saveSalPrice, deleteSalPrice, addSalRecord, deleteSalRecord, toggleSalPaid, exportSalary, showSalDropdown,
+      salSpecItems, salNewLinkSpec, salNewLinkItem, initSpecItems, saveSpecItem, deleteSpecItem,
       finYear, finMonth, finRecords, finSummary, loadFinance, exportFinance, deleteFinance, finCategories, newFinCat, loadFinCategories, saveFinCat, deleteFinCat,
       analysisYear, analysisMonth, analysisData, loadAnalysis,
       newSpec, newColor, newColorCode, newSP, newSPType, importResult,
@@ -1200,6 +1220,20 @@ createApp({
             h('input',{value:this.salNewItem,onInput:e=>this.salNewItem=e.target.value,placeholder:'工序名',style:{flex:1,fontSize:'12px'}}),
             h('input',{type:'number',step:'0.01',value:this.salNewPrice,onInput:e=>this.salNewPrice=e.target.value,placeholder:'单价',style:{width:'70px',fontSize:'12px'}}),
             h('button',{class:'btn-primary btn-xs',onClick:this.saveSalPrice},'+'),
+          ]),
+        ]),
+        h('div',{class:'card',style:{flex:1,minWidth:'280px'}},[
+          h('div',{class:'card-title'},'🔗 规格→工序关联'),
+          h('div',{style:{display:'flex',gap:'4px',flexWrap:'wrap',maxHeight:'100px',overflowY:'auto',marginBottom:'8px'}},this.salSpecItems.map(si=>h('span',{key:si.id,style:{background:'#eef1ff',padding:'2px 8px',borderRadius:'4px',fontSize:'11px',display:'inline-flex',alignItems:'center',gap:'3px'}},
+            [si.spec_name+' → '+si.item_name, h('span',{style:{cursor:'pointer',color:'#ef4444',fontWeight:700},onClick:()=>this.deleteSpecItem(si.id)},'×')]
+          ))),
+          h('div',{style:{display:'flex',gap:'4px'}},[
+            h('button',{class:'btn-xs',style:{background:'#f59e0b',color:'#fff'},onClick:this.initSpecItems},'🔄 自动匹配'),
+            h('select',{value:this.salNewLinkSpec,onChange:e=>this.salNewLinkSpec=e.target.value,style:{width:'90px',fontSize:'11px'}},
+              [h('option',{value:''},'规格'),...this.specs.map(s=>h('option',{value:s.name},s.name))]),
+            h('input',{value:this.salNewLinkItem,onInput:e=>this.salNewLinkItem=e.target.value,list:'allItemsList',placeholder:'工序',style:{width:'100px',fontSize:'11px'}}),
+            h('datalist',{id:'allItemsList'},this.salPrices.map(p=>h('option',{value:p.item_name}))),
+            h('button',{class:'btn-primary btn-xs',onClick:this.saveSpecItem},'+'),
           ]),
         ]),
       ]),

@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, extract
 
 from database import init_db, get_db
-from models import ProductSpec, Color, ProductSku, Salesperson, Transaction, InventoryLog, Admin, OperationLog, SystemConfig, FinanceRecord, FinanceCategory, SalaryWorker, SalaryPrice, SalaryRecord
+from models import ProductSpec, Color, ProductSku, Salesperson, Transaction, InventoryLog, Admin, OperationLog, SystemConfig, FinanceRecord, FinanceCategory, SalaryWorker, SalaryPrice, SalaryRecord, SalarySpecItem
 
 app = FastAPI(title="工厂进销存管理系统")
 
@@ -1448,6 +1448,53 @@ def salary_worker_delete(wid: int, admin: Admin = Depends(get_current_admin), db
     return {"ok": True}
 
 # -- 工序单价 CRUD --
+# -- 规格-工序关联 --
+@app.get("/api/salary/spec-items")
+def salary_spec_items(db: Session = Depends(get_db)):
+    """规格-工序关联列表"""
+    rows = db.query(SalarySpecItem).filter(SalarySpecItem.is_active == 1).order_by(SalarySpecItem.spec_name, SalarySpecItem.item_name).all()
+    return [{"id": r.id, "spec_name": r.spec_name, "item_name": r.item_name} for r in rows]
+
+@app.post("/api/salary/spec-items/init")
+def salary_spec_items_init(admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
+    """自动匹配工序→规格并导入关联表"""
+    prices = db.query(SalaryPrice).filter(SalaryPrice.is_active == 1).all()
+    specs = db.query(ProductSpec).filter(ProductSpec.is_active == 1).all()
+    spec_names = sorted([s.name for s in specs], key=len, reverse=True)
+
+    count = 0
+    for p in prices:
+        for sn in spec_names:
+            if sn in p.item_name:
+                exists = db.query(SalarySpecItem).filter(
+                    SalarySpecItem.spec_name == sn, SalarySpecItem.item_name == p.item_name).first()
+                if not exists:
+                    db.add(SalarySpecItem(spec_name=sn, item_name=p.item_name))
+                    count += 1
+                break
+    db.commit()
+    return {"ok": True, "imported": count}
+
+@app.post("/api/salary/spec-items")
+def salary_spec_item_create(spec_name: str, item_name: str, admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
+    exists = db.query(SalarySpecItem).filter(SalarySpecItem.spec_name == spec_name, SalarySpecItem.item_name == item_name).first()
+    if exists:
+        if exists.is_active == 0:
+            exists.is_active = 1; db.commit()
+            return {"ok": True, "reactivated": True}
+        raise HTTPException(400, "关联已存在")
+    db.add(SalarySpecItem(spec_name=spec_name, item_name=item_name))
+    db.commit()
+    return {"ok": True}
+
+@app.delete("/api/salary/spec-items/{siid}")
+def salary_spec_item_delete(siid: int, admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
+    r = db.query(SalarySpecItem).filter(SalarySpecItem.id == siid).first()
+    if not r: raise HTTPException(404, "不存在")
+    r.is_active = 0; db.commit()
+    return {"ok": True}
+
+
 @app.get("/api/salary/item-specs")
 def salary_item_specs(db: Session = Depends(get_db)):
     """返回工序→规格的映射表"""
