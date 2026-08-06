@@ -1463,6 +1463,7 @@ def salary_spec_items_init(admin: Admin = Depends(get_current_admin), db: Sessio
     spec_names = sorted([s.name for s in specs], key=len, reverse=True)
 
     count = 0
+    updated = 0
     for p in prices:
         for sn in spec_names:
             if sn in p.item_name:
@@ -1471,9 +1472,12 @@ def salary_spec_items_init(admin: Admin = Depends(get_current_admin), db: Sessio
                 if not exists:
                     db.add(SalarySpecItem(spec_name=sn, item_name=p.item_name, unit_price=p.unit_price))
                     count += 1
+                elif float(exists.unit_price or 0) == 0:
+                    exists.unit_price = p.unit_price
+                    updated += 1
                 break
     db.commit()
-    return {"ok": True, "imported": count}
+    return {"ok": True, "imported": count, "updated": updated}
 
 @app.post("/api/salary/spec-items")
 def salary_spec_item_create(spec_name: str, item_name: str, unit_price: float = 0, admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
