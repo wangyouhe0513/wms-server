@@ -128,14 +128,8 @@
   }
   @media (min-width: 769px) {
     .login-box { margin: 100px auto; }
-    /* 移动端子菜单 — 底部弹出 */
-    .submenu-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.4); z-index: 999; }
-    .submenu-panel { position: fixed; bottom: 55px; left: 8px; right: 8px; background: #fff; border-radius: 14px; z-index: 1000; overflow: hidden; box-shadow: 0 -4px 20px rgba(0,0,0,.25); animation: popIn .2s ease; padding-bottom: env(safe-area-inset-bottom, 0px); }
-    @keyframes popIn { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-    .sidebar-nav button[style*=\"paddingLeft:32\"] { display: none; }
   }
   @media (min-width: 769px) {
-    .submenu-overlay { display: none; }
     .login-box { margin: 100px auto; }
   }
 </style>
@@ -228,9 +222,7 @@ createApp({
 
     // === Main app state ===
     const currentTab = ref('dashboard');
-    const subTab = ref('enter');
-    const entrySubOpen = ref(false);
-    const salarySubOpen = ref(false);
+    const salSub = ref('enter');
     const today = new Date().toISOString().slice(0, 10);
     const showLogs = ref(false);  // toggle for operation log modal
 
@@ -791,7 +783,7 @@ createApp({
       token, authUser, loginUsername, loginPassword, loginError, loginLoading, rememberMe,
       doLogin, doLogout, showChangePwd, oldPwd, newPwd, changePwd,
       // Main
-      currentTab, subTab, entrySubOpen, salarySubOpen, today, dash, dashBalance, entryDate, entryRows, submitting, msg, msgType, todayRecords,
+      currentTab, salSub, today, dash, dashBalance, entryDate, entryRows, submitting, msg, msgType, todayRecords,
       specs, colors, salespersons, invData, invFilter, invLowStock,
       obSP, obYear, obMonth, obData,
       inYear, inMonth, inData,
@@ -835,8 +827,10 @@ createApp({
 
     const tabs = [
       {key:'dashboard', label:'🏠 首页'},
-      {key:'entry', label:'📝 出入库'},
+      {key:'entry', label:'📝 每日录入'},
       {key:'inventory', label:'📦 实时库存'},
+      {key:'outbound', label:'📤 出库记录'},
+      {key:'inbound', label:'📥 入库记录'},
       {key:'summary', label:'📊 销售汇总'},
       {key:'analysis', label:'📈 数据分析'},
       {key:'salary', label:'💵 工资管理'},
@@ -1159,8 +1153,16 @@ createApp({
     // --- Summary ---
     // --- Salary ---
     const renderSalary = () => h('div',{style:{display:'flex',flexDirection:'column',gap:'16px'}},[
-      // ===== 0. 快速填写（按规格→颜色→工序→工人） =====
-      h('div',{class:'card',style:{background:'#eef1ff',border:'2px solid #4f6ef7',display:(this.subTab==='enter'||this.subTab==='records')?'':'none'}},[
+      // 子栏目Tab栏
+      h('div',{style:{display:'flex',gap:'6px',flexWrap:'wrap'}},[
+        h('button',{class:this.salSub==='enter'?'btn-primary btn-sm':'btn-sm',onClick:()=>this.salSub='enter'},'📝 工资录入'),
+        h('button',{class:this.salSub==='records'?'btn-primary btn-sm':'btn-sm',onClick:()=>this.salSub='records'},'📋 工资记录'),
+        h('button',{class:this.salSub==='workers'?'btn-primary btn-sm':'btn-sm',onClick:()=>this.salSub='workers'},'👷 工人管理'),
+        h('button',{class:this.salSub==='items'?'btn-primary btn-sm':'btn-sm',onClick:()=>this.salSub='items'},'🔗 工序管理'),
+      ]),
+      // ===== 0. 快速填写 =====
+      (this.salSub==='enter'||this.salSub==='records') ? h('div',{class:'card',style:{background:'#eef1ff',border:'2px solid #4f6ef7'}},[
+      h('div',{class:'card',style:{background:'#eef1ff',border:'2px solid #4f6ef7'}},[
         h('div',{class:'card-title',style:{color:'#4f6ef7'}},'⚡ 快速填写（规格→颜色→工序→工人）'),
         h('div',{style:{display:'flex',gap:'6px',alignItems:'center',flexWrap:'wrap'}},[
           h('select',{value:this.salQuickSpec,onChange:e=>{this.salQuickSpec=e.target.value;this.salQuickColor='';},style:{flex:'1 1 100px',fontSize:'14px'}},
@@ -1181,10 +1183,11 @@ createApp({
               }},p.item_name+' ¥'+p.unit_price)) : h('span',{style:{color:'#94a3b8',fontSize:'13px'}},'← 选规格后这里显示工序按钮')
           ),
         ]),
-      ]),
+      ]) : null,
 
       // ===== 1. 录入区域（置顶） =====
-      h('div',{class:'card',style:{background:'#f8fafc',border:'2px solid #4f6ef7',display:this.subTab==='enter'?'':'none'}},[
+      this.salSub==='enter' ? h('div',{class:'card',style:{background:'#f8fafc',border:'2px solid #4f6ef7'}},[
+      h('div',{class:'card',style:{background:'#f8fafc',border:'2px solid #4f6ef7'}},[
         h('div',{class:'card-title',style:{color:'#4f6ef7'}},'📝 录入工资'),
         h('div',{style:{display:'flex',gap:'8px',alignItems:'center',flexWrap:'wrap',marginBottom:'10px'}},[
           h('input',{type:'month',value:this.salMonth,onInput:e=>this.salMonth=e.target.value,style:{fontSize:'13px',fontWeight:600}}),
@@ -1212,10 +1215,11 @@ createApp({
         ]),
         // 实时预览金额
         h('script',{},'setInterval(function(){var q=parseInt(document.getElementById("salQty")?.value)||0;var p=parseFloat(document.getElementById("salPrice")?.value)||0;var el=document.getElementById("salAmountPreview");if(el)el.textContent="¥"+(q*p).toFixed(2)},200)'),
-      ]),
+      ]) : null,
 
-      // ===== 2. 工人+工序管理 =====
-      h('div',{style:{display:(this.subTab==='workers'||this.subTab==='items')?'flex':'none',gap:'12px',flexWrap:'wrap'}},[
+      // ===== 2. 工人+工序 =====
+      (this.salSub==='workers'||this.salSub==='items') ? h('div',{style:{display:'flex',gap:'12px',flexWrap:'wrap'}},[
+      h('div',{style:{display:'flex',gap:'12px',flexWrap:'wrap'}},[
         h('div',{class:'card',style:{flex:1,minWidth:'260px'}},[
           h('div',{class:'card-title'},'👷 工人管理'),
           h('input',{placeholder:'🔍 筛选→点击填入录入框',onInput:e=>{document.querySelectorAll('.worker-tag').forEach(el=>{const v=e.target.value.toLowerCase();el.style.display=!v||el.textContent.toLowerCase().includes(v)?'':'none';})},style:{fontSize:'12px',marginBottom:'6px',width:'100%'}}),
@@ -1272,10 +1276,10 @@ createApp({
           ) : h('div',{style:{textAlign:'center',color:'#94a3b8',padding:'20px',fontSize:'13px'}},'← 请先选择一个规格'),
           h('datalist',{id:'allItemsList'},this.salPrices.map(p=>h('option',{value:p.item_name}))),
         ]),
-      ]),
+      ]) : null,
 
       // ===== 3. 记录表格 =====
-      (this.subTab==='records'||this.subTab==='enter') && this.salRecords.length > 0 ? h('div',{class:'card'},[
+      (this.salSub==='records'||this.salSub==='enter') && this.salRecords.length > 0 ? h('div',{class:'card'},[
         h('div',{class:'card-title'},'📋 工资明细 ('+this.salRecords.length+'条)'),
         h('div',{class:'table-wrap'},h('table',[
           h('thead',h('tr',[h('th','工人'),h('th','规格'),h('th','工序'),h('th','数量'),h('th','单价'),h('th','金额'),h('th','支付'),h('th','已付'),h('th','备注'),h('th','')])),
@@ -1292,7 +1296,7 @@ createApp({
       ]) : null,
 
       // ===== 4. 汇总 + 分享 =====
-      this.salSummary.length > 0 ? h('div',{class:'card'},[
+      (this.salSub==='records'||this.salSub==='enter') && this.salSummary.length > 0 ? h('div',{class:'card'},[
         h('div',{class:'card-title'},'📊 工资汇总'),
         h('div',{class:'table-wrap'},h('table',[
           h('thead',h('tr',[h('th','工人'),h('th','合计'),h('th','已付'),h('th','未付'),h('th','分享')])),
@@ -1630,23 +1634,6 @@ createApp({
     return h('div',{class:'app-layout'},[
       renderChangePwd(),
 
-      // === 移动端子菜单弹层(从右滑出) ===
-      (this.entrySubOpen || this.salarySubOpen) ? h('div',{class:'submenu-overlay',onClick:e=>{if(e.target===e.currentTarget){this.entrySubOpen=false;this.salarySubOpen=false;}}},[
-        h('div',{class:'submenu-panel',onClick:e=>e.stopPropagation()},[
-          this.entrySubOpen ? h('div',{style:{padding:'8px 0'}},[
-            h('button',{class:this.currentTab==='entry'?'active':'',style:{display:'block',width:'100%',textAlign:'left',padding:'14px 20px',fontSize:'16px',border:'none',background:'none',borderBottom:'1px solid #f1f5f9'},onClick:()=>{this.currentTab='entry';this.entrySubOpen=false;}},'📝 录入表单'),
-            h('button',{class:this.currentTab==='outbound'?'active':'',style:{display:'block',width:'100%',textAlign:'left',padding:'14px 20px',fontSize:'16px',border:'none',background:'none',borderBottom:'1px solid #f1f5f9'},onClick:()=>{this.currentTab='outbound';this.entrySubOpen=false;this.loadOutbound();}},'📤 出库记录'),
-            h('button',{class:this.currentTab==='inbound'?'active':'',style:{display:'block',width:'100%',textAlign:'left',padding:'14px 20px',fontSize:'16px',border:'none',background:'none'},onClick:()=>{this.currentTab='inbound';this.entrySubOpen=false;this.loadInbound();}},'📥 入库记录'),
-          ]) : null,
-          this.salarySubOpen ? h('div',{style:{padding:'8px 0'}},[
-            h('button',{class:this.subTab==='enter'?'active':'',style:{display:'block',width:'100%',textAlign:'left',padding:'14px 20px',fontSize:'16px',border:'none',background:'none',borderBottom:'1px solid #f1f5f9'},onClick:()=>{this.currentTab='salary';this.subTab='enter';this.salarySubOpen=false;this.loadSalary();}},'📝 工资录入'),
-            h('button',{class:this.subTab==='records'?'active':'',style:{display:'block',width:'100%',textAlign:'left',padding:'14px 20px',fontSize:'16px',border:'none',background:'none',borderBottom:'1px solid #f1f5f9'},onClick:()=>{this.currentTab='salary';this.subTab='records';this.salarySubOpen=false;this.loadSalary();}},'📋 工资记录'),
-            h('button',{class:this.subTab==='workers'?'active':'',style:{display:'block',width:'100%',textAlign:'left',padding:'14px 20px',fontSize:'16px',border:'none',background:'none',borderBottom:'1px solid #f1f5f9'},onClick:()=>{this.currentTab='salary';this.subTab='workers';this.salarySubOpen=false;this.loadSalary();}},'👷 工人管理'),
-            h('button',{class:this.subTab==='items'?'active':'',style:{display:'block',width:'100%',textAlign:'left',padding:'14px 20px',fontSize:'16px',border:'none',background:'none'},onClick:()=>{this.currentTab='salary';this.subTab='items';this.salarySubOpen=false;this.loadSalary();}},'🔗 工序管理'),
-          ]) : null,
-        ]),
-      ]) : null,
-
       // === 左侧边栏 ===
       h('div',{class:'sidebar'},[
         h('div',{class:'sidebar-logo'},[
@@ -1655,38 +1642,11 @@ createApp({
           h('div',{class:'sub'},'进销存管理系统'),
         ]),
         h('div',{class:'sidebar-nav'},
-          tabs.flatMap(tab=>{
-            const isOpen = (tab.key==='entry'&&this.entrySubOpen)||(tab.key==='salary'&&this.salarySubOpen);
-            const btns = [h('button',{key:tab.key, class:(this.currentTab===tab.key&&!isOpen)?'active':'',
-              onClick:()=>{
-                if(tab.key==='entry'){this.entrySubOpen=!this.entrySubOpen;this.salarySubOpen=false;return;}
-                if(tab.key==='salary'){this.salarySubOpen=!this.salarySubOpen;this.entrySubOpen=false;return;}
-                this.entrySubOpen=false;this.salarySubOpen=false;this.currentTab=tab.key;
-                if(tab.key==='help'){window.open('/static/doc.html','_blank');this.currentTab='dashboard';return;}
-                if(tab.key==='admin'){this.loadAdmins();this.loadLogs();}
-                if(tab.key==='finance'){this.loadFinance();this.loadFinCategories();}
-                if(tab.key==='summary'){this.loadSummary();}
-                if(tab.key==='analysis'){this.loadAnalysis();}
-              }
-            },isOpen?tab.label.replace(/^[^ ]+ /,'📂 '):tab.label)];
-            if(tab.key==='entry'&&this.entrySubOpen){
-              btns.push(
-                h('button',{key:'em',class:(this.currentTab==='entry'?'active':''),style:{paddingLeft:'32px',fontSize:'12px'},onClick:()=>{this.currentTab='entry';}},'📝 录入表单'),
-                h('button',{key:'ob',class:(this.currentTab==='outbound'?'active':''),style:{paddingLeft:'32px',fontSize:'12px'},onClick:()=>{this.currentTab='outbound';this.loadOutbound();}},'📤 出库记录'),
-                h('button',{key:'ib',class:(this.currentTab==='inbound'?'active':''),style:{paddingLeft:'32px',fontSize:'12px'},onClick:()=>{this.currentTab='inbound';this.loadInbound();}},'📥 入库记录'),
-              );
-            }
-            if(tab.key==='salary'&&this.salarySubOpen){
-              const setST = (v)=>{this.currentTab='salary';this.subTab=v;this.loadSalary();};
-              btns.push(
-                h('button',{key:'se',class:(this.subTab==='enter'?'active':''),style:{paddingLeft:'32px',fontSize:'12px'},onClick:()=>{setST('enter');}},'📝 工资录入'),
-                h('button',{key:'sr',class:(this.subTab==='records'?'active':''),style:{paddingLeft:'32px',fontSize:'12px'},onClick:()=>{setST('records');}},'📋 工资记录'),
-                h('button',{key:'sw',class:(this.subTab==='workers'?'active':''),style:{paddingLeft:'32px',fontSize:'12px'},onClick:()=>{setST('workers');}},'👷 工人管理'),
-                h('button',{key:'si',class:(this.subTab==='items'?'active':''),style:{paddingLeft:'32px',fontSize:'12px'},onClick:()=>{setST('items');}},'🔗 工序管理'),
-              );
-            }
-            return btns;
-          })
+          tabs.map(tab=>h('button',{key:tab.key, class:this.currentTab===tab.key?'active':'',
+            onClick:()=>{this.currentTab=tab.key;if(tab.key==='help'){window.open('/static/doc.html','_blank');this.currentTab='dashboard';return;}
+if(tab.key==='outbound'){this.loadOutbound();}if(tab.key==='inbound'){this.loadInbound();}
+if(tab.key==='admin'){this.loadAdmins();this.loadLogs();}if(tab.key==='salary'){this.loadSalary();}if(tab.key==='finance'){this.loadFinance();this.loadFinCategories();}if(tab.key==='summary'){this.loadSummary();}if(tab.key==='analysis'){this.loadAnalysis();}}
+          },tab.label))
         ),
         h('div',{class:'sidebar-footer'},[
           h('button',{class:'btn-sm',style:{background:'#f5f7fa'},onClick:()=>this.showChangePwd=true},'🔑'),
