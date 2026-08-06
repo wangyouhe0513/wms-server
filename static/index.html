@@ -1161,7 +1161,7 @@ createApp({
         h('button',{class:this.salSub==='items'?'btn-primary btn-sm':'btn-sm',onClick:()=>this.salSub='items'},'🔗 工序管理'),
       ]),
       // ===== 0. 快速填写 =====
-      (this.salSub==='enter'||this.salSub==='records') ? h('div',{class:'card',style:{background:'#eef1ff',border:'2px solid #4f6ef7'}},[
+      (this.salSub==='enter'||this.salSub==='records') && h('div',{class:'card',style:{background:'#eef1ff',border:'2px solid #4f6ef7'}},[
       h('div',{class:'card',style:{background:'#eef1ff',border:'2px solid #4f6ef7'}},[
         h('div',{class:'card-title',style:{color:'#4f6ef7'}},'⚡ 快速填写（规格→颜色→工序→工人）'),
         h('div',{style:{display:'flex',gap:'6px',alignItems:'center',flexWrap:'wrap'}},[
@@ -1183,10 +1183,10 @@ createApp({
               }},p.item_name+' ¥'+p.unit_price)) : h('span',{style:{color:'#94a3b8',fontSize:'13px'}},'← 选规格后这里显示工序按钮')
           ),
         ]),
-      ]) : null,
+      ]),
 
       // ===== 1. 录入区域（置顶） =====
-      this.salSub==='enter' ? h('div',{class:'card',style:{background:'#f8fafc',border:'2px solid #4f6ef7'}},[
+      this.salSub==='enter' && h('div',{class:'card',style:{background:'#f8fafc',border:'2px solid #4f6ef7'}},[
       h('div',{class:'card',style:{background:'#f8fafc',border:'2px solid #4f6ef7'}},[
         h('div',{class:'card-title',style:{color:'#4f6ef7'}},'📝 录入工资'),
         h('div',{style:{display:'flex',gap:'8px',alignItems:'center',flexWrap:'wrap',marginBottom:'10px'}},[
@@ -1215,10 +1215,10 @@ createApp({
         ]),
         // 实时预览金额
         h('script',{},'setInterval(function(){var q=parseInt(document.getElementById("salQty")?.value)||0;var p=parseFloat(document.getElementById("salPrice")?.value)||0;var el=document.getElementById("salAmountPreview");if(el)el.textContent="¥"+(q*p).toFixed(2)},200)'),
-      ]) : null,
+      ]),
 
       // ===== 2. 工人+工序 =====
-      (this.salSub==='workers'||this.salSub==='items') ? h('div',{style:{display:'flex',gap:'12px',flexWrap:'wrap'}},[
+      (this.salSub==='workers'||this.salSub==='items') && h('div',{style:{display:'flex',gap:'12px',flexWrap:'wrap'}},[
       h('div',{style:{display:'flex',gap:'12px',flexWrap:'wrap'}},[
         h('div',{class:'card',style:{flex:1,minWidth:'260px'}},[
           h('div',{class:'card-title'},'👷 工人管理'),
@@ -1276,7 +1276,7 @@ createApp({
           ) : h('div',{style:{textAlign:'center',color:'#94a3b8',padding:'20px',fontSize:'13px'}},'← 请先选择一个规格'),
           h('datalist',{id:'allItemsList'},this.salPrices.map(p=>h('option',{value:p.item_name}))),
         ]),
-      ]) : null,
+      ]),
 
       // ===== 3. 记录表格 =====
       (this.salSub==='records'||this.salSub==='enter') && this.salRecords.length > 0 ? h('div',{class:'card'},[
