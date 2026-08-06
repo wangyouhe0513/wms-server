@@ -1153,7 +1153,7 @@ createApp({
     // --- Summary ---
     // --- Salary ---
     const renderSalary = () => {
-      const sub = subTab.value || 'enter';
+      const sub = this.subTab || 'enter';
       return h('div',{style:{display:'flex',flexDirection:'column',gap:'16px'}},[
       // ===== 0. 快速填写（按规格→颜色→工序→工人） =====
       (sub==='enter'||sub==='records') ? h('div',{class:'card',style:{background:'#eef1ff',border:'2px solid #4f6ef7'}},[
