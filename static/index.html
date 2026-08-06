@@ -270,6 +270,7 @@ createApp({
     // Salary
     const salWorkers = ref([]); const salPrices = ref([]); const salItemSpecs = ref([]); const salRecords = ref([]);
     const salSummary = ref([]); const salMonth = ref(new Date().toISOString().slice(0,10));
+    const salPage = ref(1); const salPageSize = ref(30); const salTotal = ref(0);
     const salFilterSpec = ref('');
     const salFilterColor = ref('');
     const salQuickSpec = ref('');
@@ -422,13 +423,13 @@ createApp({
 
     // -- Salary functions --
     const loadSalary = async () => {
-      const [workers, prices, itemSpecs, records, summary] = await Promise.all([
+      const [workers, prices, itemSpecs, recordsData, summary] = await Promise.all([
         api('/api/salary/workers'), api('/api/salary/prices'), api('/api/salary/item-specs'),
-        api(`/api/salary/records?month=${salMonth.value}`),
+        api(`/api/salary/records?month=${salMonth.value}&page=${salPage.value}&page_size=${salPageSize.value}`),
         api(`/api/salary/summary?month=${salMonth.value}`)
       ]);
       salWorkers.value = workers; salPrices.value = prices; salItemSpecs.value = itemSpecs;
-      salRecords.value = records; salSummary.value = summary;
+      salRecords.value = recordsData.items; salTotal.value = recordsData.total; salSummary.value = summary;
       try { salSpecItems.value = await api('/api/salary/spec-items'); } catch(e) {}
     };
     const saveSalWorker = async () => {
@@ -788,7 +789,7 @@ createApp({
       obSP, obYear, obMonth, obData,
       inYear, inMonth, inData,
       sumYear, sumMonth, summary,
-      salWorkers, salPrices, salItemSpecs, salRecords, salSummary, salMonth, salFilterSpec, salFilterColor, salQuickSpec, salQuickColor, salQuickWorker, salNewWorker, salNewJobType, salNewItem, salNewPrice,
+      salWorkers, salPrices, salItemSpecs, salRecords, salSummary, salMonth, salPage, salPageSize, salTotal, salFilterSpec, salFilterColor, salQuickSpec, salQuickColor, salQuickWorker, salNewWorker, salNewJobType, salNewItem, salNewPrice,
       loadSalary, saveSalWorker, deleteSalWorker, saveSalPrice, deleteSalPrice, addSalRecord, deleteSalRecord, toggleSalPaid, exportSalary, showSalDropdown,
       salSpecItems, salNewLinkSpec, salNewLinkItem, salEditLinkId, salEditLinkItem, initSpecItems, saveSpecItem, updateSpecItem, deleteSpecItem,
       finYear, finMonth, finRecords, finSummary, loadFinance, exportFinance, deleteFinance, finCategories, newFinCat, loadFinCategories, saveFinCat, deleteFinCat,
@@ -1278,7 +1279,7 @@ createApp({
 
       // ===== 3. 记录表格 =====
       this.salRecords.length > 0 ? h('div',{class:'card'},[
-        h('div',{class:'card-title'},'📋 工资明细 ('+this.salRecords.length+'条)'),
+        h('div',{class:'card-title'},'📋 工资明细 (共'+this.salTotal+'条)'),
         h('div',{class:'table-wrap'},h('table',[
           h('thead',h('tr',[h('th','工人'),h('th','规格'),h('th','工序'),h('th','数量'),h('th','单价'),h('th','金额'),h('th','支付'),h('th','已付'),h('th','备注'),h('th','时间'),h('th','')])),
           h('tbody',this.salRecords.map(r=>h('tr',{key:r.id},[
@@ -1292,6 +1293,14 @@ createApp({
             h('td',h('button',{class:'btn-danger btn-xs',onClick:()=>this.deleteSalRecord(r.id)},'✕')),
           ])))
         ]))
+      ]) : null,
+      // 分页
+      (this.salSub==='records'||this.salSub==='enter') && this.salTotal > this.salPageSize ? h('div',{style:{display:'flex',gap:'8px',alignItems:'center',justifyContent:'center',marginTop:'8px'}},[
+        h('button',{class:'btn-sm',disabled:this.salPage<=1,onClick:()=>{this.salPage--;this.loadSalary();}},'◀ 上一页'),
+        h('span',{style:{fontSize:'13px',color:'#64748b'}},`${this.salPage}/${Math.ceil(this.salTotal/this.salPageSize)} 页(共${this.salTotal}条)`),
+        h('button',{class:'btn-sm',disabled:this.salPage*this.salPageSize>=this.salTotal,onClick:()=>{this.salPage++;this.loadSalary();}},'下一页 ▶'),
+        h('select',{value:this.salPageSize,onChange:e=>{this.salPageSize=parseInt(e.target.value);this.salPage=1;this.loadSalary();},style:{fontSize:'12px',marginLeft:'8px'}},
+          [30,50,100].map(n=>h('option',{value:n},n+'条/页'))),
       ]) : null,
 
       // ===== 4. 汇总 + 分享 =====

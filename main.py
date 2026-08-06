@@ -1561,16 +1561,18 @@ def salary_price_delete(pid: int, admin: Admin = Depends(get_current_admin), db:
 
 # -- 工资记录 --
 @app.get("/api/salary/records")
-def salary_records(month: str = "", worker_id: int = 0, db: Session = Depends(get_db)):
-    q = db.query(SalaryRecord).order_by(SalaryRecord.worker_id, SalaryRecord.id)
+def salary_records(month: str = "", worker_id: int = 0, page: int = 1, page_size: int = 30, db: Session = Depends(get_db)):
+    q = db.query(SalaryRecord).order_by(SalaryRecord.id.desc())
     if month: q = q.filter(SalaryRecord.month.like(month[:7] + '%'))
     if worker_id > 0: q = q.filter(SalaryRecord.worker_id == worker_id)
-    rows = q.all()
-    return [{"id": r.id, "worker_id": r.worker_id, "worker_name": r.worker.name if r.worker else "",
+    total = q.count()
+    rows = q.offset((page-1)*page_size).limit(page_size).all()
+    items = [{"id": r.id, "worker_id": r.worker_id, "worker_name": r.worker.name if r.worker else "",
              "month": r.month, "spec_name": r.spec_name or "", "item_name": r.item_name, "quantity": r.quantity,
              "unit_price": float(r.unit_price), "amount": float(r.amount),
              "payment_method": r.payment_method, "paid": r.paid, "remark": r.remark,
              "created_at": r.created_at.strftime("%m-%d %H:%M") if r.created_at else ""} for r in rows]
+    return {"items": items, "total": total, "page": page, "page_size": page_size}
 
 class SalaryRecordReq(PydanticBaseModel):
     worker_id: int = 0
