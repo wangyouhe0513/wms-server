@@ -1563,7 +1563,7 @@ def salary_price_delete(pid: int, admin: Admin = Depends(get_current_admin), db:
 @app.get("/api/salary/records")
 def salary_records(month: str = "", worker_id: int = 0, db: Session = Depends(get_db)):
     q = db.query(SalaryRecord).order_by(SalaryRecord.worker_id, SalaryRecord.id)
-    if month: q = q.filter(SalaryRecord.month == month)
+    if month: q = q.filter(SalaryRecord.month.like(month[:7] + '%'))
     if worker_id > 0: q = q.filter(SalaryRecord.worker_id == worker_id)
     rows = q.all()
     return [{"id": r.id, "worker_id": r.worker_id, "worker_name": r.worker.name if r.worker else "",
@@ -1621,7 +1621,7 @@ def salary_record_delete(rid: int, admin: Admin = Depends(get_current_admin), db
 def salary_summary(month: str = "", db: Session = Depends(get_db)):
     """按工人汇总工资"""
     q = db.query(SalaryRecord)
-    if month: q = q.filter(SalaryRecord.month == month)
+    if month: q = q.filter(SalaryRecord.month.like(month[:7] + '%'))
     rows = q.all()
     workers = {}
     for r in rows:
@@ -1760,7 +1760,7 @@ th{{background:#f5f5f5}}.total{{font-size:18px;font-weight:700;text-align:right;
 def salary_export(month: str = "", db: Session = Depends(get_db)):
     """导出工资表为Excel"""
     q = db.query(SalaryRecord).order_by(SalaryRecord.worker_id, SalaryRecord.id)
-    if month: q = q.filter(SalaryRecord.month == month)
+    if month: q = q.filter(SalaryRecord.month.like(month[:7] + '%'))
     rows = q.all()
 
     wb = openpyxl.Workbook()

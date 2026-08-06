@@ -269,7 +269,7 @@ createApp({
 
     // Salary
     const salWorkers = ref([]); const salPrices = ref([]); const salItemSpecs = ref([]); const salRecords = ref([]);
-    const salSummary = ref([]); const salMonth = ref(new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0'));
+    const salSummary = ref([]); const salMonth = ref(new Date().toISOString().slice(0,10));
     const salFilterSpec = ref('');
     const salFilterColor = ref('');
     const salQuickSpec = ref('');
@@ -1176,6 +1176,7 @@ createApp({
               style:{background:'#fff',border:'1px solid #4f6ef7',color:'#4f6ef7',marginBottom:'2px'},
               onClick:()=>{
                 document.getElementById('salWorkerInput').value=this.salQuickWorker;
+                if(document.getElementById('salSpecSelect'))document.getElementById('salSpecSelect').value=this.salQuickSpec;
                 document.getElementById('salItemInput').value=p.item_name;
                 document.getElementById('salPrice').value=p.unit_price;
                 document.getElementById('salQty').focus();
@@ -1188,7 +1189,7 @@ createApp({
       h('div',{class:'card',style:{background:'#f8fafc',border:'2px solid #4f6ef7',display:this.salSub==='enter'?'':'none'}},[
         h('div',{class:'card-title',style:{color:'#4f6ef7'}},'📝 录入工资'),
         h('div',{style:{display:'flex',gap:'8px',alignItems:'center',flexWrap:'wrap',marginBottom:'10px'}},[
-          h('input',{type:'month',value:this.salMonth,onInput:e=>this.salMonth=e.target.value,style:{fontSize:'13px',fontWeight:600}}),
+          h('input',{type:'date',value:this.salMonth,onInput:e=>this.salMonth=e.target.value,style:{fontSize:'13px',fontWeight:600}}),
           h('button',{class:'btn-warning btn-sm',onClick:this.exportSalary},'📥 导出Excel'),
           h('span',{style:{flex:1}}),
           h('small',{style:{color:'#94a3b8'}},'搜工人→搜工序→填数量→自动填单价→添加'),
