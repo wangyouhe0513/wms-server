@@ -267,8 +267,9 @@ createApp({
     const summary = ref(null);
 
     // Salary
-    const salWorkers = ref([]); const salPrices = ref([]); const salRecords = ref([]);
+    const salWorkers = ref([]); const salPrices = ref([]); const salItemSpecs = ref([]); const salRecords = ref([]);
     const salSummary = ref([]); const salMonth = ref(new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0'));
+    const salFilterSpec = ref('');
     const salNewWorker = ref(''); const salNewJobType = ref('机工');
     const salNewItem = ref(''); const salNewPrice = ref('');
     const salEditWorkerId = ref(0); const salEditItemId = ref(0);
@@ -410,12 +411,12 @@ createApp({
 
     // -- Salary functions --
     const loadSalary = async () => {
-      const [workers, prices, records, summary] = await Promise.all([
-        api('/api/salary/workers'), api('/api/salary/prices'),
+      const [workers, prices, itemSpecs, records, summary] = await Promise.all([
+        api('/api/salary/workers'), api('/api/salary/prices'), api('/api/salary/item-specs'),
         api(`/api/salary/records?month=${salMonth.value}`),
         api(`/api/salary/summary?month=${salMonth.value}`)
       ]);
-      salWorkers.value = workers; salPrices.value = prices;
+      salWorkers.value = workers; salPrices.value = prices; salItemSpecs.value = itemSpecs;
       salRecords.value = records; salSummary.value = summary;
     };
     const saveSalWorker = async () => {
@@ -468,8 +469,9 @@ createApp({
       const method = document.getElementById('salMethod')?.value||'微信';
       const remark = document.getElementById('salRemark')?.value||'';
       if (!wid || !item || !qty || !price) return alert('请填写完整');
+      const spec = salItemSpecs.value.find(p=>p.item_name===item)?.spec_name || salFilterSpec.value || '';
       await api('/api/salary/records', {method:'POST', body:JSON.stringify({
-        worker_id: wid, month: salMonth.value, item_name: item,
+        worker_id: wid, month: salMonth.value, spec_name: spec, item_name: item,
         quantity: qty, unit_price: price, payment_method: method, remark
       })});
       document.getElementById('salWorkerInput').value = '';
@@ -753,7 +755,7 @@ createApp({
       obSP, obYear, obMonth, obData,
       inYear, inMonth, inData,
       sumYear, sumMonth, summary,
-      salWorkers, salPrices, salRecords, salSummary, salMonth, salNewWorker, salNewJobType, salNewItem, salNewPrice,
+      salWorkers, salPrices, salItemSpecs, salRecords, salSummary, salMonth, salFilterSpec, salNewWorker, salNewJobType, salNewItem, salNewPrice,
       loadSalary, saveSalWorker, deleteSalWorker, saveSalPrice, deleteSalPrice, addSalRecord, deleteSalRecord, toggleSalPaid, exportSalary, showSalDropdown,
       finYear, finMonth, finRecords, finSummary, loadFinance, exportFinance, deleteFinance, finCategories, newFinCat, loadFinCategories, saveFinCat, deleteFinCat,
       analysisYear, analysisMonth, analysisData, loadAnalysis,
@@ -1126,12 +1128,14 @@ createApp({
           h('small',{style:{color:'#94a3b8'}},'搜工人→搜工序→填数量→自动填单价→添加'),
         ]),
         h('div',{style:{display:'flex',gap:'6px',alignItems:'center',flexWrap:'wrap'}},[
+          h('select',{id:'salSpecSelect',style:{width:'90px',fontSize:'13px'},onChange:e=>{this.salFilterSpec=e.target.value;document.getElementById('salItemInput').value='';document.getElementById('salPrice').value='';}},
+            [h('option',{value:''},'全部规格'),...Array.from(new Set(this.salItemSpecs.map(p=>p.spec_name).filter(Boolean))).sort().map(s=>h('option',{value:s},s))]),
           h('input',{id:'salWorkerInput',placeholder:'🔍 搜工人',style:{flex:'1 1 100px',fontSize:'14px',fontWeight:500},autocomplete:'off',
             onFocus:e=>this.showSalDropdown('salWorkerInput',this.salWorkers,'name'),
             onInput:e=>this.showSalDropdown('salWorkerInput',this.salWorkers,'name')}),
           h('input',{id:'salItemInput',placeholder:'🔍 搜工序',style:{flex:'1 1 120px',fontSize:'14px'},autocomplete:'off',
-            onFocus:e=>{this.showSalDropdown('salItemInput',this.salPrices,'item_name');},
-            onInput:e=>{this.showSalDropdown('salItemInput',this.salPrices,'item_name');const p=this.salPrices.find(p=>p.item_name===e.target.value);if(p)document.getElementById('salPrice').value=p.unit_price;}}),
+            onFocus:e=>{const items=this.salFilterSpec?this.salItemSpecs.filter(p=>p.spec_name===this.salFilterSpec):this.salItemSpecs;this.showSalDropdown('salItemInput',items,'item_name');},
+            onInput:e=>{const items=this.salFilterSpec?this.salItemSpecs.filter(p=>p.spec_name===this.salFilterSpec):this.salItemSpecs;this.showSalDropdown('salItemInput',items,'item_name');const p=this.salItemSpecs.find(p=>p.item_name===e.target.value);if(p)document.getElementById('salPrice').value=p.unit_price;}}),
           h('input',{id:'salQty',type:'number',min:1,placeholder:'数量',style:{width:'60px',fontSize:'14px',fontWeight:500}}),
           h('span',{style:{fontSize:'13px',color:'#94a3b8'}},'×'),
           h('input',{id:'salPrice',type:'number',step:'0.01',placeholder:'单价',style:{width:'80px',fontSize:'14px'}}),
@@ -1176,9 +1180,9 @@ createApp({
       this.salRecords.length > 0 ? h('div',{class:'card'},[
         h('div',{class:'card-title'},'📋 工资明细 ('+this.salRecords.length+'条)'),
         h('div',{class:'table-wrap'},h('table',[
-          h('thead',h('tr',[h('th','工人'),h('th','工序'),h('th','数量'),h('th','单价'),h('th','金额'),h('th','支付'),h('th','已付'),h('th','备注'),h('th','')])),
+          h('thead',h('tr',[h('th','工人'),h('th','规格'),h('th','工序'),h('th','数量'),h('th','单价'),h('th','金额'),h('th','支付'),h('th','已付'),h('th','备注'),h('th','')])),
           h('tbody',this.salRecords.map(r=>h('tr',{key:r.id},[
-            h('td',{style:{fontWeight:500}},r.worker_name),h('td',r.item_name),
+            h('td',{style:{fontWeight:500}},r.worker_name),h('td',{style:{fontSize:'12px',color:'#94a3b8'}},r.spec_name||'—'),h('td',r.item_name),
             h('td',String(r.quantity)),h('td','¥'+Number(r.unit_price).toFixed(2)),
             h('td',{style:{fontWeight:700,color:r.paid?'#22c55e':'#4f6ef7'}},'¥'+Number(r.amount).toFixed(2)),
             h('td',r.payment_method),

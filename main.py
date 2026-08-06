@@ -1448,6 +1448,27 @@ def salary_worker_delete(wid: int, admin: Admin = Depends(get_current_admin), db
     return {"ok": True}
 
 # -- 工序单价 CRUD --
+@app.get("/api/salary/item-specs")
+def salary_item_specs(db: Session = Depends(get_db)):
+    """返回工序→规格的映射表"""
+    prices = db.query(SalaryPrice).filter(SalaryPrice.is_active == 1).all()
+    specs = db.query(ProductSpec).filter(ProductSpec.is_active == 1).all()
+    spec_names = [s.name for s in specs]
+
+    # 为每个工序匹配规格
+    result = []
+    for p in prices:
+        matched = ""
+        # 按规格名长度降序匹配，优先匹配长的（如"无钢丝"优先于"钢丝"）
+        for sn in sorted(spec_names, key=len, reverse=True):
+            if sn in p.item_name:
+                matched = sn
+                break
+        result.append({"id": p.id, "item_name": p.item_name, "unit_price": float(p.unit_price), "spec_name": matched})
+
+    return result
+
+
 @app.get("/api/salary/prices")
 def salary_prices(db: Session = Depends(get_db)):
     rows = db.query(SalaryPrice).filter(SalaryPrice.is_active == 1).order_by(SalaryPrice.item_name).all()
@@ -1485,13 +1506,14 @@ def salary_records(month: str = "", worker_id: int = 0, db: Session = Depends(ge
     if worker_id > 0: q = q.filter(SalaryRecord.worker_id == worker_id)
     rows = q.all()
     return [{"id": r.id, "worker_id": r.worker_id, "worker_name": r.worker.name if r.worker else "",
-             "month": r.month, "item_name": r.item_name, "quantity": r.quantity,
+             "month": r.month, "spec_name": r.spec_name or "", "item_name": r.item_name, "quantity": r.quantity,
              "unit_price": float(r.unit_price), "amount": float(r.amount),
              "payment_method": r.payment_method, "paid": r.paid, "remark": r.remark} for r in rows]
 
 class SalaryRecordReq(PydanticBaseModel):
     worker_id: int = 0
     month: str = ""
+    spec_name: str = ""
     item_name: str = ""
     quantity: int = 0
     unit_price: float = 0
@@ -1509,7 +1531,7 @@ class SalaryRecordUpdateReq(PydanticBaseModel):
 @app.post("/api/salary/records")
 def salary_record_create(req: SalaryRecordReq, admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
     amount = Decimal(str(req.quantity)) * Decimal(str(req.unit_price))
-    r = SalaryRecord(worker_id=req.worker_id, month=req.month, item_name=req.item_name,
+    r = SalaryRecord(worker_id=req.worker_id, month=req.month, spec_name=req.spec_name, item_name=req.item_name,
                      quantity=req.quantity, unit_price=Decimal(str(req.unit_price)),
                      amount=amount, payment_method=req.payment_method, paid=req.paid, remark=req.remark)
     db.add(r); db.commit()
