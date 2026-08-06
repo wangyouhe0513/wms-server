@@ -1837,10 +1837,16 @@ def dashboard(db: Session = Depends(get_db)):
         ProductSku.current_stock < func.coalesce(ProductSku.low_stock_threshold, default_threshold)
     ).count()
 
+    # 当月工资汇总
+    salary_month = db.query(func.sum(SalaryRecord.amount)).filter(
+        SalaryRecord.month.like(today.strftime("%Y-%m") + '%')
+    ).scalar() or 0
+
     return {
         "today_out_amount": today_out,
         "today_in_qty": today_in,
         "month_total": month_total,
+        "salary_month_total": float(salary_month),
         "low_stock_count": low_skus,
         "total_specs": db.query(ProductSpec).filter(ProductSpec.is_active == 1).count(),
         "total_colors": db.query(Color).filter(Color.is_active == 1).count(),

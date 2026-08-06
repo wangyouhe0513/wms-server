@@ -215,7 +215,7 @@ createApp({
     const showLogs = ref(false);  // toggle for operation log modal
 
     // Dashboard
-    const dash = ref({today_out_amount:0,today_in_qty:0,month_total:0,low_stock_count:0,total_specs:0,total_colors:0});
+    const dash = ref({today_out_amount:0,today_in_qty:0,month_total:0,low_stock_count:0,total_specs:0,total_colors:0,salary_month_total:0});
     const dashBalance = ref(0);
 
     // Entry
@@ -869,6 +869,11 @@ createApp({
           onClick:()=>this.currentTab='finance'},[
           h('div',{class:'label'},'💰 当前余额'),
           h('div',{class:'value'},'¥'+this.dashBalance.toLocaleString()),
+        ]),
+        h('div',{class:'stat-card',style:{background:'linear-gradient(135deg,#06b6d4,#0891b2)',cursor:'pointer'},
+          onClick:()=>this.currentTab='salary'},[
+          h('div',{class:'label'},'💵 本月工资'),
+          h('div',{class:'value'},'¥'+Number(this.dash.salary_month_total||0).toLocaleString()),
         ]),
       ]),
 
