@@ -128,10 +128,10 @@
   }
   @media (min-width: 769px) {
     .login-box { margin: 100px auto; }
-    /* 移动端子菜单 — 底部弹出浮层 */
-    .submenu-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.2); z-index: 200; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 65px; }
-    .submenu-panel { background: #fff; border-radius: 12px; width: 90%; max-width: 360px; overflow: hidden; box-shadow: 0 8px 30px rgba(0,0,0,.15); animation: popIn .2s ease; }
-    @keyframes popIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    /* 移动端子菜单 — 底部弹出 */
+    .submenu-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.35); z-index: 300; }
+    .submenu-panel { position: fixed; bottom: 55px; left: 10px; right: 10px; background: #fff; border-radius: 14px; z-index: 301; overflow: hidden; box-shadow: 0 -4px 20px rgba(0,0,0,.2); animation: popIn .2s ease; padding-bottom: env(safe-area-inset-bottom, 0px); }
+    @keyframes popIn { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
   }
   @media (min-width: 769px) {
     .submenu-overlay { display: none; }
