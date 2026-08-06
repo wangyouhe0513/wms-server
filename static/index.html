@@ -132,6 +132,7 @@
     .submenu-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.35); z-index: 300; }
     .submenu-panel { position: fixed; bottom: 55px; left: 10px; right: 10px; background: #fff; border-radius: 14px; z-index: 301; overflow: hidden; box-shadow: 0 -4px 20px rgba(0,0,0,.2); animation: popIn .2s ease; padding-bottom: env(safe-area-inset-bottom, 0px); }
     @keyframes popIn { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .sidebar-nav button[style*=\"paddingLeft:32\"] { display: none; }
   }
   @media (min-width: 769px) {
     .submenu-overlay { display: none; }
