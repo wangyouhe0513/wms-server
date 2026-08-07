@@ -716,26 +716,78 @@ def set_threshold(sku_id: int, threshold: int, admin: Admin = Depends(get_curren
     return {"ok": True, "sku_id": sku_id, "threshold": threshold}
 
 
-@app.get("/api/sku/latest-prices")
-def latest_prices(db: Session = Depends(get_db)):
-    """返回每个 spec-color 组合的最新出库单价，用于一键填价"""
+class MatchPriceItem(BaseModel):
+    spec: str
+    color: str
+    salesperson: str
+
+class MatchPriceRequest(BaseModel):
+    items: List[MatchPriceItem]
+
+@app.post("/api/sku/match-prices")
+def match_prices(req: MatchPriceRequest, db: Session = Depends(get_db)):
+    """智能三级匹配单价：
+    1. 同规格+同颜色+同销售人
+    2. 同规格+同销售人（不限颜色）
+    3. 同规格+同颜色（不限销售人）
+    """
     from sqlalchemy import text
-    rows = db.execute(text("""
-        SELECT ps.name as spec, c.name as color, t.unit_price
-        FROM transactions t
-        JOIN product_skus sku ON t.sku_id = sku.id
-        JOIN product_specs ps ON sku.spec_id = ps.id
-        JOIN colors c ON sku.color_id = c.id
-        WHERE t.trans_type = '出库' AND t.unit_price > 0
-        AND t.id IN (
-            SELECT MAX(t2.id) FROM transactions t2
-            WHERE t2.sku_id = t.sku_id AND t2.trans_type = '出库' AND t2.unit_price > 0
-        )
-    """)).fetchall()
     result = {}
-    for spec, color, price in rows:
-        result[f"{spec}|{color}"] = float(price)
-    return result
+
+    for idx, item in enumerate(req.items):
+        price = None
+        spec = item.spec.strip()
+        color = item.color.strip()
+        sp = item.salesperson.strip()
+        if not spec or not color or not sp:
+            continue
+
+        # Tier 1: spec + color + salesperson
+        row = db.execute(text("""
+            SELECT t.unit_price FROM transactions t
+            JOIN product_skus sku ON t.sku_id = sku.id
+            JOIN product_specs ps ON sku.spec_id = ps.id
+            JOIN colors c ON sku.color_id = c.id
+            JOIN salespersons s ON t.salesperson_id = s.id
+            WHERE t.trans_type = '出库' AND t.unit_price > 0
+            AND ps.name = :spec AND c.name = :color AND s.name = :sp
+            ORDER BY t.id DESC LIMIT 1
+        """), {"spec": spec, "color": color, "sp": sp}).fetchone()
+        if row:
+            price = float(row[0])
+
+        # Tier 2: spec + salesperson (any color)
+        if price is None:
+            row = db.execute(text("""
+                SELECT t.unit_price FROM transactions t
+                JOIN product_skus sku ON t.sku_id = sku.id
+                JOIN product_specs ps ON sku.spec_id = ps.id
+                JOIN salespersons s ON t.salesperson_id = s.id
+                WHERE t.trans_type = '出库' AND t.unit_price > 0
+                AND ps.name = :spec AND s.name = :sp
+                ORDER BY t.id DESC LIMIT 1
+            """), {"spec": spec, "sp": sp}).fetchone()
+            if row:
+                price = float(row[0])
+
+        # Tier 3: spec + color (any salesperson)
+        if price is None:
+            row = db.execute(text("""
+                SELECT t.unit_price FROM transactions t
+                JOIN product_skus sku ON t.sku_id = sku.id
+                JOIN product_specs ps ON sku.spec_id = ps.id
+                JOIN colors c ON sku.color_id = c.id
+                WHERE t.trans_type = '出库' AND t.unit_price > 0
+                AND ps.name = :spec AND c.name = :color
+                ORDER BY t.id DESC LIMIT 1
+            """), {"spec": spec, "color": color}).fetchone()
+            if row:
+                price = float(row[0])
+
+        if price is not None:
+            result[str(idx)] = price
+
+    return {"prices": result}
 
 
 @app.get("/api/inventory/snapshot")
