@@ -215,7 +215,7 @@ createApp({
     const showLogs = ref(false);  // toggle for operation log modal
 
     // Dashboard
-    const dash = ref({today_out_amount:0,today_in_qty:0,month_total:0,month_in_qty:0,low_stock_count:0,total_specs:0,total_colors:0,salary_month_total:0,total_workers:0,total_price_items:0});
+    const dash = ref({today_out_amount:0,today_out_qty:0,today_in_qty:0,month_total:0,month_out_qty:0,month_in_qty:0,low_stock_count:0,total_specs:0,total_colors:0,salary_month_total:0,total_workers:0,total_price_items:0});
     const dashBalance = ref(0);
     const showMoney = ref(false);
 
@@ -853,6 +853,12 @@ createApp({
           ]),
           h('div',{class:'stat-card',style:{background:'linear-gradient(135deg,#10b981,#059669)',cursor:'pointer'},onClick:()=>this.currentTab='inbound'},[
             h('div',{class:'label'},'📦 本月入库'),h('div',{class:'value'},String(this.dash.month_in_qty||0)+' 件'),
+          ]),
+          h('div',{class:'stat-card',style:{background:'linear-gradient(135deg,#409eff,#337ecc)',cursor:'pointer'},onClick:()=>this.currentTab='outbound'},[
+            h('div',{class:'label'},'📤 今日出库'),h('div',{class:'value'},String(this.dash.today_out_qty||0)+' 件'),
+          ]),
+          h('div',{class:'stat-card',style:{background:'linear-gradient(135deg,#e6a23c,#d4880f)',cursor:'pointer'},onClick:()=>this.currentTab='outbound'},[
+            h('div',{class:'label'},'📤 本月出库'),h('div',{class:'value'},String(this.dash.month_out_qty||0)+' 件'),
           ]),
           h('div',{class:'stat-card',style:{background:'linear-gradient(135deg,#f56c6c,#c0392b)',cursor:'pointer'},onClick:()=>this.currentTab='thresholds'},[
             h('div',{class:'label'},'🔴 低库存预警'),h('div',{class:'value'},String(this.dash.low_stock_count)+' SKU'),

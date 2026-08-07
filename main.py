@@ -1821,6 +1821,7 @@ def dashboard(db: Session = Depends(get_db)):
 
     today_rows = db.query(Transaction).filter(Transaction.trans_date == today).all()
     today_out = sum(float(t.amount) for t in today_rows if t.trans_type == "出库" and (not t.salesperson_id or t.salesperson_id in active_sp_ids))
+    today_out_qty = sum(t.quantity for t in today_rows if t.trans_type == "出库")
     today_in = sum(t.quantity for t in today_rows if t.trans_type == "入库")
 
     # 本月累计（只统计在职销售人员）
@@ -1831,6 +1832,7 @@ def dashboard(db: Session = Depends(get_db)):
         Transaction.trans_type == "出库",
     ).all()
     month_total = sum(float(t.amount) for t in month_rows if not t.salesperson_id or t.salesperson_id in active_sp_ids)
+    month_out_qty = sum(t.quantity for t in month_rows)
 
     # 本月累计入库
     month_in = db.query(func.sum(Transaction.quantity)).filter(
@@ -1851,8 +1853,10 @@ def dashboard(db: Session = Depends(get_db)):
 
     return {
         "today_out_amount": today_out,
+        "today_out_qty": today_out_qty,
         "today_in_qty": today_in,
         "month_total": month_total,
+        "month_out_qty": month_out_qty,
         "month_in_qty": int(month_in),
         "salary_month_total": float(salary_month),
         "low_stock_count": low_skus,
