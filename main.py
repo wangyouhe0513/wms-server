@@ -716,6 +716,28 @@ def set_threshold(sku_id: int, threshold: int, admin: Admin = Depends(get_curren
     return {"ok": True, "sku_id": sku_id, "threshold": threshold}
 
 
+@app.get("/api/sku/latest-prices")
+def latest_prices(db: Session = Depends(get_db)):
+    """返回每个 spec-color 组合的最新出库单价，用于一键填价"""
+    from sqlalchemy import text
+    rows = db.execute(text("""
+        SELECT ps.name as spec, c.name as color, t.unit_price
+        FROM transactions t
+        JOIN product_skus sku ON t.sku_id = sku.id
+        JOIN product_specs ps ON sku.spec_id = ps.id
+        JOIN colors c ON sku.color_id = c.id
+        WHERE t.trans_type = '出库' AND t.unit_price > 0
+        AND t.id IN (
+            SELECT MAX(t2.id) FROM transactions t2
+            WHERE t2.sku_id = t.sku_id AND t2.trans_type = '出库' AND t2.unit_price > 0
+        )
+    """)).fetchall()
+    result = {}
+    for spec, color, price in rows:
+        result[f"{spec}|{color}"] = float(price)
+    return result
+
+
 @app.get("/api/inventory/snapshot")
 def inventory_snapshot_download(admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
     """生成带水印的库存快照 HTML"""

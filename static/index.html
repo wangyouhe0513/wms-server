@@ -355,6 +355,21 @@ createApp({
 
     const addEntryRow = (type) => entryRows.value.push({type,spec:'',color:'',qty:1,price:0,sp:'',remark:''});
 
+    const autoFillPrices = async () => {
+      const outRows = entryRows.value.filter(r => r.type==='出库' && r.spec.trim() && r.color.trim());
+      if (outRows.length===0) { msg.value='没有可填价的出库行（需填写规格+颜色）'; msgType.value='err'; return; }
+      try {
+        const prices = await api('/api/sku/latest-prices');
+        let filled = 0;
+        outRows.forEach(r => {
+          const key = r.spec.trim()+'|'+r.color.trim();
+          if (prices[key]) { r.price = prices[key]; filled++; }
+        });
+        if (filled===0) { msg.value='未找到历史出库单价，请手动填写'; msgType.value='err'; }
+        else { msg.value='已为 '+filled+' 行填入历史单价'; msgType.value='ok'; }
+      } catch(e) { msg.value='获取价格失败'; msgType.value='err'; }
+    };
+
     // Quick-fill computed: unique specs from inventory
     const quickSpecs = computed(() => Object.keys(invData.value));
 
@@ -820,7 +835,7 @@ createApp({
       analysisYear, analysisMonth, analysisData, loadAnalysis,
       newSpec, newColor, newColorCode, newSP, newSPType, importResult,
       quickType, quickSpec, quickSP, quickSpecs, quickColors, quickAdd,
-      addEntryRow, submitEntries, loadTodayRecords, deleteTransaction, loadOutbound, exportOutbound, loadInbound, exportInbound, loadSummary, renderCharts, loadInventory, downloadSnapshot,
+      addEntryRow, autoFillPrices, submitEntries, loadTodayRecords, deleteTransaction, loadOutbound, exportOutbound, loadInbound, exportInbound, loadSummary, renderCharts, loadInventory, downloadSnapshot,
       saveSpec, deleteSpec, editSpec, saveColor, deleteColor, editColor,
       saveSP, deleteSP, importStock, fmt, entryOutTotal, entryInTotal, filteredInventory,
       globalSettings, saveGlobalSettings, skuThresholds, loadSkuThresholds, saveSkuThreshold,
@@ -937,6 +952,7 @@ createApp({
         h('div',{style:{display:'flex',gap:'8px'}},[
           h('button',{class:'btn-primary',onClick:()=>this.addEntryRow('出库')},'+ 出库行'),
           h('button',{class:'btn-success',onClick:()=>this.addEntryRow('入库')},'+ 入库行'),
+          h('button',{class:'btn-warning btn-sm',onClick:this.autoFillPrices,style:{fontSize:'12px'}},'📋 一键填价'),
         ])
       ]),
 
