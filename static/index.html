@@ -122,7 +122,7 @@
     .sidebar-nav button { width: 100%; padding: 9px 4px; font-size: 11px; font-weight: 600; border-radius: 6px; min-height: 36px; text-align: center; overflow: hidden; text-overflow: ellipsis; }
     .sidebar-nav button.active { color: var(--primary); background: var(--primary-light); }
     .sidebar-footer { display: none; }
-    .main-content { margin-left: 0; padding: calc(16px + env(safe-area-inset-top, 0px)) 10px 120px 10px; }
+    .main-content { margin-left: 0; padding: calc(16px + env(safe-area-inset-top, 0px)) 10px calc(90px + env(safe-area-inset-bottom, 20px)) 10px; }
     .card { padding: 14px; border-radius: 10px; margin-bottom: 10px; }
     .stat-card { padding: 14px 12px; }
     .stat-card .value { font-size: 20px; }
@@ -1349,7 +1349,14 @@ createApp({
             h('td',h('button',{class:'btn-xs',style:{background:'#4f6ef7',color:'#fff'},onClick:()=>{
         const a = document.createElement('a'); a.href = `/api/salary/share-image?month=${this.salMonth}&worker=${encodeURIComponent(s.worker_name)}`; a.target = '_blank'; a.click();
       }},'📋 工资单')),
-          ])))
+          ]))),
+          h('tfoot',h('tr',[
+            h('td',{style:{fontWeight:700}},'合计'),
+            h('td',{style:{fontWeight:700,color:'#4f6ef7'}},'¥'+this.salSummary.reduce((a,s)=>a+s.total,0).toFixed(2)),
+            h('td',{style:{fontWeight:700,color:'#22c55e'}},'¥'+this.salSummary.reduce((a,s)=>a+s.paid_amount,0).toFixed(2)),
+            h('td',{style:{fontWeight:700,color:'#ef4444'}},'¥'+this.salSummary.reduce((a,s)=>a+s.total-s.paid_amount,0).toFixed(2)),
+            h('td',''),
+          ])),
         ]))
       ]) : null,
     ]);
