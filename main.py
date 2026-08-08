@@ -1831,23 +1831,19 @@ def salary_share(month: str = "", worker: str = "", db: Session = Depends(get_db
     for r in worker_records:
         rows_html += f"<tr><td>{r.spec_name or ''}</td><td>{r.color_name or ''}</td><td>{r.item_name}</td><td>{r.quantity}</td><td>¥{float(r.unit_price):.2f}</td><td>¥{float(r.amount):.2f}</td><td>{r.payment_method}</td><td style='font-size:11px'>{r.created_at.strftime('%m-%d %H:%M') if r.created_at else ''}</td></tr>"
 
-    # Generate QR code
+    # Generate QR code as SVG (no Pillow needed)
+    from urllib.parse import quote
+    share_url = f"http://47.96.91.217/api/salary/share?month={quote(month)}&worker={quote(worker)}"
+
     qr_img_html = ""
     try:
         import qrcode as qrcode_lib
-        from urllib.parse import quote
-        share_url = f"http://47.96.91.217/api/salary/share?month={quote(month)}&worker={quote(worker)}"
-        qr = qrcode_lib.QRCode(box_size=4, border=2)
-        qr.add_data(share_url)
-        qr.make(fit=True)
-        img = qr.make_image(fill_color='#1e293b', back_color='white')
-        buf = io.BytesIO()
-        img.save(buf, format='PNG')
-        import base64
-        qr_b64 = base64.b64encode(buf.getvalue()).decode()
-        qr_img_html = f'<div class="qr-box"><p style="font-weight:600;margin-bottom:8px">📱 扫码查看工资单</p><img src="data:image/png;base64,{qr_b64}" style="width:180px;height:180px" alt="QR码"><p style="font-size:11px;color:#94a3b8;margin-top:6px">{share_url}</p></div>'
+        import qrcode.image.svg
+        img = qrcode_lib.make(share_url, image_factory=qrcode_lib.image.svg.SvgPathImage)
+        svg_str = img.to_string().decode('utf-8')
+        qr_img_html = f'<div class="qr-box"><p style="font-weight:600;margin-bottom:8px">📱 扫码查看工资单</p><div style="width:180px;height:180px;margin:0 auto">{svg_str}</div><p style="font-size:11px;color:#94a3b8;margin-top:6px">长按识别二维码</p></div>'
     except Exception:
-        qr_img_html = '<div class="qr-box"><p style="color:#94a3b8">QR码生成失败，请截图分享</p></div>'
+        qr_img_html = f'<div class="qr-box"><p style="color:#94a3b8">📱 扫码查看工资单</p><p style="font-size:12px;word-break:break-all;padding:0 20px">{share_url}</p><p style="font-size:11px;color:#94a3b8">请截图分享或复制链接给工人</p></div>'
 
     html = f"""<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{worker} - {month}工资单</title>
 <style>body{{font-family:'PingFang SC','Microsoft YaHei',sans-serif;max-width:600px;margin:0 auto;padding:16px;color:#1e293b;-webkit-user-select:none;user-select:none;background:#fff}}
