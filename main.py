@@ -1838,14 +1838,15 @@ def salary_share(month: str = "", worker: str = "", db: Session = Depends(get_db
     qr_img_html = ""
     try:
         import qrcode as qrcode_lib
-        import qrcode.image.svg
-        img = qrcode_lib.make(share_url, image_factory=qrcode_lib.image.svg.SvgImage)
-        svg_str = img.to_string().decode('utf-8')
-        svg_str = svg_str.replace('width="45mm"','width="180"').replace('height="45mm"','height="180"')
-        qr_img_html = f'<div class="qr-box"><p style="font-weight:600;margin-bottom:8px">📱 扫码查看工资单</p><div style="width:180px;height:180px;margin:0 auto">{svg_str}</div><p style="font-size:11px;color:#94a3b8;margin-top:6px">长按识别二维码</p></div>'
+        import base64
+        img = qrcode_lib.make(share_url)
+        buf = io.BytesIO()
+        img.save(buf, format='PNG')
+        qr_b64 = base64.b64encode(buf.getvalue()).decode()
+        qr_img_html = f'<div class="qr-box"><p style="font-weight:600;margin-bottom:8px">📱 扫码查看工资单</p><img src="data:image/png;base64,{qr_b64}" style="width:180px;height:180px" alt="QR码"><p style="font-size:11px;color:#94a3b8;margin-top:6px">长按识别二维码</p></div>'
     except Exception as e:
-        print(f"[QR] qrcode failed: {e}. Install: pip3 install qrcode")
-        qr_img_html = f'<div class="qr-box"><p style="color:#ef4444;font-weight:600">⚠️ 二维码生成失败</p><p style="font-size:12px;color:#64748b">请联系管理员安装 qrcode 库</p><p style="font-size:12px;word-break:break-all;padding:0 20px;color:#94a3b8">{share_url}</p></div>'
+        print(f"[QR] failed: {e}")
+        qr_img_html = f'<div class="qr-box"><p style="color:#ef4444;font-weight:600">⚠️ 二维码生成失败</p><p style="font-size:12px;color:#64748b">错误: {str(e)[:100]}</p><p style="font-size:12px;word-break:break-all;padding:0 20px;color:#94a3b8">{share_url}</p></div>'
 
     html = f"""<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{worker} - {month}工资单</title>
 <style>body{{font-family:'PingFang SC','Microsoft YaHei',sans-serif;max-width:600px;margin:0 auto;padding:16px;color:#1e293b;-webkit-user-select:none;user-select:none;background:#fff}}
