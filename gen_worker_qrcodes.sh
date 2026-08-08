@@ -1,67 +1,49 @@
 #!/bin/bash
 # ============================================
-# 淼伊库服饰 — 工人工资本二维码批量生成
-# 用法: bash gen_worker_qrcodes.sh
+# 淼伊库服饰 — 工人工资二维码批量生成
+# 服务器执行: bash gen_worker_qrcodes.sh
 # 输出: worker_qrcodes.zip
 # ============================================
 set -e
+cd "$(dirname "$0")"
 
-IP="${1:-47.96.91.217}"
-BASE="http://${IP}"
-ZIP="worker_qrcodes.zip"
 TMPDIR="/tmp/qr_$$"
+ZIP="worker_qrcodes.zip"
+export TMPDIR
 mkdir -p "$TMPDIR"
 
-echo "🔐 登录 ${IP}..."
+python3 << 'PYEOF'
+import os, sys, urllib.parse
+sys.path.insert(0, '.')
+from database import SessionLocal
+from models import Salesperson
+import qrcode
 
-TOKEN=$(curl -sf -X POST "${BASE}/api/auth/login" \
-  -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"admin123"}' | \
-  python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
+BASE = "http://47.96.91.217/api/salary/share"
+OUT = os.environ['TMPDIR']
+db = SessionLocal()
 
-echo "📋 获取工人列表 & 生成二维码..."
-
-python3 << PYEOF
-import urllib.request, urllib.parse, json, qrcode, os, sys
-
-# 获取活跃工人
-req = urllib.request.Request(
-    "${BASE}/api/salespersons",
-    headers={"Authorization": "Bearer ${TOKEN}"}
-)
-workers = json.loads(urllib.request.urlopen(req).read())
-active = [w['name'] for w in workers if w.get('is_active')]
-
-outdir = "$TMPDIR"
-print(f"找到 {len(active)} 名工人")
-
-for name in active:
-    url = f"${BASE}/api/salary/share?worker={urllib.parse.quote(name)}"
-    img = qrcode.make(url)
-    fname = os.path.join(outdir, f"{name}.png")
-    img.save(fname)
-    print(f"  ✅ {name}")
-
-print(f"\n共生成 {len(active)} 个二维码")
+try:
+    workers = db.query(Salesperson).filter(Salesperson.is_active == 1).all()
+    print(f"📋 {len(workers)} 名活跃工人")
+    for w in workers:
+        url = f"{BASE}?worker={urllib.parse.quote(w.name)}"
+        qrcode.make(url).save(os.path.join(OUT, f"{w.name}.png"))
+        print(f"  ✅ {w.name}")
+    print(f"✅ 生成 {len(workers)} 个二维码")
+finally:
+    db.close()
 PYEOF
 
 COUNT=$(ls "$TMPDIR"/*.png 2>/dev/null | wc -l | tr -d ' ')
-
 if [ "$COUNT" -eq 0 ]; then
-  echo "❌ 没有生成任何文件"
-  rm -rf "$TMPDIR"
-  exit 1
+    echo "❌ 无文件生成"
+    rm -rf "$TMPDIR"; exit 1
 fi
 
-echo ""
-echo "📦 打包 ${COUNT} 个文件 → ${ZIP} ..."
 rm -f "$ZIP"
-cd "$TMPDIR" && zip -q "$OLDPWD/$ZIP" *.png && cd "$OLDPWD"
-
-SIZE=$(ls -lh "$ZIP" | awk '{print $5}')
-echo ""
-echo "========================================="
-echo "  ✅ 完成！${COUNT} 个二维码 → ${ZIP} (${SIZE})"
-echo "========================================="
-
+cd "$TMPDIR"; zip -q "$OLDPWD/$ZIP" *.png; cd "$OLDPWD"
 rm -rf "$TMPDIR"
+
+echo "📦 ${ZIP} ($(ls -lh "$ZIP" | awk '{print $5}')) — ${COUNT} 个二维码"
+echo "✅ 完成"
