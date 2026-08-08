@@ -1814,110 +1814,6 @@ th,td{{border:1px solid #ddd;padding:8px 10px}}th{{background:#f5f5f5}}
         return Response(content=f"生成失败: {e}".encode(), media_type="text/plain", status_code=500)
 
 
-def _qr_html_table(data: str, size: int = 180) -> str:
-    """纯 Python 生成 QR 码 HTML 表格，零依赖"""
-    # QR encoding constants
-    def make_qr(data_str):
-        # Convert to byte values
-        d = []
-        for ch in data_str:
-            c = ord(ch)
-            if c < 128:
-                d.append(c)
-            else:
-                d.append(0x80 | ((c >> 6) & 0x1F))
-                d.append(0x80 | (c & 0x3F))
-
-        # Use type 10 (57x57) to be safe for URLs
-        type_num = 6  # 41x41 modules, fits typical URLs
-        if len(d) > 60: type_num = 10  # 57x57
-
-        # Alignment pattern positions
-        align = {
-            6: [6, 34],
-            10: [6, 28, 54],
-        }.get(type_num, [6, 34])
-
-        module_count = 4 * type_num + 17
-        matrix = [[False] * module_count for _ in range(module_count)]
-
-        # Finder patterns (top-left, top-right, bottom-left)
-        for r, c in [(0, 0), (0, module_count - 7), (module_count - 7, 0)]:
-            for y in range(7):
-                for x in range(7):
-                    val = False
-                    if y == 0 or y == 6 or x == 0 or x == 6:
-                        val = True
-                    elif 2 <= y <= 4 and 2 <= x <= 4:
-                        val = True
-                    rr, cc = r + y, c + x
-                    if rr < module_count and cc < module_count:
-                        matrix[rr][cc] = val
-
-        # Timing patterns
-        for i in range(8, module_count - 8):
-            matrix[6][i] = i % 2 == 0
-            matrix[i][6] = i % 2 == 0
-
-        # Alignment patterns
-        for ar in align:
-            for ac in align:
-                if (ar == 6 and ac == 6) or (ar == 6 and ac == module_count - 7) or (ar == module_count - 7 and ac == 6):
-                    continue
-                for y in range(-2, 3):
-                    for x in range(-2, 3):
-                        rr, cc = ar + y, ac + x
-                        if 0 <= rr < module_count and 0 <= cc < module_count:
-                            matrix[rr][cc] = abs(x) != 2 and abs(y) != 2
-
-        # Encode data into matrix (simple byte mode)
-        mask = 2  # Use a fixed mask for simplicity
-        byte_idx = 0
-        bit_idx = 7
-        total_bits = len(d) * 8
-        direction = -1
-        col = module_count - 1
-
-        while col > 0:
-            if col == 6:
-                col -= 1
-            for row_offset in range(module_count):
-                y = module_count - 1 - row_offset if direction == -1 else row_offset
-                for x_off in [0, 1]:
-                    x = col - x_off
-                    if x < 0 or x >= module_count or matrix[y][x] is not None:
-                        continue
-                    # Only fill if matrix position is None (not reserved)
-                    # Apply mask
-                    mask_bit = ((y + x) % 2 == 0) if mask == 0 else (y % 2 == 0) if mask == 1 else (x % 3 == 0) if mask == 2 else ((y + x) % 3 == 0) if mask == 3 else (((y // 2) + (x // 3)) % 2 == 0) if mask == 4 else ((y * x) % 2 + (y * x) % 3 == 0) if mask == 5 else (((y * x) % 2 + (y * x) % 3) % 2 == 0) if mask == 6 else (((y + x) % 2 + (y * x) % 3) % 2 == 0)
-                    data_bit = False
-                    if byte_idx < total_bits:
-                        data_bit = (d[byte_idx // 8] >> (7 - byte_idx % 8)) & 1
-                        byte_idx += 1
-                    matrix[y][x] = data_bit ^ mask_bit
-
-            direction = -direction
-            col -= 2
-
-        return matrix, module_count
-
-    matrix, count = make_qr(data)
-    cell_size = max(2, size // count)
-    actual_size = cell_size * count
-    margin = (size - actual_size) // 2
-
-    cells = ""
-    for row in range(count):
-        cells += '<tr>'
-        for col in range(count):
-            val = matrix[row][col] if col < len(matrix[row]) else False
-            bg = '#1e293b' if val else '#fff'
-            cells += f'<td style="width:{cell_size}px;height:{cell_size}px;background:{bg};border:none;padding:0"></td>'
-        cells += '</tr>'
-
-    return f'<table style="border-collapse:collapse;margin:{margin}px auto;width:{actual_size}px;height:{actual_size}px;table-layout:fixed">{cells}</table>'
-
-
 @app.get("/api/salary/share")
 def salary_share(month: str = "", worker: str = "", db: Session = Depends(get_db)):
     """生成单个工人工资单（可分享/打印），底部带二维码，无需登录"""
@@ -1943,21 +1839,13 @@ def salary_share(month: str = "", worker: str = "", db: Session = Depends(get_db
     try:
         import qrcode as qrcode_lib
         import qrcode.image.svg
-        # Use SvgImage (rect-based, more compatible) instead of SvgPathImage
-        factory = qrcode_lib.image.svg.SvgImage
-        img = qrcode_lib.make(share_url, image_factory=factory)
+        img = qrcode_lib.make(share_url, image_factory=qrcode_lib.image.svg.SvgImage)
         svg_str = img.to_string().decode('utf-8')
-        # Fix SVG dimensions for better display
         svg_str = svg_str.replace('width="45mm"','width="180"').replace('height="45mm"','height="180"')
         qr_img_html = f'<div class="qr-box"><p style="font-weight:600;margin-bottom:8px">📱 扫码查看工资单</p><div style="width:180px;height:180px;margin:0 auto">{svg_str}</div><p style="font-size:11px;color:#94a3b8;margin-top:6px">长按识别二维码</p></div>'
     except Exception as e:
-        print(f"[QR] SVG failed: {e}")
-        # Fallback: generate QR as HTML table (pure Python, no deps)
-        try:
-            table = _qr_html_table(share_url)
-            qr_img_html = f'<div class="qr-box"><p style="font-weight:600;margin-bottom:8px">📱 扫码查看工资单</p>{table}<p style="font-size:11px;color:#94a3b8;margin-top:6px">长按识别二维码</p></div>'
-        except Exception:
-            qr_img_html = f'<div class="qr-box"><p style="color:#94a3b8">📱 扫码查看工资单</p><p style="font-size:12px;word-break:break-all;padding:0 20px">{share_url}</p><p style="font-size:11px;color:#94a3b8">请截图分享或复制链接给工人</p></div>'
+        print(f"[QR] qrcode failed: {e}. Install: pip3 install qrcode")
+        qr_img_html = f'<div class="qr-box"><p style="color:#ef4444;font-weight:600">⚠️ 二维码生成失败</p><p style="font-size:12px;color:#64748b">请联系管理员安装 qrcode 库</p><p style="font-size:12px;word-break:break-all;padding:0 20px;color:#94a3b8">{share_url}</p></div>'
 
     html = f"""<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{worker} - {month}工资单</title>
 <style>body{{font-family:'PingFang SC','Microsoft YaHei',sans-serif;max-width:600px;margin:0 auto;padding:16px;color:#1e293b;-webkit-user-select:none;user-select:none;background:#fff}}
