@@ -16,7 +16,7 @@ python3 << 'PYEOF'
 import os, sys, urllib.parse
 sys.path.insert(0, '.')
 from database import SessionLocal
-from models import Salesperson
+from models import SalaryWorker
 import qrcode
 
 BASE = "http://47.96.91.217/api/salary/share"
@@ -24,7 +24,7 @@ OUT = os.environ['TMPDIR']
 db = SessionLocal()
 
 try:
-    workers = db.query(Salesperson).filter(Salesperson.is_active == 1).all()
+    workers = db.query(SalaryWorker).filter(SalaryWorker.is_active == 1).all()
     print(f"📋 {len(workers)} 名活跃工人")
     for w in workers:
         url = f"{BASE}?worker={urllib.parse.quote(w.name)}"
