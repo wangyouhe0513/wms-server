@@ -20,8 +20,9 @@ from models import ProductSpec, Color, ProductSku, Salesperson, Transaction, Inv
 
 app = FastAPI(title="工厂进销存管理系统")
 
-# Session token store: {token: admin_id}
+# Session token store: {token: (admin_id, created_at)}
 _active_tokens = {}
+TOKEN_EXPIRE_HOURS = 24
 
 
 # ============================================================
@@ -72,9 +73,14 @@ def get_current_admin(authorization: str = Header(None), db: Session = Depends(g
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(401, "请先登录")
     token = authorization[7:]
-    admin_id = _active_tokens.get(token)
-    if not admin_id:
+    entry = _active_tokens.get(token)
+    if not entry:
         raise HTTPException(401, "登录已过期，请重新登录")
+    admin_id, created_at = entry
+    # 检查是否超过24小时
+    if (datetime.now() - created_at).total_seconds() > TOKEN_EXPIRE_HOURS * 3600:
+        del _active_tokens[token]
+        raise HTTPException(401, "登录已过期（24小时），请重新登录")
     admin = db.query(Admin).filter(Admin.id == admin_id, Admin.is_active == 1).first()
     if not admin:
         raise HTTPException(401, "账户已被禁用")
@@ -117,7 +123,7 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
     if not admin or admin.password_hash != hash_password(req.password):
         raise HTTPException(401, "用户名或密码错误")
     token = generate_token()
-    _active_tokens[token] = admin.id
+    _active_tokens[token] = (admin.id, datetime.now())
     admin.last_login = datetime.now()
     log_operation(db, admin.id, admin.username, "login", "auth", f"管理员登录")
     db.commit()
@@ -131,7 +137,7 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
 @app.post("/api/auth/logout")
 def logout(admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
     # Remove all tokens for this admin
-    expired = [k for k, v in _active_tokens.items() if v == admin.id]
+    expired = [k for k, v in _active_tokens.items() if v[0] == admin.id]
     for k in expired:
         del _active_tokens[k]
     log_operation(db, admin.id, admin.username, "logout", "auth", "管理员登出")
@@ -204,7 +210,7 @@ def delete_admin(admin_id: int, admin: Admin = Depends(get_current_admin), db: S
     target.is_active = 0
     db.commit()
     # Remove their tokens
-    expired = [k for k, v in _active_tokens.items() if v == admin_id]
+    expired = [k for k, v in _active_tokens.items() if v[0] == admin_id]
     for k in expired:
         del _active_tokens[k]
     log_operation(db, admin.id, admin.username, "delete", "admin", f"删除管理员: {target.username}")
