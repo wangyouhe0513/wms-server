@@ -6,3 +6,4 @@ openpyxl>=3.0.0
 python-multipart>=0.0.5
 jinja2>=3.0.0
 pydantic>=1.8.0
+qrcode>=7.0

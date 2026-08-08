@@ -1816,7 +1816,7 @@ th,td{{border:1px solid #ddd;padding:8px 10px}}th{{background:#f5f5f5}}
 
 @app.get("/api/salary/share")
 def salary_share(month: str = "", worker: str = "", db: Session = Depends(get_db)):
-    """生成单个工人工资单（可分享/打印）"""
+    """生成单个工人工资单（可分享/打印），底部带二维码，无需登录"""
     q = db.query(SalaryRecord).filter(SalaryRecord.month.like(month[:7] + '%'))
     records = q.all()
     worker_records = [r for r in records if r.worker.name == worker]
@@ -1829,8 +1829,25 @@ def salary_share(month: str = "", worker: str = "", db: Session = Depends(get_db
 
     rows_html = ""
     for r in worker_records:
-        t = r.created_at.strftime("%m-%d %H:%M") if r.created_at else ""
-        rows_html += f"<tr><td>{r.spec_name or ''}</td><td>{r.color_name or ''}</td><td>{r.item_name}</td><td>{r.quantity}</td><td>¥{float(r.unit_price):.2f}</td><td>¥{float(r.amount):.2f}</td><td>{r.payment_method}</td><td style='font-size:11px'>{r.created_at.strftime('%m-%d %H:%M') if r.created_at else ''}</td><td style='font-size:11px;color:#94a3b8'>{t}</td></tr>"
+        rows_html += f"<tr><td>{r.spec_name or ''}</td><td>{r.color_name or ''}</td><td>{r.item_name}</td><td>{r.quantity}</td><td>¥{float(r.unit_price):.2f}</td><td>¥{float(r.amount):.2f}</td><td>{r.payment_method}</td><td style='font-size:11px'>{r.created_at.strftime('%m-%d %H:%M') if r.created_at else ''}</td></tr>"
+
+    # Generate QR code
+    qr_img_html = ""
+    try:
+        import qrcode as qrcode_lib
+        from urllib.parse import quote
+        share_url = f"http://47.96.91.217/api/salary/share?month={quote(month)}&worker={quote(worker)}"
+        qr = qrcode_lib.QRCode(box_size=4, border=2)
+        qr.add_data(share_url)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color='#1e293b', back_color='white')
+        buf = io.BytesIO()
+        img.save(buf, format='PNG')
+        import base64
+        qr_b64 = base64.b64encode(buf.getvalue()).decode()
+        qr_img_html = f'<div class="qr-box"><p style="font-weight:600;margin-bottom:8px">📱 扫码查看工资单</p><img src="data:image/png;base64,{qr_b64}" style="width:180px;height:180px" alt="QR码"><p style="font-size:11px;color:#94a3b8;margin-top:6px">{share_url}</p></div>'
+    except Exception:
+        qr_img_html = '<div class="qr-box"><p style="color:#94a3b8">QR码生成失败，请截图分享</p></div>'
 
     html = f"""<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{worker} - {month}工资单</title>
 <style>body{{font-family:'PingFang SC','Microsoft YaHei',sans-serif;max-width:600px;margin:0 auto;padding:16px;color:#1e293b;-webkit-user-select:none;user-select:none;background:#fff}}
@@ -1842,14 +1859,16 @@ td{{padding:10px 8px;border-bottom:1px solid #f1f5f9}}
 tr:nth-child(even) td{{background:#fafbfd}}
 .total{{text-align:right;font-size:16px;font-weight:700;padding:16px 0;border-top:2px solid #4f6ef7;margin-top:8px}}
 .total span{{color:#4f6ef7}}
-.tip{{background:#f8fafc;border-radius:10px;padding:12px;text-align:center;font-size:13px;color:#64748b;margin-top:20px}}
-.footer{{text-align:center;color:#94a3b8;font-size:11px;margin-top:20px;padding-top:16px;border-top:1px solid #f1f5f9}}
-@media print{{body{{margin:0;padding:10px}}}}
+.qr-box{{text-align:center;padding:20px;margin-top:20px;border-top:2px dashed #e2e8f0}}
+.tip{{background:#f8fafc;border-radius:10px;padding:12px;text-align:center;font-size:13px;color:#64748b;margin-top:12px}}
+.footer{{text-align:center;color:#94a3b8;font-size:11px;margin-top:12px;padding-top:12px;border-top:1px solid #f1f5f9}}
+@media print{{body{{margin:0;padding:10px}}.qr-box{{page-break-before:always}}}}
 </style></head><body>
 <div class="header"><h2>💰 {worker} 工资单</h2><div class="sub">{month} &nbsp;|&nbsp; 淼伊库服饰有限公司</div></div>
 <table><thead><tr><th>规格</th><th>颜色</th><th>工序</th><th>数量</th><th>单价</th><th>金额</th><th>支付</th><th>时间</th></tr></thead><tbody>{rows_html}</tbody></table>
 <div class="total">合计 <span>¥{total:.2f}</span> &nbsp; 已付 <span>¥{paid:.2f}</span> &nbsp; 未付 <span style="color:#ef4444">¥{total-paid:.2f}</span></div>
-<div class="tip">📱 iPhone按 <b>电源+音量+</b> &nbsp;|&nbsp; 安卓按 <b>电源+音量-</b> 截图发给厂长</div>
+{qr_img_html}
+<div class="tip">📱 扫描二维码查看工资 &nbsp;|&nbsp; 淼伊库服饰有限公司</div>
 <div class="footer">生成时间: {date.today()}</div>
 </body></html>"""
     return Response(content=html, media_type="text/html; charset=utf-8")

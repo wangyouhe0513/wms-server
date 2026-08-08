@@ -1364,7 +1364,7 @@ createApp({
             h('td',{style:{color:'#22c55e'}},'¥'+s.paid_amount.toFixed(2)),
             h('td',{style:{color:'#ef4444'}},'¥'+(s.total-s.paid_amount).toFixed(2)),
             h('td',h('button',{class:'btn-xs',style:{background:'#4f6ef7',color:'#fff'},onClick:()=>{
-        const a = document.createElement('a'); a.href = `/api/salary/share-image?month=${this.salMonth}&worker=${encodeURIComponent(s.worker_name)}`; a.target = '_blank'; a.click();
+        const a = document.createElement('a'); a.href = `/api/salary/share?month=${this.salMonth}&worker=${encodeURIComponent(s.worker_name)}`; a.target = '_blank'; a.click();
       }},'📋 工资单')),
           ]))),
           h('tfoot',h('tr',[
