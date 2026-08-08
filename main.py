@@ -1816,39 +1816,58 @@ th,td{{border:1px solid #ddd;padding:8px 10px}}th{{background:#f5f5f5}}
 
 @app.get("/api/salary/share")
 def salary_share(month: str = "", worker: str = "", db: Session = Depends(get_db)):
-    """生成单个工人工资单（可分享/打印），底部带二维码，无需登录"""
-    q = db.query(SalaryRecord).filter(SalaryRecord.month.like(month[:7] + '%'))
-    records = q.all()
-    worker_records = [r for r in records if r.worker.name == worker]
+    """工人工资单（无需登录）
+    - 指定 month: 查看该月明细（管理员分享）
+    - 不指定 month: 查看所有未付款记录 + 二维码（工人自行扫码）
+    """
+    from urllib.parse import quote
+
+    # 永久二维码 URL（不带 month，工人可保存）
+    perm_url = f"http://47.96.91.217/api/salary/share?worker={quote(worker)}"
+
+    if month:
+        # 管理员查看指定月份
+        q = db.query(SalaryRecord).filter(SalaryRecord.month.like(month[:7] + '%'))
+        records = q.all()
+        worker_records = [r for r in records if r.worker.name == worker]
+        page_title = f"{worker} - {month}工资单"
+        page_sub = f"{month} &nbsp;|&nbsp; 淼伊库服饰有限公司"
+    else:
+        # 工人扫码查看：只显示未付款
+        all_records = db.query(SalaryRecord).filter(SalaryRecord.paid == False).all()
+        worker_records = [r for r in all_records if r.worker.name == worker]
+        worker_records.sort(key=lambda r: r.created_at or datetime.min, reverse=True)
+        page_title = f"{worker} - 工资查询"
+        page_sub = "未付款记录 &nbsp;|&nbsp; 淼伊库服饰有限公司"
 
     if not worker_records:
-        return Response(content="<h2>无数据</h2>", media_type="text/html")
+        return Response(content=f'<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="font-family:PingFang SC,Microsoft YaHei,sans-serif;max-width:600px;margin:0 auto;padding:20px;text-align:center"><h2>💰 {worker}</h2><p style="color:#22c55e;font-size:18px">🎉 没有未付款记录</p><p style="color:#94a3b8">所有工资已结清</p><p style="color:#64748b">淼伊库服饰有限公司</p></body></html>', media_type="text/html")
 
     total = sum(float(r.amount) for r in worker_records)
     paid = sum(float(r.amount) for r in worker_records if r.paid)
 
     rows_html = ""
     for r in worker_records:
-        rows_html += f"<tr><td>{r.spec_name or ''}</td><td>{r.color_name or ''}</td><td>{r.item_name}</td><td>{r.quantity}</td><td>¥{float(r.unit_price):.2f}</td><td>¥{float(r.amount):.2f}</td><td>{r.payment_method}</td><td style='font-size:11px'>{r.created_at.strftime('%m-%d %H:%M') if r.created_at else ''}</td></tr>"
-
-    # Generate QR code as SVG (no Pillow needed)
-    from urllib.parse import quote
-    share_url = f"http://47.96.91.217/api/salary/share?month={quote(month)}&worker={quote(worker)}"
+        pay_color = "#22c55e" if r.paid else "#ef4444"
+        pay_text = "已付" if r.paid else "未付"
+        r_time = r.created_at.strftime('%m-%d %H:%M') if r.created_at else ''
+        r_month = r.month if r.month else ''
+        rows_html += f"<tr><td>{r.spec_name or ''}</td><td>{r.color_name or ''}</td><td>{r.item_name}</td><td>{r.quantity}</td><td>¥{float(r.unit_price):.2f}</td><td>¥{float(r.amount):.2f}</td><td style='color:{pay_color};font-weight:600'>{pay_text}</td><td style='font-size:11px'>{r_time}</td><td style='font-size:11px;color:#94a3b8'>{r_month}</td></tr>"
 
     qr_img_html = ""
     try:
         import qrcode as qrcode_lib
         import base64
-        img = qrcode_lib.make(share_url)
+        img = qrcode_lib.make(perm_url)
         buf = io.BytesIO()
         img.save(buf, format='PNG')
         qr_b64 = base64.b64encode(buf.getvalue()).decode()
-        qr_img_html = f'<div class="qr-box"><p style="font-weight:600;margin-bottom:8px">📱 扫码查看工资单</p><img src="data:image/png;base64,{qr_b64}" style="width:180px;height:180px" alt="QR码"><p style="font-size:11px;color:#94a3b8;margin-top:6px">长按识别二维码</p></div>'
+        qr_img_html = f'<div class="qr-box"><p style="font-weight:600;margin-bottom:8px">📱 扫码随时查看工资</p><img src="data:image/png;base64,{qr_b64}" style="width:180px;height:180px" alt="QR码"><p style="font-size:11px;color:#94a3b8;margin-top:6px">长按保存二维码，随时扫码查看</p></div>'
     except Exception as e:
         print(f"[QR] failed: {e}")
-        qr_img_html = f'<div class="qr-box"><p style="color:#ef4444;font-weight:600">⚠️ 二维码生成失败</p><p style="font-size:12px;color:#64748b">错误: {str(e)[:100]}</p><p style="font-size:12px;word-break:break-all;padding:0 20px;color:#94a3b8">{share_url}</p></div>'
+        qr_img_html = f'<div class="qr-box"><p style="color:#ef4444">⚠️ 二维码生成失败</p></div>'
 
-    html = f"""<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{worker} - {month}工资单</title>
+    html = f"""<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{page_title}</title>
 <style>body{{font-family:'PingFang SC','Microsoft YaHei',sans-serif;max-width:600px;margin:0 auto;padding:16px;color:#1e293b;-webkit-user-select:none;user-select:none;background:#fff}}
 .header{{text-align:center;padding:20px 0;border-bottom:2px solid #4f6ef7;margin-bottom:16px}}
 .header h2{{margin:0;font-size:20px}}.header .sub{{color:#64748b;font-size:13px;margin-top:4px}}
@@ -1863,11 +1882,11 @@ tr:nth-child(even) td{{background:#fafbfd}}
 .footer{{text-align:center;color:#94a3b8;font-size:11px;margin-top:12px;padding-top:12px;border-top:1px solid #f1f5f9}}
 @media print{{body{{margin:0;padding:10px}}.qr-box{{page-break-before:always}}}}
 </style></head><body>
-<div class="header"><h2>💰 {worker} 工资单</h2><div class="sub">{month} &nbsp;|&nbsp; 淼伊库服饰有限公司</div></div>
-<table><thead><tr><th>规格</th><th>颜色</th><th>工序</th><th>数量</th><th>单价</th><th>金额</th><th>支付</th><th>时间</th></tr></thead><tbody>{rows_html}</tbody></table>
+<div class="header"><h2>💰 {worker} 工资单</h2><div class="sub">{page_sub}</div></div>
+<table><thead><tr><th>规格</th><th>颜色</th><th>工序</th><th>数量</th><th>单价</th><th>金额</th><th>支付</th><th>时间</th><th>月份</th></tr></thead><tbody>{rows_html}</tbody></table>
 <div class="total">合计 <span>¥{total:.2f}</span> &nbsp; 已付 <span>¥{paid:.2f}</span> &nbsp; 未付 <span style="color:#ef4444">¥{total-paid:.2f}</span></div>
 {qr_img_html}
-<div class="tip">📱 扫描二维码查看工资 &nbsp;|&nbsp; 淼伊库服饰有限公司</div>
+<div class="tip">📱 保存二维码随时查看 &nbsp;|&nbsp; 自动显示未付款记录 &nbsp;|&nbsp; 淼伊库服饰有限公司</div>
 <div class="footer">生成时间: {date.today()}</div>
 </body></html>"""
     return Response(content=html, media_type="text/html; charset=utf-8")
