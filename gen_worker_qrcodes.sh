@@ -42,8 +42,16 @@ if [ "$COUNT" -eq 0 ]; then
 fi
 
 rm -f "$ZIP"
-cd "$TMPDIR"; zip -q "$OLDPWD/$ZIP" *.png; cd "$OLDPWD"
+python3 -c "
+import zipfile, os
+z = zipfile.ZipFile('$ZIP', 'w')
+for f in os.listdir('$TMPDIR'):
+    if f.endswith('.png'):
+        z.write(os.path.join('$TMPDIR', f), f)
+z.close()
+"
 rm -rf "$TMPDIR"
 
-echo "📦 ${ZIP} ($(ls -lh "$ZIP" | awk '{print $5}')) — ${COUNT} 个二维码"
+SIZE=$(python3 -c "import os; s=os.path.getsize('$ZIP'); print(f'{s/1024:.0f}KB' if s<1024*1024 else f'{s/1024/1024:.1f}MB')")
+echo "📦 ${ZIP} (${SIZE}) — ${COUNT} 个二维码"
 echo "✅ 完成"
