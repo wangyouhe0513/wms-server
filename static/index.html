@@ -914,11 +914,11 @@ createApp({
       ]),
 
       // KPI Grid — Row 2: Month
-      h('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:'10px'}},[
+      h('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:'10px'}},[
         kpi('📤','#eff6ff','#6366f1',String(this.dash.month_out_qty||0)+' 件','本月出库',()=>this.currentTab='outbound'),
         kpi('📥','#f0fdf4','#10b981',String(this.dash.month_in_qty||0)+' 件','本月入库',()=>this.currentTab='inbound'),
         kpi('💰','#fff7ed','#f97316',this.showMoney?'¥'+this.fmt(this.dash.month_total):'***','本月销售',()=>this.showMoney=!this.showMoney,!this.showMoney),
-        kpi('💵','#f5f3ff','#8b5cf6',this.showMoney?'¥'+this.dashBalance.toLocaleString():'***','当前余额',()=>this.showMoney=!this.showMoney,!this.showMoney),
+        kpi('💵','#f5f3ff','#8b5cf6',this.showMoney?'¥'+this.fmt(this.dashBalance):'***','当前余额',()=>this.showMoney=!this.showMoney,!this.showMoney),
       ]),
 
       // Low stock alerts
