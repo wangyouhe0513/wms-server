@@ -1363,7 +1363,7 @@ createApp({
         h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:'8px'}},[
           h('span',{class:'card-title',style:{marginBottom:0}},'📊 工资汇总'),
           h('div',{style:{display:'flex',gap:'6px',alignItems:'center'}},[
-            h('button',{class:'btn-xs',style:{fontSize:'10px',background:this.salSumDateFrom===prevMonthFirst()&&this.salSumDateTo===prevMonthLast()?'#4f6ef7':'#e2e8f0',color:this.salSumDateFrom===prevMonthFirst()&&this.salSumDateTo===prevMonthLast()?'#fff':'#64748b'},onClick:()=>{this.salSumDateFrom=prevMonthFirst();this.salSumDateTo=prevMonthLast();this.loadSalary();}},'📅 上月'),
+            h('button',{class:'btn-xs',style:{fontSize:'10px',background:'#e2e8f0',color:'#64748b'},onClick:()=>{const d=new Date();d.setMonth(d.getMonth()-1);const f=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-01';d.setDate(0);const l=d.toISOString().slice(0,10);this.salSumDateFrom=f;this.salSumDateTo=l;this.loadSalary();}},'📅 上月'),
             h('button',{class:'btn-xs',style:{fontSize:'10px',background:this.salSumDateFrom===currMonthFirst()&&this.salSumDateTo===currMonthLast()?'#4f6ef7':'#e2e8f0',color:this.salSumDateFrom===currMonthFirst()&&this.salSumDateTo===currMonthLast()?'#fff':'#64748b'},onClick:()=>{this.salSumDateFrom=currMonthFirst();this.salSumDateTo=currMonthLast();this.loadSalary();}},'📅 本月'),
             h('input',{type:'date',value:this.salSumDateFrom,onInput:e=>{this.salSumDateFrom=e.target.value;this.loadSalary();},style:{width:'120px',fontSize:'11px'},title:'开始日期'}),
             h('span',{style:{fontSize:'11px',color:'#94a3b8'}},'→'),
