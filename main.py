@@ -1708,10 +1708,26 @@ def salary_record_delete(rid: int, admin: Admin = Depends(get_current_admin), db
     return {"ok": True}
 
 @app.post("/api/salary/batch-paid")
-def salary_batch_paid(month: str = "", worker_name: str = "", admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
-    """批量标记已付（按月份+可选工人）"""
+def salary_batch_paid(month: str = "", worker_name: str = "", date_from: str = "", date_to: str = "", admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
+    """批量标记已付（按月份/日期范围+可选工人）"""
     q = db.query(SalaryRecord)
-    if month: q = q.filter(SalaryRecord.month.like(month[:7] + '%'))
+    if date_from and date_to:
+        months = set()
+        from_year, from_month = int(date_from[:4]), int(date_from[5:7])
+        to_year, to_month = int(date_to[:4]), int(date_to[5:7])
+        for y in range(from_year, to_year + 1):
+            m_start = from_month if y == from_year else 1
+            m_end = to_month if y == to_year else 12
+            for m in range(m_start, m_end + 1):
+                months.add(f"{y}-{m:02d}")
+        if months:
+            q = q.filter(or_(*[SalaryRecord.month.like(m + '%') for m in sorted(months)]))
+    elif date_from:
+        q = q.filter(SalaryRecord.month >= date_from[:7])
+    elif date_to:
+        q = q.filter(SalaryRecord.month <= date_to[:7])
+    elif month:
+        q = q.filter(SalaryRecord.month.like(month[:7] + '%'))
     if worker_name:
         w = db.query(SalaryWorker).filter(SalaryWorker.name == worker_name).first()
         if w: q = q.filter(SalaryRecord.worker_id == w.id)
@@ -1721,10 +1737,27 @@ def salary_batch_paid(month: str = "", worker_name: str = "", admin: Admin = Dep
 
 
 @app.get("/api/salary/summary")
-def salary_summary(month: str = "", db: Session = Depends(get_db)):
-    """按工人汇总工资"""
+def salary_summary(month: str = "", date_from: str = "", date_to: str = "", db: Session = Depends(get_db)):
+    """按工人汇总工资，支持月份或日期范围筛选"""
     q = db.query(SalaryRecord)
-    if month: q = q.filter(SalaryRecord.month.like(month[:7] + '%'))
+    if date_from and date_to:
+        # month 字段存 YYYY-MM 格式，日期选择器给 YYYY-MM-DD，用月份前缀匹配
+        months = set()
+        from_year, from_month = int(date_from[:4]), int(date_from[5:7])
+        to_year, to_month = int(date_to[:4]), int(date_to[5:7])
+        for y in range(from_year, to_year + 1):
+            m_start = from_month if y == from_year else 1
+            m_end = to_month if y == to_year else 12
+            for m in range(m_start, m_end + 1):
+                months.add(f"{y}-{m:02d}")
+        if months:
+            q = q.filter(or_(*[SalaryRecord.month.like(m + '%') for m in sorted(months)]))
+    elif date_from:
+        q = q.filter(SalaryRecord.month >= date_from[:7])
+    elif date_to:
+        q = q.filter(SalaryRecord.month <= date_to[:7])
+    elif month:
+        q = q.filter(SalaryRecord.month.like(month[:7] + '%'))
     rows = q.all()
     workers = {}
     for r in rows:

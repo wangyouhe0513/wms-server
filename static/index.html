@@ -285,6 +285,12 @@ createApp({
     const salSummary = ref([]); const salMonth = ref(new Date().toISOString().slice(0,10));
     const salPage = ref(1); const salPageSize = ref(30); const salTotal = ref(0);
     const salKeyword = ref(''); const salDateFrom = ref(''); const salDateTo = ref('');
+    // 工资汇总专用日期范围（默认上月：每月15号发上月工资）
+    const salSumDateFrom = ref(prevMonthFirst()); const salSumDateTo = ref(prevMonthLast());
+    function prevMonthFirst() { const d = new Date(); d.setMonth(d.getMonth()-1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`; }
+    function prevMonthLast() { const d = new Date(); d.setDate(0); return d.toISOString().slice(0,10); }
+    function currMonthFirst() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`; }
+    function currMonthLast() { const d = new Date(); d.setMonth(d.getMonth()+1); d.setDate(0); return d.toISOString().slice(0,10); }
     const salFilterSpec = ref('');
     const salFilterColor = ref('');
     const salQuickSpec = ref('');
@@ -459,7 +465,7 @@ createApp({
       const [workers, prices, itemSpecs, recordsData, summary] = await Promise.all([
         api('/api/salary/workers'), api('/api/salary/prices'), api('/api/salary/item-specs'),
         api(`/api/salary/records?month=${salMonth.value}&page=${salPage.value}&page_size=${salPageSize.value}&keyword=${encodeURIComponent(salKeyword.value)}&date_from=${salDateFrom.value}&date_to=${salDateTo.value}`),
-        api(`/api/salary/summary?month=${salMonth.value}`)
+        api(`/api/salary/summary?month=${salMonth.value}&date_from=${salSumDateFrom.value}&date_to=${salSumDateTo.value}`)
       ]);
       salWorkers.value = workers; salPrices.value = prices; salItemSpecs.value = itemSpecs;
       salRecords.value = recordsData.items; salTotal.value = recordsData.total; salSummary.value = summary;
@@ -562,8 +568,10 @@ createApp({
     };
     const exportSalary = () => window.open(`/api/salary/export?month=${salMonth.value}`, '_blank');
     const batchPaid = async () => {
-      if (!confirm('确定将本月所有工资标记为已付？')) return;
-      const r = await api(`/api/salary/batch-paid?month=${salMonth.value}`, {method:'POST'});
+      const from = salSumDateFrom.value, to = salSumDateTo.value;
+      const range = from && to ? `\n日期: ${from} ~ ${to}` : `\n月份: ${salMonth.value}`;
+      if (!confirm(`确定将以下范围内所有未付工资标记为已付？${range}`)) return;
+      const r = await api(`/api/salary/batch-paid?month=${salMonth.value}&date_from=${salSumDateFrom.value}&date_to=${salSumDateTo.value}`, {method:'POST'});
       alert(`已标记 ${r.updated} 条记录为已付`); loadSalary();
     };
 
@@ -828,7 +836,7 @@ createApp({
       obSP, obYear, obMonth, obData,
       inYear, inMonth, inData,
       sumYear, sumMonth, summary,
-      salWorkers, salPrices, salItemSpecs, salRecords, salSummary, salMonth, salPage, salPageSize, salTotal, salKeyword, salDateFrom, salDateTo, salFilterSpec, salFilterColor, salQuickSpec, salQuickColor, salQuickWorker, salNewWorker, salNewJobType, salNewItem, salNewPrice,
+      salWorkers, salPrices, salItemSpecs, salRecords, salSummary, salMonth, salPage, salPageSize, salTotal, salKeyword, salDateFrom, salDateTo, salSumDateFrom, salSumDateTo, salFilterSpec, salFilterColor, salQuickSpec, salQuickColor, salQuickWorker, salNewWorker, salNewJobType, salNewItem, salNewPrice,
       loadSalary, saveSalWorker, deleteSalWorker, saveSalPrice, deleteSalPrice, addSalRecord, deleteSalRecord, toggleSalPaid, exportSalary, batchPaid, showSalDropdown,
       salSpecItems, salNewLinkSpec, salNewLinkItem, salEditLinkId, salEditLinkItem, initSpecItems, saveSpecItem, updateSpecItem, deleteSpecItem,
       finYear, finMonth, finRecords, finPage, finTotal, finPerson, finCat, finSummary, loadFinance, exportFinance, deleteFinance,
@@ -1351,12 +1359,19 @@ createApp({
       ]) : null,
 
       // ===== 4. 汇总 + 分享 =====
-      this.salSummary.length > 0 ? h('div',{class:'card'},[
-        h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center'}},[
+      h('div',{class:'card'},[
+        h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:'8px'}},[
           h('span',{class:'card-title',style:{marginBottom:0}},'📊 工资汇总'),
-          h('button',{class:'btn-success btn-sm',onClick:this.batchPaid,style:{fontSize:'12px'}},'✅ 批量已付'),
+          h('div',{style:{display:'flex',gap:'6px',alignItems:'center'}},[
+            h('button',{class:'btn-xs',style:{fontSize:'10px',background:this.salSumDateFrom===prevMonthFirst()&&this.salSumDateTo===prevMonthLast()?'#4f6ef7':'#e2e8f0',color:this.salSumDateFrom===prevMonthFirst()&&this.salSumDateTo===prevMonthLast()?'#fff':'#64748b'},onClick:()=>{this.salSumDateFrom=prevMonthFirst();this.salSumDateTo=prevMonthLast();this.loadSalary();}},'📅 上月'),
+            h('button',{class:'btn-xs',style:{fontSize:'10px',background:this.salSumDateFrom===currMonthFirst()&&this.salSumDateTo===currMonthLast()?'#4f6ef7':'#e2e8f0',color:this.salSumDateFrom===currMonthFirst()&&this.salSumDateTo===currMonthLast()?'#fff':'#64748b'},onClick:()=>{this.salSumDateFrom=currMonthFirst();this.salSumDateTo=currMonthLast();this.loadSalary();}},'📅 本月'),
+            h('input',{type:'date',value:this.salSumDateFrom,onInput:e=>{this.salSumDateFrom=e.target.value;this.loadSalary();},style:{width:'120px',fontSize:'11px'},title:'开始日期'}),
+            h('span',{style:{fontSize:'11px',color:'#94a3b8'}},'→'),
+            h('input',{type:'date',value:this.salSumDateTo,onInput:e=>{this.salSumDateTo=e.target.value;this.loadSalary();},style:{width:'120px',fontSize:'11px'},title:'结束日期'}),
+            h('button',{class:'btn-success btn-sm',onClick:this.batchPaid,style:{fontSize:'12px'}},'✅ 批量已付'),
+          ]),
         ]),
-        h('div',{class:'table-wrap'},h('table',[
+        this.salSummary.length > 0 ? h('div',{class:'table-wrap'},h('table',[
           h('thead',h('tr',[h('th','工人'),h('th','合计'),h('th','已付'),h('th','未付'),h('th','分享')])),
           h('tbody',this.salSummary.map(s=>h('tr',{key:s.worker_name},[
             h('td',{style:{fontWeight:600}},s.worker_name),
@@ -1374,8 +1389,8 @@ createApp({
             h('td',{style:{fontWeight:700,color:'#ef4444'}},'¥'+this.salSummary.reduce((a,s)=>a+s.total-s.paid_amount,0).toFixed(2)),
             h('td',''),
           ])),
-        ]))
-      ]) : null,
+        ])) : h('div',{style:{textAlign:'center',color:'#94a3b8',padding:'20px',fontSize:'13px'}},'该日期范围内暂无工资记录')
+      ]),
     ]);
 
     // --- Finance ---
