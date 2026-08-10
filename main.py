@@ -1650,8 +1650,8 @@ def salary_records(month: str = "", worker_id: int = 0, keyword: str = "", date_
     if keyword:
         kw = f"%{keyword}%"
         q = q.filter(or_(SalaryRecord.spec_name.like(kw), SalaryRecord.item_name.like(kw), SalaryRecord.color_name.like(kw)))
-    if date_from: q = q.filter(SalaryRecord.month >= date_from)
-    if date_to: q = q.filter(SalaryRecord.month <= date_to)
+    if date_from: q = q.filter(SalaryRecord.month >= date_from[:7])
+    if date_to: q = q.filter(SalaryRecord.month <= date_to[:7])
     total = q.count()
     rows = q.offset((page-1)*page_size).limit(page_size).all()
     items = [{"id": r.id, "worker_id": r.worker_id, "worker_name": r.worker.name if r.worker else "",
