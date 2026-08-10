@@ -202,6 +202,7 @@ createApp({
     const rememberMe = ref(!!localStorage.getItem('wms_remember_user'));
 
     const doLogin = async () => {
+      if (loginLoading.value) return;  // 防止重复提交
       loginError.value = ''; loginLoading.value = true;
       try {
         const res = await fetch('/api/auth/login', {
@@ -869,7 +870,7 @@ createApp({
           h('input',{type:'checkbox',checked:this.rememberMe,onChange:e=>this.rememberMe=e.target.checked,style:{width:'auto',margin:0}}),
           h('span','记住密码'),
         ]),
-        h('button',{class:'btn-primary',onClick:this.doLogin,disabled:this.loginLoading,style:{width:'100%',padding:'12px',fontSize:'16px'}},
+        h('button',{class:'btn-primary',onClick:this.doLogin,style:{width:'100%',padding:'12px',fontSize:'16px',pointerEvents:this.loginLoading?'none':'auto',opacity:this.loginLoading?'0.7':'1'}},
           this.loginLoading?'登录中...':'登 录'),
       ]);
     }
