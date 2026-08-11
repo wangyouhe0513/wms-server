@@ -107,6 +107,8 @@ class Admin(Base):
     password_hash = Column(String(200), nullable=False, comment="密码哈希")
     role = Column(String(20), default="admin", comment="admin/superadmin")
     is_active = Column(Integer, default=1)
+    token = Column(String(64), nullable=True, comment="当前登录token")
+    token_expires_at = Column(DateTime, nullable=True, comment="token过期时间")
     created_at = Column(DateTime, default=datetime.now)
     last_login = Column(DateTime, nullable=True)
 

@@ -73,17 +73,26 @@ def get_current_admin(authorization: str = Header(None), db: Session = Depends(g
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(401, "请先登录")
     token = authorization[7:]
+
+    # 先从内存查找（兼容旧方式）
     entry = _active_tokens.get(token)
-    if not entry:
-        raise HTTPException(401, "登录已过期，请重新登录")
-    admin_id, created_at = entry
-    # 检查是否超过24小时
-    if (datetime.now() - created_at).total_seconds() > TOKEN_EXPIRE_HOURS * 3600:
-        del _active_tokens[token]
-        raise HTTPException(401, "登录已过期（24小时），请重新登录")
-    admin = db.query(Admin).filter(Admin.id == admin_id, Admin.is_active == 1).first()
-    if not admin:
+    if entry:
+        admin_id, created_at = entry
+        if (datetime.now() - created_at).total_seconds() > TOKEN_EXPIRE_HOURS * 3600:
+            del _active_tokens[token]
+            raise HTTPException(401, "登录已过期（24小时），请重新登录")
+        admin = db.query(Admin).filter(Admin.id == admin_id, Admin.is_active == 1).first()
+        if admin: return admin
         raise HTTPException(401, "账户已被禁用")
+
+    # DB持久化token（服务器重启不丢）
+    admin = db.query(Admin).filter(Admin.token == token, Admin.is_active == 1).first()
+    if not admin:
+        raise HTTPException(401, "请先登录")
+    if admin.token_expires_at and datetime.now() > admin.token_expires_at:
+        admin.token = None; admin.token_expires_at = None
+        db.commit()
+        raise HTTPException(401, "登录已过期（24小时），请重新登录")
     return admin
 
 
@@ -124,6 +133,9 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
         raise HTTPException(401, "用户名或密码错误")
     token = generate_token()
     _active_tokens[token] = (admin.id, datetime.now())
+    # 持久化到DB，服务器重启不丢登录状态
+    admin.token = token
+    admin.token_expires_at = datetime.now() + timedelta(hours=TOKEN_EXPIRE_HOURS)
     admin.last_login = datetime.now()
     log_operation(db, admin.id, admin.username, "login", "auth", f"管理员登录")
     db.commit()
@@ -136,10 +148,12 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
 
 @app.post("/api/auth/logout")
 def logout(admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
-    # Remove all tokens for this admin
+    # 清除内存+DB token
     expired = [k for k, v in _active_tokens.items() if v[0] == admin.id]
     for k in expired:
         del _active_tokens[k]
+    admin.token = None
+    admin.token_expires_at = None
     log_operation(db, admin.id, admin.username, "logout", "auth", "管理员登出")
     db.commit()
     return {"ok": True}
