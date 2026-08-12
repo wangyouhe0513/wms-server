@@ -1233,8 +1233,7 @@ createApp({
               h('td',''),
             ]))
           ]))
-        ] : h('div',{style:{textAlign:'center',color:'#909399',padding:'24px',fontSize:'13px'}},
-          this.adjustRecords.length===0&&this.adjustYear?'点击「查询」查看调整记录':'暂无调整记录'),
+        ] : h('div',{style:{textAlign:'center',color:'#909399',padding:'24px',fontSize:'13px'}},'暂无调整记录'),
       ]),
     ]);
 
@@ -1850,7 +1849,7 @@ createApp({
           tabs.map(tab=>h('button',{key:tab.key, class:this.currentTab===tab.key?'active':'',
             onClick:()=>{this.currentTab=tab.key;if(tab.key==='help'){window.open('/static/doc.html','_blank');this.currentTab='dashboard';return;}
 if(tab.key==='outbound'){this.loadOutbound();}if(tab.key==='inbound'){this.loadInbound();}
-if(tab.key==='admin'){this.loadAdmins();this.loadLogs();}if(tab.key==='salary'){this.loadSalary();}if(tab.key==='finance'){this.loadFinance();this.loadFinCategories();}if(tab.key==='summary'){this.loadSummary();}if(tab.key==='analysis'){this.loadAnalysis();}}
+if(tab.key==='admin'){this.loadAdmins();this.loadLogs();}if(tab.key==='salary'){this.loadSalary();}if(tab.key==='finance'){this.loadFinance();this.loadFinCategories();}if(tab.key==='summary'){this.loadSummary();}if(tab.key==='analysis'){this.loadAnalysis();}if(tab.key==='inventory'){this.loadAdjustments();}}
           },tab.label))
         ),
         h('div',{class:'sidebar-footer'},[
