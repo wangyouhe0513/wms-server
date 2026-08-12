@@ -1156,7 +1156,7 @@ createApp({
         h('div',{style:{background:'#fff',borderRadius:'16px',padding:'28px',maxWidth:'380px',width:'90%',boxShadow:'0 20px 60px rgba(0,0,0,.15)'},onClick:e=>e.stopPropagation()},[
           h('div',{style:{fontSize:'18px',fontWeight:700,marginBottom:'20px'}},'🔧 库存调整'),
           h('div',{style:{marginBottom:'12px',fontSize:'14px',color:'#64748b'}},'规格: '+this.adjustSpec+' / '+this.adjustColor),
-          h('div',{style:{marginBottom:'16px',fontSize:'14px'}},'系统库存: '+h('b',String(this.adjustOldStock))+' 件'),
+          h('div',{style:{marginBottom:'16px',fontSize:'14px'}},['系统库存: ',h('b',String(this.adjustOldStock)),' 件']),
           h('div',{style:{marginBottom:'4px',fontSize:'13px',fontWeight:600}},'实际盘点数量:'),
           h('input',{type:'number',value:this.adjustNewStock,onInput:e=>this.adjustNewStock=parseInt(e.target.value)||0,min:0,style:{width:'100%',fontSize:'18px',padding:'10px',marginBottom:'16px'}}),
           h('div',{style:{marginBottom:'4px',fontSize:'13px',fontWeight:600}},'调整原因:'),
