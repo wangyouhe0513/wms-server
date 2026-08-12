@@ -911,6 +911,131 @@ def inventory_history(sku_id: int, limit: int = 50, db: Session = Depends(get_db
 
 
 # ============================================================
+# 库存调整
+# ============================================================
+class StockAdjustRequest(PydanticBaseModel):
+    sku_id: int
+    actual_stock: int
+    reason: str = ""
+
+@app.post("/api/inventory/adjust")
+def stock_adjust(req: StockAdjustRequest, admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
+    """库存盘点调整：输入实际库存数，系统自动计算差异并记录"""
+    sku = db.query(ProductSku).filter(ProductSku.id == req.sku_id).first()
+    if not sku:
+        raise HTTPException(404, "SKU 不存在")
+
+    old_stock = sku.current_stock
+    delta = req.actual_stock - old_stock
+
+    if delta == 0:
+        raise HTTPException(400, "库存无变化，无需调整")
+
+    # 创建调整交易记录（quantity 存差异值，正=盘盈，负=盘亏）
+    t = Transaction(
+        trans_date=date.today(),
+        trans_type="调整",
+        sku_id=sku.id,
+        quantity=delta,
+        unit_price=0,
+        amount=0,
+        remark=f"{req.reason}（盘点: {old_stock} → {req.actual_stock}）",
+    )
+    db.add(t)
+    db.flush()
+
+    # 更新库存
+    sku.current_stock = req.actual_stock
+
+    # 库存日志
+    log = InventoryLog(
+        sku_id=sku.id,
+        transaction_id=t.id,
+        change_qty=delta,
+        before_stock=old_stock,
+        after_stock=req.actual_stock,
+    )
+    db.add(log)
+
+    spec_name = sku.spec.name if sku.spec else "?"
+    color_name = sku.color.name if sku.color else "?"
+    log_operation(db, admin.id, admin.username, "adjust", "stock",
+                  f"{spec_name}-{color_name}: {old_stock} → {req.actual_stock} ({'+' if delta>0 else ''}{delta}), 原因: {req.reason}")
+
+    db.commit()
+    return {"ok": True, "sku_id": sku.id, "old_stock": old_stock, "new_stock": req.actual_stock, "delta": delta}
+
+
+@app.get("/api/inventory/adjustments")
+def list_adjustments(year: int = 0, month: int = 0, page: int = 1, page_size: int = 50, db: Session = Depends(get_db)):
+    """查询库存调整记录及汇总"""
+    q = db.query(Transaction).filter(Transaction.trans_type == "调整")
+
+    if year > 0 and month > 0:
+        start = date(year, month, 1)
+        if month == 12:
+            end = date(year + 1, 1, 1)
+        else:
+            end = date(year, month + 1, 1)
+        q = q.filter(Transaction.trans_date >= start, Transaction.trans_date < end)
+    elif year > 0:
+        q = q.filter(Transaction.trans_date >= date(year, 1, 1), Transaction.trans_date < date(year + 1, 1, 1))
+
+    q = q.order_by(Transaction.id.desc())
+
+    total = q.count()
+    rows = q.offset((page - 1) * page_size).limit(page_size).all()
+
+    items = []
+    total_up = 0   # 盘盈
+    total_down = 0  # 盘亏
+    for r in rows:
+        sku = r.sku
+        delta = r.quantity  # quantity 直接存差异值
+        if delta > 0:
+            total_up += delta
+        else:
+            total_down += abs(delta)
+
+        # 从 remark 解析旧/新库存
+        remark = r.remark or ""
+        reason = remark.split("（盘点")[0].strip() if "（盘点" in remark else remark
+        old_stock = 0
+        new_stock = 0
+        try:
+            if "盘点:" in remark:
+                nums = remark.split("盘点:")[1].split("→")
+                old_stock = int(nums[0].strip())
+                new_stock = int(nums[1].split("）")[0].strip())
+        except:
+            pass
+
+        items.append({
+            "id": r.id,
+            "date": str(r.trans_date),
+            "spec": sku.spec.name if sku and sku.spec else "?",
+            "color": sku.color.name if sku and sku.color else "?",
+            "old_stock": old_stock,
+            "new_stock": new_stock,
+            "delta": delta,
+            "reason": reason,
+        })
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "summary": {
+            "total_up": total_up,      # 盘盈合计
+            "total_down": total_down,  # 盘亏合计
+            "net": total_up - total_down,  # 净差异
+            "total_count": total,
+        }
+    }
+
+
+# ============================================================
 # 个人出库账单
 # ============================================================
 @app.get("/api/bills/personal")

@@ -273,7 +273,42 @@ createApp({
     const invFilter = ref('');
     const invLowStock = ref([]);
 
-    // Outbound
+    // Stock adjustment
+    const adjustShow = ref(false);
+    const adjustSkuId = ref(0); const adjustSpec = ref(''); const adjustColor = ref('');
+    const adjustOldStock = ref(0); const adjustNewStock = ref(0); const adjustReason = ref('');
+    const adjustMsg = ref(''); const adjustMsgType = ref('ok'); const adjustSaving = ref(false);
+
+    const openAdjust = (sid, spec, color, stock) => {
+      adjustSkuId.value = sid; adjustSpec.value = spec; adjustColor.value = color;
+      adjustOldStock.value = stock; adjustNewStock.value = stock; adjustReason.value = '';
+      adjustMsg.value = ''; adjustShow.value = true;
+    };
+
+    const doAdjust = async () => {
+      if (adjustNewStock.value === adjustOldStock.value) { adjustMsg.value='库存无变化'; adjustMsgType.value='err'; return; }
+      if (!adjustReason.value.trim()) { adjustMsg.value='请填写调整原因'; adjustMsgType.value='err'; return; }
+      adjustSaving.value = true; adjustMsg.value = '';
+      try {
+        await api('/api/inventory/adjust', {method:'POST', body:JSON.stringify({
+          sku_id: adjustSkuId.value, actual_stock: adjustNewStock.value, reason: adjustReason.value
+        })});
+        adjustMsg.value = `调整成功 (${adjustOldStock.value} → ${adjustNewStock.value})`; adjustMsgType.value = 'ok';
+        setTimeout(()=>{ adjustShow.value = false; refreshAll(); }, 800);
+      } catch(e) { adjustMsg.value = e.message; adjustMsgType.value = 'err'; }
+      adjustSaving.value = false;
+    };
+
+    // Adjustments history
+    const adjustRecords = ref([]); const adjustSummary = ref(null);
+    const adjustYear = ref(new Date().getFullYear()); const adjustMonth = ref(new Date().getMonth()+1);
+
+    const loadAdjustments = async () => {
+      try {
+        const data = await api(`/api/inventory/adjustments?year=${adjustYear.value}&month=${adjustMonth.value}`);
+        adjustRecords.value = data.items; adjustSummary.value = data.summary;
+      } catch(e) {}
+    };
     const obSP = ref('');
     const obYear = ref(new Date().getFullYear());
     const obMonth = ref(new Date().getMonth()+1);
@@ -842,6 +877,8 @@ createApp({
       // Main
       currentTab, salSub, today, dash, dashBalance, showMoney, entryDate, entryRows, submitting, msg, msgType, todayRecords,
       specs, colors, salespersons, invData, invFilter, invLowStock,
+      adjustShow, adjustSkuId, adjustSpec, adjustColor, adjustOldStock, adjustNewStock, adjustReason, adjustMsg, adjustMsgType, adjustSaving, openAdjust, doAdjust,
+      adjustRecords, adjustSummary, adjustYear, adjustMonth, loadAdjustments,
       obSP, obYear, obMonth, obData,
       inYear, inMonth, inData,
       sumYear, sumMonth, summary,
@@ -1106,41 +1143,99 @@ createApp({
       loadInventory();
     };
 
-    const renderInventory = () => h('div',{class:'card'},[
-      h('div',{style:{display:'flex',gap:'12px',alignItems:'center',marginBottom:'16px',flexWrap:'wrap'}},[
-        h('span',{class:'card-title'},'📦 实时库存'),
-        h('input',{value:this.invFilter,onInput:e=>this.invFilter=e.target.value,placeholder:'搜索规格...',style:{width:'200px'}}),
-        h('button',{class:'btn-warning btn-sm',onClick:()=>this.downloadSnapshot()},'📥 下载快照'),
-      ]),
-      this.invLowStock.length ? h('div',{style:{background:'#fef0f0',padding:'10px 16px',borderRadius:'8px',marginBottom:'16px'}},[
-        '🔴 ',h('b','低库存预警：'),
-        ...this.invLowStock.map(ls=>h('span',{class:'low-stock',style:{marginLeft:'12px'}},ls))
+    const renderInventory = () => h('div',{style:{display:'flex',flexDirection:'column',gap:'16px'}},[
+      // Adjust modal
+      this.adjustShow ? h('div',{style:{position:'fixed',inset:0,background:'rgba(0,0,0,.4)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'},onClick:()=>this.adjustShow=false},[
+        h('div',{style:{background:'#fff',borderRadius:'16px',padding:'28px',maxWidth:'380px',width:'90%',boxShadow:'0 20px 60px rgba(0,0,0,.15)'},onClick:e=>e.stopPropagation()},[
+          h('div',{style:{fontSize:'18px',fontWeight:700,marginBottom:'20px'}},'🔧 库存调整'),
+          h('div',{style:{marginBottom:'12px',fontSize:'14px',color:'#64748b'}},'规格: '+this.adjustSpec+' / '+this.adjustColor),
+          h('div',{style:{marginBottom:'16px',fontSize:'14px'}},'系统库存: '+h('b',String(this.adjustOldStock))+' 件'),
+          h('div',{style:{marginBottom:'4px',fontSize:'13px',fontWeight:600}},'实际盘点数量:'),
+          h('input',{type:'number',value:this.adjustNewStock,onInput:e=>this.adjustNewStock=parseInt(e.target.value)||0,min:0,style:{width:'100%',fontSize:'18px',padding:'10px',marginBottom:'16px'}}),
+          h('div',{style:{marginBottom:'4px',fontSize:'13px',fontWeight:600}},'调整原因:'),
+          h('input',{value:this.adjustReason,onInput:e=>this.adjustReason=e.target.value,placeholder:'如：月末盘点、录入错误等',style:{width:'100%',marginBottom:'16px'}}),
+          this.adjustMsg ? h('div',{style:{padding:'8px 12px',borderRadius:'8px',marginBottom:'12px',background:this.adjustMsgType==='ok'?'#f0fdf4':'#fef2f2',color:this.adjustMsgType==='ok'?'#16a34a':'#ef4444',fontSize:'13px'}},this.adjustMsg) : null,
+          h('div',{style:{display:'flex',gap:'10px'}},[
+            h('button',{class:'btn-primary',onClick:this.doAdjust,disabled:this.adjustSaving,style:{flex:1}},this.adjustSaving?'保存中...':'✅ 确认调整'),
+            h('button',{onClick:()=>this.adjustShow=false,style:{flex:1,background:'#f1f5f9',border:'none',borderRadius:'8px',cursor:'pointer'}},'取消'),
+          ])
+        ])
       ]) : null,
-      ...Object.entries(this.filteredInventory).map(([spec,items]) => h('div',{key:spec,style:{marginBottom:'20px'}},[
-        h('div',{style:{fontWeight:600,color:'#303133',marginBottom:'8px',borderBottom:'2px solid #409eff',paddingBottom:'4px',display:'inline-block'}},spec),
-        h('div',{style:{display:'flex',flexWrap:'wrap',gap:'10px'}},
-          items.map(item => {
-            const threshold = item.threshold || this.globalSettings.low_stock_threshold || 50;
-            const isLow = item.stock < threshold;
-            return h('div',{key:item.sku_id,style:{padding:'8px 14px',borderRadius:'8px',minWidth:'100px',textAlign:'center',background:isLow?'#fef0f0':'#f5f7fa'}},
-            [
-              h('div',{style:{fontSize:'12px',color:'#909399'}},item.color),
-              h('div',{class:isLow?'low-stock':'',style:{fontSize:'18px',fontWeight:700,cursor:'pointer'},
-                onClick:async()=>{
-                  const logs=await this.api('/api/inventory/'+item.sku_id+'/history?limit=20');
-                  let msg=item.color+' 最近变动:\n';
-                  logs.forEach(l=>msg+=`${l.time} ${l.change_qty>0?'+':''}${l.change_qty} (${l.before_stock}->${l.after_stock})\n`);
-                  msg+=`\n低库存阈值: ${threshold}`;
-                  alert(msg);
-                }
-              },String(item.stock)),
-              h('div',{style:{fontSize:'10px',color:'#909399',cursor:'pointer',marginTop:'2px'},
-                onClick:e=>{e.stopPropagation();setThreshold(item.sku_id,threshold);}
-              },`阈值:${threshold}`),
-            ]);
-          })
-        )
-      ]))
+
+      // Inventory grid
+      h('div',{class:'card'},[
+        h('div',{style:{display:'flex',gap:'12px',alignItems:'center',marginBottom:'16px',flexWrap:'wrap'}},[
+          h('span',{class:'card-title'},'📦 实时库存'),
+          h('input',{value:this.invFilter,onInput:e=>this.invFilter=e.target.value,placeholder:'搜索规格...',style:{width:'200px'}}),
+          h('button',{class:'btn-warning btn-sm',onClick:()=>this.downloadSnapshot()},'📥 下载快照'),
+        ]),
+        this.invLowStock.length ? h('div',{style:{background:'#fef0f0',padding:'10px 16px',borderRadius:'8px',marginBottom:'16px'}},[
+          '🔴 ',h('b','低库存预警：'),
+          ...this.invLowStock.map(ls=>h('span',{class:'low-stock',style:{marginLeft:'12px'}},ls))
+        ]) : null,
+        ...Object.entries(this.filteredInventory).map(([spec,items]) => h('div',{key:spec,style:{marginBottom:'20px'}},[
+          h('div',{style:{fontWeight:600,color:'#303133',marginBottom:'8px',borderBottom:'2px solid #409eff',paddingBottom:'4px',display:'inline-block'}},spec),
+          h('div',{style:{display:'flex',flexWrap:'wrap',gap:'10px'}},
+            items.map(item => {
+              const threshold = item.threshold || this.globalSettings.low_stock_threshold || 50;
+              const isLow = item.stock < threshold;
+              return h('div',{key:item.sku_id,style:{padding:'8px 14px',borderRadius:'8px',minWidth:'100px',textAlign:'center',background:isLow?'#fef0f0':'#f5f7fa'}},
+              [
+                h('div',{style:{fontSize:'12px',color:'#909399'}},item.color),
+                h('div',{class:isLow?'low-stock':'',style:{fontSize:'18px',fontWeight:700,cursor:'pointer'},
+                  onClick:async()=>{
+                    const logs=await this.api('/api/inventory/'+item.sku_id+'/history?limit=20');
+                    let msg=item.color+' 最近变动:\n';
+                    logs.forEach(l=>msg+=`${l.time} ${l.change_qty>0?'+':''}${l.change_qty} (${l.before_stock}->${l.after_stock})\n`);
+                    msg+=`\n低库存阈值: ${threshold}`;
+                    alert(msg);
+                  }
+                },String(item.stock)),
+                h('div',{style:{fontSize:'10px',color:'#909399',cursor:'pointer',marginTop:'2px'},
+                  onClick:e=>{e.stopPropagation();setThreshold(item.sku_id,threshold);}
+                },`阈值:${threshold}`),
+                h('button',{class:'btn-xs',style:{marginTop:'4px',fontSize:'10px',background:'#f1f5f9',color:'#64748b'},onClick:e=>{e.stopPropagation();this.openAdjust(item.sku_id,spec,item.color,item.stock);}},'🔧 调整'),
+              ]);
+            })
+          )
+        ]))
+      ]),
+
+      // Adjustment history
+      h('div',{class:'card'},[
+        h('div',{style:{display:'flex',gap:'10px',alignItems:'center',marginBottom:'14px',flexWrap:'wrap'}},[
+          h('span',{class:'card-title',style:{marginBottom:0}},'📋 调整记录'),
+          h('select',{value:this.adjustYear,onChange:e=>{this.adjustYear=parseInt(e.target.value);this.loadAdjustments();},style:{width:'90px'}},
+            [2024,2025,2026,2027,2028].map(y=>h('option',{value:y},String(y)))),
+          h('span','年'),
+          h('select',{value:this.adjustMonth,onChange:e=>{this.adjustMonth=parseInt(e.target.value);this.loadAdjustments();},style:{width:'70px'}},
+            Array.from({length:12},(_,i)=>h('option',{value:i+1},String(i+1)+'月'))),
+          h('button',{class:'btn-primary btn-sm',onClick:this.loadAdjustments},'查询'),
+          this.adjustRecords.length > 0 ? h('span',{style:{fontSize:'13px',color:'#64748b',marginLeft:'auto'}},
+            '盘盈 +'+this.adjustSummary.total_up+' / 盘亏 −'+this.adjustSummary.total_down+' / 净差异 '+(this.adjustSummary.net>=0?'+':'')+this.adjustSummary.net+' 件')
+          : null,
+        ]),
+        this.adjustRecords.length > 0 ? [
+          h('div',{class:'table-wrap'},h('table',[
+            h('thead',h('tr',[h('th','日期'),h('th','规格'),h('th','颜色'),h('th','调整前'),h('th','调整后'),h('th','差异'),h('th','原因')])),
+            h('tbody',this.adjustRecords.map(r=>h('tr',{key:r.id},[
+              h('td',{style:{fontSize:'12px',color:'#94a3b8'}},r.date),
+              h('td',r.spec), h('td',r.color),
+              h('td',String(r.old_stock)),
+              h('td',String(r.new_stock)),
+              h('td',{style:{fontWeight:700,color:r.delta>0?'#16a34a':'#ef4444'}},r.delta>0?'+'+r.delta:String(r.delta)),
+              h('td',{style:{fontSize:'13px'}},r.reason),
+            ]))),
+            h('tfoot',h('tr',[
+              h('td',{colSpan:3,style:{textAlign:'right',fontWeight:700}},'合计'),
+              h('td',{colSpan:2}),
+              h('td',{style:{fontWeight:700,color:'#4f6ef7'}},(this.adjustSummary.net>=0?'+':'')+this.adjustSummary.net+' 件'),
+              h('td',''),
+            ]))
+          ]))
+        ] : h('div',{style:{textAlign:'center',color:'#909399',padding:'24px',fontSize:'13px'}},
+          this.adjustRecords.length===0&&this.adjustYear?'点击「查询」查看调整记录':'暂无调整记录'),
+      ]),
     ]);
 
     // --- Outbound ---
