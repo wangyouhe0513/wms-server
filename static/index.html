@@ -280,8 +280,9 @@ createApp({
     const adjustMsg = ref(''); const adjustMsgType = ref('ok'); const adjustSaving = ref(false);
 
     const openAdjust = (sid, spec, color, stock) => {
-      adjustSkuId.value = sid; adjustSpec.value = spec; adjustColor.value = color;
-      adjustOldStock.value = stock; adjustNewStock.value = stock; adjustReason.value = '';
+      adjustSkuId.value = parseInt(sid)||0; adjustSpec.value = String(spec||''); adjustColor.value = String(color||'');
+      const val = parseInt(stock)||0;
+      adjustOldStock.value = val; adjustNewStock.value = val; adjustReason.value = '';
       adjustMsg.value = ''; adjustShow.value = true;
     };
 
