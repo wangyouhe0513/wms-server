@@ -279,9 +279,15 @@ createApp({
     const adjustOldStock = ref(0); const adjustNewStock = ref(0); const adjustReason = ref('');
     const adjustMsg = ref(''); const adjustMsgType = ref('ok'); const adjustSaving = ref(false);
 
-    const openAdjust = (sid, spec, color, stock) => {
+    const openAdjust = (sid, spec, color) => {
       adjustSkuId.value = parseInt(sid)||0; adjustSpec.value = String(spec||''); adjustColor.value = String(color||'');
-      const val = parseInt(stock)||0;
+      // 从 invData 里查当前库存
+      let val = 0;
+      const items = invData.value[spec];
+      if (items) {
+        const found = items.find(i => i.sku_id === parseInt(sid));
+        if (found) val = parseInt(found.stock)||0;
+      }
       adjustOldStock.value = val; adjustNewStock.value = val; adjustReason.value = '';
       adjustMsg.value = ''; adjustShow.value = true;
     };
@@ -1195,7 +1201,7 @@ createApp({
                 h('div',{style:{fontSize:'10px',color:'#909399',cursor:'pointer',marginTop:'2px'},
                   onClick:e=>{e.stopPropagation();setThreshold(item.sku_id,threshold);}
                 },`阈值:${threshold}`),
-                h('button',{class:'btn-xs',style:{marginTop:'4px',fontSize:'10px',background:'#f1f5f9',color:'#64748b'},onClick:e=>{e.stopPropagation();this.openAdjust(item.sku_id,spec,item.color,item.stock);}},'🔧 调整'),
+                h('button',{class:'btn-xs',style:{marginTop:'4px',fontSize:'10px',background:'#f1f5f9',color:'#64748b'},onClick:e=>{e.stopPropagation();this.openAdjust(item.sku_id,spec,item.color);}},'🔧 调整'),
               ]);
             })
           )
