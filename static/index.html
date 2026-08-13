@@ -244,7 +244,8 @@ createApp({
     // === Main app state ===
     const currentTab = ref('dashboard');
     const salSub = ref('enter');
-    const today = new Date().toISOString().slice(0, 10);
+    const fmtDate = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const today = fmtDate(new Date());
     const showLogs = ref(false);  // toggle for operation log modal
 
     // Dashboard
@@ -333,15 +334,15 @@ createApp({
 
     // Salary
     const salWorkers = ref([]); const salPrices = ref([]); const salItemSpecs = ref([]); const salRecords = ref([]);
-    const salSummary = ref([]); const salMonth = ref(new Date().toISOString().slice(0,10));
+    const salSummary = ref([]); const salMonth = ref(fmtDate(new Date()));
     const salPage = ref(1); const salPageSize = ref(30); const salTotal = ref(0);
     const salKeyword = ref(''); const salDateFrom = ref(''); const salDateTo = ref('');
     // 工资汇总专用日期范围（默认上月：每月15号发上月工资）
     const salSumDateFrom = ref(prevMonthFirst()); const salSumDateTo = ref(prevMonthLast());
-    function prevMonthFirst() { const d = new Date(); d.setMonth(d.getMonth()-1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`; }
-    function prevMonthLast() { const d = new Date(); d.setDate(0); return d.toISOString().slice(0,10); }
-    function currMonthFirst() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`; }
-    function currMonthLast() { const d = new Date(); d.setMonth(d.getMonth()+1); d.setDate(0); return d.toISOString().slice(0,10); }
+    function prevMonthFirst() { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth()-1); return fmtDate(d); }
+    function prevMonthLast() { const d = new Date(); d.setDate(0); return fmtDate(d); }
+    function currMonthFirst() { const d = new Date(); d.setDate(1); return fmtDate(d); }
+    function currMonthLast() { const d = new Date(); d.setMonth(d.getMonth()+1); d.setDate(0); return fmtDate(d); }
     const salFilterSpec = ref('');
     const salFilterColor = ref('');
     const salQuickSpec = ref('');
@@ -1473,8 +1474,8 @@ createApp({
         h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:'8px'}},[
           h('span',{class:'card-title',style:{marginBottom:0}},'📊 工资汇总'),
           h('div',{style:{display:'flex',gap:'6px',alignItems:'center'}},[
-            h('button',{class:'btn-xs',style:{fontSize:'10px',background:'#e2e8f0',color:'#64748b'},onClick:()=>{const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-1);const f=d.toISOString().slice(0,10);d.setMonth(d.getMonth()+1,0);const l=d.toISOString().slice(0,10);this.salSumDateFrom=f;this.salSumDateTo=l;fetch('/api/salary/summary?month=&date_from='+encodeURIComponent(f)+'&date_to='+encodeURIComponent(l),{headers:{'Authorization':'Bearer '+this.token}}).then(r=>r.json()).then(d=>{this.salSummary=d;}).catch(()=>{});}},'📅 上月'),
-            h('button',{class:'btn-xs',style:{fontSize:'10px',background:'#4f6ef7',color:'#fff'},onClick:()=>{const d=new Date();d.setDate(1);const f=d.toISOString().slice(0,10);d.setMonth(d.getMonth()+1,0);const l=d.toISOString().slice(0,10);this.salSumDateFrom=f;this.salSumDateTo=l;fetch('/api/salary/summary?month=&date_from='+encodeURIComponent(f)+'&date_to='+encodeURIComponent(l),{headers:{'Authorization':'Bearer '+this.token}}).then(r=>r.json()).then(d=>{this.salSummary=d;}).catch(()=>{});}},'📅 本月'),
+            h('button',{class:'btn-xs',style:{fontSize:'10px',background:'#e2e8f0',color:'#64748b'},onClick:()=>{const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-1);const f=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');d.setMonth(d.getMonth()+1,0);const l=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');this.salSumDateFrom=f;this.salSumDateTo=l;fetch('/api/salary/summary?month=&date_from='+encodeURIComponent(f)+'&date_to='+encodeURIComponent(l),{headers:{'Authorization':'Bearer '+this.token}}).then(r=>r.json()).then(d=>{this.salSummary=d;}).catch(()=>{});}},'📅 上月'),
+            h('button',{class:'btn-xs',style:{fontSize:'10px',background:'#4f6ef7',color:'#fff'},onClick:()=>{const d=new Date();d.setDate(1);const f=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');d.setMonth(d.getMonth()+1,0);const l=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');this.salSumDateFrom=f;this.salSumDateTo=l;fetch('/api/salary/summary?month=&date_from='+encodeURIComponent(f)+'&date_to='+encodeURIComponent(l),{headers:{'Authorization':'Bearer '+this.token}}).then(r=>r.json()).then(d=>{this.salSummary=d;}).catch(()=>{});}},'📅 本月'),
             h('input',{type:'date',value:this.salSumDateFrom,onInput:e=>{this.salSumDateFrom=e.target.value;this.loadSalary();},style:{width:'120px',fontSize:'11px'},title:'开始日期'}),
             h('span',{style:{fontSize:'11px',color:'#94a3b8'}},'→'),
             h('input',{type:'date',value:this.salSumDateTo,onInput:e=>{this.salSumDateTo=e.target.value;this.loadSalary();},style:{width:'120px',fontSize:'11px'},title:'结束日期'}),
