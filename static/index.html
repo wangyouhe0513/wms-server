@@ -358,6 +358,8 @@ createApp({
     const salNewWorker = ref(''); const salNewJobType = ref('机工');
     const salNewItem = ref(''); const salNewPrice = ref('');
     const salEditWorkerId = ref(0); const salEditItemId = ref(0);
+    const salPriceFilter = ref('');
+    const salEditPriceId = ref(0); const salEditPriceName = ref(''); const salEditPriceVal = ref('');
 
     // Finance
     const finYear = ref(new Date().getFullYear());
@@ -563,6 +565,14 @@ createApp({
     const deleteSalPrice = async (id) => {
       if (!confirm('确定删除？')) return;
       await api(`/api/salary/prices/${id}`, {method:'DELETE'}); loadSalary();
+    };
+    const startEditPrice = (p) => {
+      salEditPriceId.value = p.id; salEditPriceName.value = p.item_name; salEditPriceVal.value = p.unit_price;
+    };
+    const saveEditPrice = async () => {
+      if (!salEditPriceName.value.trim()) return;
+      await api(`/api/salary/prices/${salEditPriceId.value}?item_name=${encodeURIComponent(salEditPriceName.value.trim())}&unit_price=${salEditPriceVal.value||0}`, {method:'PUT'});
+      salEditPriceId.value = 0; salEditPriceName.value = ''; salEditPriceVal.value = ''; loadSalary();
     };
     const showSalDropdown = (id, list, key) => {
       const el = document.getElementById(id);
@@ -892,7 +902,7 @@ createApp({
       obSP, obYear, obMonth, obData,
       inYear, inMonth, inData,
       sumYear, sumMonth, summary,
-      salWorkers, salPrices, salItemSpecs, salRecords, salSummary, salMonth, salPage, salPageSize, salTotal, salKeyword, salDateFrom, salDateTo, salSumDateFrom, salSumDateTo, salFilterSpec, salFilterColor, salQuickSpec, salQuickColor, salQuickWorker, salNewWorker, salNewJobType, salNewItem, salNewPrice,
+      salWorkers, salPrices, salItemSpecs, salRecords, salSummary, salMonth, salPage, salPageSize, salTotal, salKeyword, salDateFrom, salDateTo, salSumDateFrom, salSumDateTo, salFilterSpec, salFilterColor, salQuickSpec, salQuickColor, salQuickWorker, salNewWorker, salNewJobType, salNewItem, salNewPrice, salPriceFilter, salEditPriceId, salEditPriceName, salEditPriceVal, startEditPrice, saveEditPrice,
       loadSalary, saveSalWorker, deleteSalWorker, saveSalPrice, deleteSalPrice, addSalRecord, deleteSalRecord, toggleSalPaid, exportSalary, batchPaid, showSalDropdown,
       salSpecItems, salNewLinkSpec, salNewLinkItem, salEditLinkId, salEditLinkItem, initSpecItems, saveSpecItem, updateSpecItem, deleteSpecItem,
       finYear, finMonth, finRecords, finPage, finTotal, finPerson, finCat, finSummary, loadFinance, exportFinance, deleteFinance,
@@ -1393,44 +1403,59 @@ createApp({
             h('button',{class:'btn-primary btn-xs',onClick:this.saveSalWorker},'+'),
           ]),
         ]),
-        h('div',{class:'card',style:{flex:1,minWidth:'260px',display:this.salSub==='items'?'':'none'}},[
-          h('div',{class:'card-title'},'📏 工序单价'),
-          h('div',{style:{display:'flex',gap:'4px',flexWrap:'wrap',maxHeight:'120px',overflowY:'auto'}},this.salPrices.map(p=>h('span',{key:p.id,style:{background:'#f1f5f9',padding:'2px 8px',borderRadius:'4px',fontSize:'11px',display:'inline-flex',alignItems:'center',gap:'3px'}},
-            [p.item_name+' ¥'+p.unit_price, h('span',{style:{cursor:'pointer',color:'#ef4444',fontWeight:700},onClick:()=>this.deleteSalPrice(p.id)},'×')]
-          ))),
-          h('div',{style:{display:'flex',gap:'4px',marginTop:'8px'}},[
-            h('input',{value:this.salNewItem,onInput:e=>this.salNewItem=e.target.value,placeholder:'工序名',style:{flex:1,fontSize:'12px'}}),
-            h('input',{type:'number',step:'0.01',value:this.salNewPrice,onInput:e=>this.salNewPrice=e.target.value,placeholder:'单价',style:{width:'70px',fontSize:'12px'}}),
+        h('div',{class:'card',style:{flex:'1 1 340px',minWidth:'300px',display:this.salSub==='items'?'':'none'}},[
+          h('div',{class:'card-title'},'📏 工序单价（'+this.salPrices.length+'个）'),
+          h('div',{style:{display:'flex',gap:'6px',marginBottom:'10px',flexWrap:'wrap'}},[
+            h('input',{value:this.salPriceFilter,onInput:e=>this.salPriceFilter=e.target.value,placeholder:'🔍 搜索工序',style:{flex:1,minWidth:'100px',fontSize:'13px'}}),
+            h('input',{value:this.salNewItem,onInput:e=>this.salNewItem=e.target.value,placeholder:'新工序名',style:{flex:1,minWidth:'80px',fontSize:'13px'},onKeyup:e=>{if(e.key==='Enter')this.saveSalPrice();}}),
+            h('input',{type:'number',step:'0.01',value:this.salNewPrice,onInput:e=>this.salNewPrice=e.target.value,placeholder:'单价',style:{width:'70px',fontSize:'13px'},onKeyup:e=>{if(e.key==='Enter')this.saveSalPrice();}}),
             h('button',{class:'btn-primary btn-xs',onClick:this.saveSalPrice},'+'),
           ]),
+          h('div',{style:{maxHeight:'420px',overflowY:'auto'}},h('table',[
+            h('thead',h('tr',[h('th','工序名'),h('th',{style:{textAlign:'right'}},'单价'),h('th',{style:{width:'76px'}},'操作')])),
+            h('tbody',(this.salPrices.filter(p=>!this.salPriceFilter||p.item_name.includes(this.salPriceFilter))).map(p=>
+              this.salEditPriceId===p.id
+              ? h('tr',{key:p.id},[
+                  h('td',h('input',{value:this.salEditPriceName,onInput:e=>this.salEditPriceName=e.target.value,style:{width:'100%',fontSize:'13px',padding:'4px 6px'}})),
+                  h('td',h('input',{type:'number',step:'0.01',value:this.salEditPriceVal,onInput:e=>this.salEditPriceVal=e.target.value,style:{width:'80px',fontSize:'13px',padding:'4px 6px'}})),
+                  h('td',[h('button',{class:'btn-success btn-xs',style:{marginRight:'3px'},onClick:this.saveEditPrice},'✓'),h('button',{class:'btn-xs',style:{background:'#f1f5f9'},onClick:()=>this.salEditPriceId=0},'✗')]),
+                ])
+              : h('tr',{key:p.id},[
+                  h('td',{style:{fontWeight:500}},p.item_name),
+                  h('td',{style:{textAlign:'right',color:'#4f6ef7',fontWeight:600}},'¥'+Number(p.unit_price).toFixed(2)),
+                  h('td',[h('button',{class:'btn-xs',style:{background:'#f1f5f9',marginRight:'3px'},onClick:()=>this.startEditPrice(p)},'✏️'),h('button',{class:'btn-danger btn-xs',onClick:()=>this.deleteSalPrice(p.id)},'🗑')]),
+                ])
+            )),
+          ])),
         ]),
-        h('div',{class:'card',style:{flex:1,minWidth:'300px',display:this.salSub==='items'?'':'none'}},[
-          h('div',{class:'card-title'},'🔗 规格→工序关联'),
-          h('div',{style:{display:'flex',gap:'6px',alignItems:'center',marginBottom:'8px',flexWrap:'wrap'}},[
-            h('button',{class:'btn-xs',style:{background:'#f59e0b',color:'#fff'},onClick:this.initSpecItems},'🔄 自动匹配'),
-            h('select',{value:this.salNewLinkSpec,onChange:e=>{this.salNewLinkSpec=e.target.value;this.loadSpecItems();},style:{fontSize:'12px',fontWeight:600}},
+        h('div',{class:'card',style:{flex:'1 1 340px',minWidth:'300px',display:this.salSub==='items'?'':'none'}},[
+          h('div',{class:'card-title'},'🔗 规格→工序关联'+(this.salNewLinkSpec?'（'+this.salSpecItems.filter(si=>si.spec_name===this.salNewLinkSpec).length+'个工序）':'')),
+          h('div',{style:{display:'flex',gap:'6px',alignItems:'center',marginBottom:'10px',flexWrap:'wrap'}},[
+            h('select',{value:this.salNewLinkSpec,onChange:e=>{this.salNewLinkSpec=e.target.value;this.loadSpecItems();},style:{flex:1,minWidth:'120px',fontSize:'14px',fontWeight:600,padding:'8px'}},
               [h('option',{value:''},'选择规格▼'),...this.specs.map(s=>h('option',{value:s.name},s.name))]),
+            h('button',{class:'btn-warning btn-xs',onClick:this.initSpecItems},'🔄 自动匹配'),
           ]),
           // 关联列表
-          this.salNewLinkSpec ? h('div',{style:{maxHeight:'200px',overflowY:'auto'}},
-            h('table',{style:{fontSize:'12px'}},[
+          this.salNewLinkSpec ? h('div',{style:{maxHeight:'420px',overflowY:'auto'}},
+            h('table',[
+              h('thead',h('tr',[h('th','工序名'),h('th',{style:{textAlign:'right'}},'单价'),h('th',{style:{width:'76px'}},'操作')])),
               h('tbody',[
-                ...this.salSpecItems.filter(si=>si.spec_name===this.salNewLinkSpec).map(si=>h('tr',{key:si.id},
-                  this.salEditLinkId===si.id ? [
-                    h('td',{style:{padding:'4px 6px'}},h('input',{value:this.salEditLinkItem,onInput:e=>this.salEditLinkItem=e.target.value,style:{width:'100px',fontSize:'12px',padding:'2px 6px'}})),
-                    h('td',{style:{padding:'4px 4px'}},h('input',{type:'number',step:'0.01',value:this.salEditLinkPrice,onInput:e=>this.salEditLinkPrice=parseFloat(e.target.value)||0,style:{width:'65px',fontSize:'12px',padding:'2px 6px'}})),
-                    h('td',{style:{padding:'4px 2px',width:'50px'}},[h('button',{class:'btn-success btn-xs',style:{marginRight:'2px'},onClick:()=>this.updateSpecItem(si.id)},'✓'),h('button',{class:'btn-xs',style:{background:'#f1f5f9'},onClick:()=>{this.salEditLinkId=0;}},'✗')]),
-                  ] : [
-                    h('td',{style:{padding:'4px 6px',fontWeight:500}},si.item_name),
-                    h('td',{style:{padding:'4px 6px',color:'#4f6ef7',fontWeight:600}},'¥'+Number(si.unit_price||0).toFixed(2)),
-                    h('td',{style:{padding:'4px 2px',width:'40px'}},[h('button',{class:'btn-xs',style:{background:'#f1f5f9',marginRight:'2px'},onClick:()=>{this.salEditLinkId=si.id;this.salEditLinkItem=si.item_name;this.salEditLinkPrice=si.unit_price||0;}},'✏️'),h('button',{class:'btn-danger btn-xs',onClick:()=>this.deleteSpecItem(si.id)},'✕')]),
-                  ]
-                )),
+                ...this.salSpecItems.filter(si=>si.spec_name===this.salNewLinkSpec).map(si=>
+                  this.salEditLinkId===si.id ? h('tr',{key:si.id},[
+                    h('td',h('input',{value:this.salEditLinkItem,onInput:e=>this.salEditLinkItem=e.target.value,style:{width:'100%',fontSize:'13px',padding:'4px 6px'}})),
+                    h('td',h('input',{type:'number',step:'0.01',value:this.salEditLinkPrice,onInput:e=>this.salEditLinkPrice=parseFloat(e.target.value)||0,style:{width:'80px',fontSize:'13px',padding:'4px 6px'}})),
+                    h('td',[h('button',{class:'btn-success btn-xs',style:{marginRight:'3px'},onClick:()=>this.updateSpecItem(si.id)},'✓'),h('button',{class:'btn-xs',style:{background:'#f1f5f9'},onClick:()=>{this.salEditLinkId=0;}},'✗')]),
+                  ]) : h('tr',{key:si.id},[
+                    h('td',{style:{fontWeight:500}},si.item_name),
+                    h('td',{style:{textAlign:'right',color:'#4f6ef7',fontWeight:600}},'¥'+Number(si.unit_price||0).toFixed(2)),
+                    h('td',[h('button',{class:'btn-xs',style:{background:'#f1f5f9',marginRight:'3px'},onClick:()=>{this.salEditLinkId=si.id;this.salEditLinkItem=si.item_name;this.salEditLinkPrice=si.unit_price||0;}},'✏️'),h('button',{class:'btn-danger btn-xs',onClick:()=>this.deleteSpecItem(si.id)},'🗑')]),
+                  ])
+                ),
                 // 新增行
                 h('tr',{key:'new'},[
-                  h('td',{style:{padding:'4px 6px'}},h('input',{value:this.salNewLinkItem,onInput:e=>this.salNewLinkItem=e.target.value,list:'allItemsList',placeholder:'新工序名',style:{width:'120px',fontSize:'12px',padding:'2px 6px'},onKeyup:e=>{if(e.key==='Enter')this.saveSpecItem();}})),
-                  h('td',{style:{padding:'4px 4px'}},h('input',{id:'salNewLinkPrice',type:'number',step:'0.01',placeholder:'单价',style:{width:'65px',fontSize:'12px',padding:'2px 6px'}})),
-                  h('td',{style:{padding:'4px 2px'}},h('button',{class:'btn-primary btn-xs',onClick:this.saveSpecItem},'+ 新增')),
+                  h('td',h('input',{value:this.salNewLinkItem,onInput:e=>this.salNewLinkItem=e.target.value,list:'allItemsList',placeholder:'新工序名',style:{width:'100%',fontSize:'13px',padding:'4px 6px'},onKeyup:e=>{if(e.key==='Enter')this.saveSpecItem();}})),
+                  h('td',h('input',{id:'salNewLinkPrice',type:'number',step:'0.01',placeholder:'单价',style:{width:'80px',fontSize:'13px',padding:'4px 6px'}})),
+                  h('td',h('button',{class:'btn-primary btn-xs',onClick:this.saveSpecItem},'+ 新增')),
                 ]),
               ])
             ])
