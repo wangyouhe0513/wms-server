@@ -513,6 +513,17 @@ def create_transactions(batch: TransactionBatch, admin: Admin = Depends(get_curr
                     db.flush()
                 sp_id = sp.id
 
+            # 防重复录入：同销售人+规格+颜色+数量 今天已存在则禁止
+            dup = db.query(Transaction).filter(
+                Transaction.trans_date == trans_date,
+                Transaction.trans_type == item.trans_type,
+                Transaction.sku_id == sku.id,
+                Transaction.salesperson_id == sp_id,
+                Transaction.quantity == item.quantity,
+            ).first()
+            if dup:
+                raise HTTPException(400, f"{item.spec_name}-{item.color_name}：今天已操作过，请勿重复录入")
+
             # 计算金额
             amount = Decimal(str(item.quantity)) * Decimal(str(item.unit_price))
 
@@ -1495,8 +1506,20 @@ async def finance_create(
                     f.write(await receipt.read())
                 paths.append(f"/static/receipts/{filename}")
 
+    # 防重复报账：同类型+金额+日期+类别+责任人，当天仅可录入一次
+    d = datetime.strptime(date, "%Y-%m-%d").date()
+    dup = db.query(FinanceRecord).filter(
+        FinanceRecord.type == type,
+        FinanceRecord.amount == Decimal(str(amount)),
+        FinanceRecord.date == d,
+        FinanceRecord.category == category,
+        FinanceRecord.person == person,
+    ).first()
+    if dup:
+        raise HTTPException(400, f"今天已录入过相同{type}（金额 ¥{amount}，类别 {category or '无'}，责任人 {person or '无'}），请勿重复操作")
+
     r = FinanceRecord(
-        type=type, date=datetime.strptime(date, "%Y-%m-%d").date(),
+        type=type, date=d,
         amount=Decimal(str(amount)), category=category, detail=detail,
         person=person, receipt=",".join(paths),
     )
@@ -1821,6 +1844,20 @@ class SalaryRecordUpdateReq(PydanticBaseModel):
 
 @app.post("/api/salary/records")
 def salary_record_create(req: SalaryRecordReq, admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
+    # 防重复录入：同工人+规格+颜色+工序+数量，今天已存在则禁止
+    today = req.month[:10] if req.month else ""
+    if today:
+        dup = db.query(SalaryRecord).filter(
+            SalaryRecord.month.like(today + '%'),
+            SalaryRecord.worker_id == req.worker_id,
+            SalaryRecord.spec_name == req.spec_name,
+            SalaryRecord.color_name == req.color_name,
+            SalaryRecord.item_name == req.item_name,
+            SalaryRecord.quantity == req.quantity,
+        ).first()
+        if dup:
+            raise HTTPException(400, f"{req.item_name}：今天已录入过（同工人+规格+颜色+工序+数量），请勿重复操作")
+
     amount = Decimal(str(req.quantity)) * Decimal(str(req.unit_price))
     r = SalaryRecord(worker_id=req.worker_id, month=req.month, spec_name=req.spec_name, color_name=req.color_name, item_name=req.item_name,
                      quantity=req.quantity, unit_price=Decimal(str(req.unit_price)),
