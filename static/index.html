@@ -1316,12 +1316,12 @@ createApp({
     // --- Salary ---
     const renderSalary = () => h('div',{style:{display:'flex',flexDirection:'column',gap:'16px'}},[
       // 子栏目Tab
-      h('div',{style:{display:'flex',gap:'4px',marginBottom:'4px'}},[
-        h('button',{class:this.salSub==='enter'?'btn-primary btn-sm':'btn-sm',style:{flex:'1',minWidth:'0',padding:'12px 8px',fontSize:'14px'},onClick:()=>this.salSub='enter'},'📝 录入'),
-        h('button',{class:this.salSub==='records'?'btn-primary btn-sm':'btn-sm',style:{flex:'1',minWidth:'0',padding:'12px 8px',fontSize:'14px'},onClick:()=>this.salSub='records'},'📋 记录'),
-        h('button',{class:this.salSub==='workers'?'btn-primary btn-sm':'btn-sm',style:{flex:'1',minWidth:'0',padding:'12px 8px',fontSize:'14px'},onClick:()=>this.salSub='workers'},'👷 工人'),
-        h('button',{class:this.salSub==='items'?'btn-primary btn-sm':'btn-sm',style:{flex:'1',minWidth:'0',padding:'12px 8px',fontSize:'14px'},onClick:()=>this.salSub='items'},'🔗 工序'),
-        h('button',{class:this.salSub==='views'?'btn-primary btn-sm':'btn-sm',style:{flex:'1',minWidth:'0',padding:'12px 8px',fontSize:'14px'},onClick:()=>{this.salSub='views';this.loadSalary();}},'👀 活跃度'),
+      h('div',{style:{display:'flex',gap:'4px',marginBottom:'4px',overflowX:'auto','-webkit-overflow-scrolling':'touch'}},[
+        h('button',{class:this.salSub==='enter'?'btn-primary btn-sm':'btn-sm',style:{flex:'1 0 auto',minWidth:'72px',padding:'12px 8px',fontSize:'14px'},onClick:()=>this.salSub='enter'},'📝 录入'),
+        h('button',{class:this.salSub==='records'?'btn-primary btn-sm':'btn-sm',style:{flex:'1 0 auto',minWidth:'72px',padding:'12px 8px',fontSize:'14px'},onClick:()=>this.salSub='records'},'📋 记录'),
+        h('button',{class:this.salSub==='workers'?'btn-primary btn-sm':'btn-sm',style:{flex:'1 0 auto',minWidth:'72px',padding:'12px 8px',fontSize:'14px'},onClick:()=>this.salSub='workers'},'👷 工人'),
+        h('button',{class:this.salSub==='items'?'btn-primary btn-sm':'btn-sm',style:{flex:'1 0 auto',minWidth:'72px',padding:'12px 8px',fontSize:'14px'},onClick:()=>this.salSub='items'},'🔗 工序'),
+        h('button',{class:this.salSub==='views'?'btn-primary btn-sm':'btn-sm',style:{flex:'1 0 auto',minWidth:'72px',padding:'12px 8px',fontSize:'14px'},onClick:()=>{this.salSub='views';this.loadSalary();}},'👀 活跃度'),
       ]),
       // ===== 活跃度统计 =====
       this.salSub==='views' ? h('div',{class:'card'},[
@@ -1360,7 +1360,7 @@ createApp({
         ])),
       ]) : null,
       // ===== 0. 快速填写 =====
-      h('div',{class:'card',style:{background:'#eef1ff',border:'2px solid #4f6ef7',display:this.salSub==='enter'||this.salSub==='records'?'':'none'}},[
+      h('div',{class:'card',style:{background:'#eef1ff',border:'2px solid #4f6ef7',display:this.salSub==='enter'?'':'none'}},[
         h('div',{class:'card-title',style:{color:'#4f6ef7'}},'⚡ 快速填写（规格→颜色→工序→工人）'),
         h('div',{style:{display:'flex',gap:'6px',alignItems:'center',flexWrap:'wrap'}},[
           h('select',{value:this.salQuickSpec,onChange:e=>{this.salQuickSpec=e.target.value;this.salQuickColor='';},style:{flex:'1 1 100px',fontSize:'14px'}},
@@ -1416,8 +1416,8 @@ createApp({
       ]),
 
       // ===== 2. 工人+工序管理 =====
-      h('div',{style:{display:(this.salSub==='workers'||this.salSub==='items')?'flex':'none',gap:'12px',flexWrap:'wrap'}},[
-        h('div',{class:'card',style:{flex:1,minWidth:'260px'}},[
+      h('div',{style:{display:'flex',gap:'12px',flexWrap:'wrap'}},[
+        h('div',{class:'card',style:{flex:1,minWidth:'260px',display:this.salSub==='workers'?'':'none'}},[
           h('div',{class:'card-title'},'👷 工人管理'),
           h('input',{placeholder:'🔍 筛选→点击填入录入框',onInput:e=>{document.querySelectorAll('.worker-tag').forEach(el=>{const v=e.target.value.toLowerCase();el.style.display=!v||el.textContent.toLowerCase().includes(v)?'':'none';})},style:{fontSize:'12px',marginBottom:'6px',width:'100%'}}),
           h('div',{style:{display:'flex',gap:'4px',flexWrap:'wrap',maxHeight:'120px',overflowY:'auto'}},this.salWorkers.map(w=>h('span',{key:w.id,class:'worker-tag',style:{background:'#f1f5f9',padding:'2px 8px',borderRadius:'4px',fontSize:'11px',display:'inline-flex',alignItems:'center',gap:'3px',cursor:'pointer'},onClick:()=>{document.getElementById('salWorkerInput').value=w.name;document.getElementById('salWorkerInput').focus()}},
@@ -1429,7 +1429,7 @@ createApp({
             h('button',{class:'btn-primary btn-xs',onClick:this.saveSalWorker},'+'),
           ]),
         ]),
-        h('div',{class:'card',style:{flex:1,minWidth:'260px'}},[
+        h('div',{class:'card',style:{flex:1,minWidth:'260px',display:this.salSub==='items'?'':'none'}},[
           h('div',{class:'card-title'},'📏 工序单价'),
           h('div',{style:{display:'flex',gap:'4px',flexWrap:'wrap',maxHeight:'120px',overflowY:'auto'}},this.salPrices.map(p=>h('span',{key:p.id,style:{background:'#f1f5f9',padding:'2px 8px',borderRadius:'4px',fontSize:'11px',display:'inline-flex',alignItems:'center',gap:'3px'}},
             [p.item_name+' ¥'+p.unit_price, h('span',{style:{cursor:'pointer',color:'#ef4444',fontWeight:700},onClick:()=>this.deleteSalPrice(p.id)},'×')]
@@ -1440,7 +1440,7 @@ createApp({
             h('button',{class:'btn-primary btn-xs',onClick:this.saveSalPrice},'+'),
           ]),
         ]),
-        h('div',{class:'card',style:{flex:1,minWidth:'300px'}},[
+        h('div',{class:'card',style:{flex:1,minWidth:'300px',display:this.salSub==='items'?'':'none'}},[
           h('div',{class:'card-title'},'🔗 规格→工序关联'),
           h('div',{style:{display:'flex',gap:'6px',alignItems:'center',marginBottom:'8px',flexWrap:'wrap'}},[
             h('button',{class:'btn-xs',style:{background:'#f59e0b',color:'#fff'},onClick:this.initSpecItems},'🔄 自动匹配'),
@@ -1476,7 +1476,7 @@ createApp({
       ]),
 
       // ===== 3. 记录表格 =====
-      this.salRecords.length > 0 ? h('div',{class:'card'},[
+      (this.salSub==='records'||this.salSub==='enter') && this.salRecords.length > 0 ? h('div',{class:'card'},[
         h('div',{class:'card-title'},'📋 工资明细 (共'+this.salTotal+'条)'),
         h('div',{style:{display:'flex',gap:'6px',marginBottom:'12px',flexWrap:'wrap'}},[
           h('input',{value:this.salKeyword,onInput:e=>this.salKeyword=e.target.value,placeholder:'🔍 搜规格/工序/颜色',style:{flex:1,fontSize:'12px'},onKeyup:e=>{if(e.key==='Enter'){this.salPage=1;this.loadSalary();}}}),
@@ -1509,7 +1509,7 @@ createApp({
       ]) : null,
 
       // ===== 4. 汇总 + 分享 =====
-      h('div',{class:'card'},[
+      this.salSub==='records' ? h('div',{class:'card'},[
         h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:'8px'}},[
           h('span',{class:'card-title',style:{marginBottom:0}},'📊 工资汇总'),
           h('div',{style:{display:'flex',gap:'6px',alignItems:'center'}},[
@@ -1540,7 +1540,7 @@ createApp({
             h('td',''),
           ])),
         ])) : h('div',{style:{textAlign:'center',color:'#94a3b8',padding:'20px',fontSize:'13px'}},'该日期范围内暂无工资记录')
-      ]),
+      ]) : null,
     ]);
 
     // --- Finance ---
