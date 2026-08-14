@@ -1315,10 +1315,11 @@ createApp({
     // --- Summary ---
     // --- Salary ---
     const renderSalary = () => h('div',{style:{display:'flex',flexDirection:'column',gap:'16px'}},[
-      // 子栏目Tab
+      // 子栏目Tab（按业务场景排序：日常录入→明细→汇总发薪→基础设置→监控）
       h('div',{style:{display:'flex',gap:'4px',marginBottom:'4px',overflowX:'auto','-webkit-overflow-scrolling':'touch'}},[
         h('button',{class:this.salSub==='enter'?'btn-primary btn-sm':'btn-sm',style:{flex:'1 0 auto',minWidth:'72px',padding:'12px 8px',fontSize:'14px'},onClick:()=>this.salSub='enter'},'📝 录入'),
         h('button',{class:this.salSub==='records'?'btn-primary btn-sm':'btn-sm',style:{flex:'1 0 auto',minWidth:'72px',padding:'12px 8px',fontSize:'14px'},onClick:()=>this.salSub='records'},'📋 记录'),
+        h('button',{class:this.salSub==='summary'?'btn-primary btn-sm':'btn-sm',style:{flex:'1 0 auto',minWidth:'72px',padding:'12px 8px',fontSize:'14px'},onClick:()=>{this.salSub='summary';this.loadSalary();}},'📊 汇总'),
         h('button',{class:this.salSub==='workers'?'btn-primary btn-sm':'btn-sm',style:{flex:'1 0 auto',minWidth:'72px',padding:'12px 8px',fontSize:'14px'},onClick:()=>this.salSub='workers'},'👷 工人'),
         h('button',{class:this.salSub==='items'?'btn-primary btn-sm':'btn-sm',style:{flex:'1 0 auto',minWidth:'72px',padding:'12px 8px',fontSize:'14px'},onClick:()=>this.salSub='items'},'🔗 工序'),
         h('button',{class:this.salSub==='views'?'btn-primary btn-sm':'btn-sm',style:{flex:'1 0 auto',minWidth:'72px',padding:'12px 8px',fontSize:'14px'},onClick:()=>{this.salSub='views';this.loadSalary();}},'👀 活跃度'),
@@ -1509,7 +1510,7 @@ createApp({
       ]) : null,
 
       // ===== 4. 汇总 + 分享 =====
-      this.salSub==='records' ? h('div',{class:'card'},[
+      this.salSub==='summary' ? h('div',{class:'card'},[
         h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:'8px'}},[
           h('span',{class:'card-title',style:{marginBottom:0}},'📊 工资汇总'),
           h('div',{style:{display:'flex',gap:'6px',alignItems:'center'}},[
