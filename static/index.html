@@ -244,6 +244,7 @@ createApp({
     // === Main app state ===
     const currentTab = ref('dashboard');
     const salSub = ref('enter');
+    const viewStats = ref({items:[], summary:{total_workers:0,viewed:0,not_viewed:0,view_rate:0}});
     const fmtDate = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     const today = fmtDate(new Date());
     const showLogs = ref(false);  // toggle for operation log modal
@@ -522,6 +523,7 @@ createApp({
       salWorkers.value = workers; salPrices.value = prices; salItemSpecs.value = itemSpecs;
       salRecords.value = recordsData.items; salTotal.value = recordsData.total; salSummary.value = summary;
       try { salSpecItems.value = await api('/api/salary/spec-items'); } catch(e) {}
+      try { viewStats.value = await api('/api/salary/views'); } catch(e) {}
     };
     const saveSalWorker = async () => {
       if (!salNewWorker.value.trim()) return;
@@ -883,7 +885,7 @@ createApp({
       token, authUser, loginUsername, loginPassword, loginError, loginLoading, rememberMe,
       doLogin, doLogout, showChangePwd, oldPwd, newPwd, changePwd,
       // Main
-      currentTab, salSub, today, dash, dashBalance, showMoney, entryDate, entryRows, submitting, msg, msgType, todayRecords,
+      currentTab, salSub, viewStats, today, dash, dashBalance, showMoney, entryDate, entryRows, submitting, msg, msgType, todayRecords,
       specs, colors, salespersons, invData, invFilter, invLowStock,
       adjustShow, adjustSkuId, adjustSpec, adjustColor, adjustOldStock, adjustNewStock, adjustReason, adjustMsg, adjustMsgType, adjustSaving, openAdjust, doAdjust,
       adjustRecords, adjustSummary, adjustYear, adjustMonth, loadAdjustments,
@@ -1319,7 +1321,44 @@ createApp({
         h('button',{class:this.salSub==='records'?'btn-primary btn-sm':'btn-sm',style:{flex:'1',minWidth:'0',padding:'12px 8px',fontSize:'14px'},onClick:()=>this.salSub='records'},'📋 记录'),
         h('button',{class:this.salSub==='workers'?'btn-primary btn-sm':'btn-sm',style:{flex:'1',minWidth:'0',padding:'12px 8px',fontSize:'14px'},onClick:()=>this.salSub='workers'},'👷 工人'),
         h('button',{class:this.salSub==='items'?'btn-primary btn-sm':'btn-sm',style:{flex:'1',minWidth:'0',padding:'12px 8px',fontSize:'14px'},onClick:()=>this.salSub='items'},'🔗 工序'),
+        h('button',{class:this.salSub==='views'?'btn-primary btn-sm':'btn-sm',style:{flex:'1',minWidth:'0',padding:'12px 8px',fontSize:'14px'},onClick:()=>{this.salSub='views';this.loadSalary();}},'👀 活跃度'),
       ]),
+      // ===== 活跃度统计 =====
+      this.salSub==='views' ? h('div',{class:'card'},[
+        h('div',{class:'card-title'},'👀 工资查看活跃度'),
+        // 汇总卡片
+        h('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(120px,1fr))',gap:'10px',marginBottom:'16px'}},[
+          h('div',{style:{background:'#fff',border:'1px solid #e5e7eb',borderRadius:'10px',padding:'14px',textAlign:'center'}},[
+            h('div',{style:{fontSize:'22px',fontWeight:800,color:'#111827'}},String(this.viewStats.summary.total_workers||0)),
+            h('div',{style:{fontSize:'11px',color:'#6b7280'}},'工人总数'),
+          ]),
+          h('div',{style:{background:'#fff',border:'1px solid #e5e7eb',borderRadius:'10px',padding:'14px',textAlign:'center'}},[
+            h('div',{style:{fontSize:'22px',fontWeight:800,color:'#16a34a'}},String(this.viewStats.summary.viewed||0)),
+            h('div',{style:{fontSize:'11px',color:'#6b7280'}},'已查看'),
+          ]),
+          h('div',{style:{background:'#fff',border:'1px solid #e5e7eb',borderRadius:'10px',padding:'14px',textAlign:'center'}},[
+            h('div',{style:{fontSize:'22px',fontWeight:800,color:'#ef4444'}},String(this.viewStats.summary.not_viewed||0)),
+            h('div',{style:{fontSize:'11px',color:'#6b7280'}},'未查看'),
+          ]),
+          h('div',{style:{background:'#fff',border:'1px solid #e5e7eb',borderRadius:'10px',padding:'14px',textAlign:'center'}},[
+            h('div',{style:{fontSize:'22px',fontWeight:800,color:'#4f6ef7'}},String(this.viewStats.summary.view_rate||0)+'%'),
+            h('div',{style:{fontSize:'11px',color:'#6b7280'}},'查看率'),
+          ]),
+        ]),
+        // 明细列表
+        h('div',{class:'table-wrap'},h('table',[
+          h('thead',h('tr',[h('th','工人'),h('th','工种'),h('th','查看次数'),h('th','最后查看时间'),h('th','状态')])),
+          h('tbody',(this.viewStats.items||[]).map(r=>h('tr',{key:r.worker_name},[
+            h('td',{style:{fontWeight:600}},r.worker_name),
+            h('td',r.job_type||'—'),
+            h('td',String(r.view_count||0)),
+            h('td',{style:{fontSize:'12px',color:'#94a3b8'}},r.last_view||'—'),
+            h('td',r.view_count>0
+              ? h('span',{style:{background:'#dcfce7',color:'#16a34a',padding:'3px 10px',borderRadius:'20px',fontSize:'11px',fontWeight:600}},'✅ 已查看')
+              : h('span',{style:{background:'#fef2f2',color:'#ef4444',padding:'3px 10px',borderRadius:'20px',fontSize:'11px',fontWeight:600}},'⚠️ 未查看'),
+          ]))),
+        ])),
+      ]) : null,
       // ===== 0. 快速填写 =====
       h('div',{class:'card',style:{background:'#eef1ff',border:'2px solid #4f6ef7',display:this.salSub==='enter'||this.salSub==='records'?'':'none'}},[
         h('div',{class:'card-title',style:{color:'#4f6ef7'}},'⚡ 快速填写（规格→颜色→工序→工人）'),

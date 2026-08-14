@@ -218,3 +218,15 @@ class SalarySpecItem(Base):
     created_at = Column(DateTime, default=datetime.now)
 
     __table_args__ = (Index("idx_ssi_spec", "spec_name"), UniqueConstraint("spec_name", "item_name"))
+
+
+class SalaryViewLog(Base):
+    """工人查看工资单的访问记录，用于统计活跃度"""
+    __tablename__ = "salary_view_logs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    worker_name = Column(String(30), nullable=False, comment="工人姓名")
+    month = Column(String(10), default="", comment="查看的月份（空=全部未付）")
+    viewed_at = Column(DateTime, default=datetime.now, comment="查看时间")
+
+    __table_args__ = (Index("idx_view_worker", "worker_name"), Index("idx_view_time", "viewed_at"))

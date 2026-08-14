@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, extract, or_
 
 from database import init_db, get_db
-from models import ProductSpec, Color, ProductSku, Salesperson, Transaction, InventoryLog, Admin, OperationLog, SystemConfig, FinanceRecord, FinanceCategory, SalaryWorker, SalaryPrice, SalaryRecord, SalarySpecItem
+from models import ProductSpec, Color, ProductSku, Salesperson, Transaction, InventoryLog, Admin, OperationLog, SystemConfig, FinanceRecord, FinanceCategory, SalaryWorker, SalaryPrice, SalaryRecord, SalarySpecItem, SalaryViewLog
 
 app = FastAPI(title="工厂进销存管理系统")
 
@@ -2010,6 +2010,7 @@ def salary_share(month: str = "", worker: str = "", db: Session = Depends(get_db
         worker_records = [r for r in records if r.worker.name == worker]
         page_title = f"{worker} - {month}工资单"
         page_sub = f"{month} &nbsp;|&nbsp; 淼伊库服饰有限公司"
+        is_worker_view = False
     else:
         # 工人扫码查看：只显示未付款
         all_records = db.query(SalaryRecord).filter(SalaryRecord.paid == False).all()
@@ -2017,6 +2018,15 @@ def salary_share(month: str = "", worker: str = "", db: Session = Depends(get_db
         worker_records.sort(key=lambda r: r.created_at or datetime.min, reverse=True)
         page_title = f"{worker} - 工资查询"
         page_sub = "未付款记录 &nbsp;|&nbsp; 淼伊库服饰有限公司"
+        is_worker_view = True
+
+    # 工人扫码查看时记录活跃度
+    if is_worker_view and worker:
+        try:
+            db.add(SalaryViewLog(worker_name=worker, month=month or ""))
+            db.commit()
+        except Exception:
+            db.rollback()
 
     if not worker_records:
         return Response(content=f'<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="font-family:PingFang SC,Microsoft YaHei,sans-serif;max-width:600px;margin:0 auto;padding:20px;text-align:center"><h2>💰 {worker}</h2><p style="color:#22c55e;font-size:18px">🎉 没有未付款记录</p><p style="color:#94a3b8">所有工资已结清</p><p style="color:#64748b">淼伊库服饰有限公司</p></body></html>', media_type="text/html")
@@ -2068,6 +2078,42 @@ tr:nth-child(even) td{{background:#fafbfd}}
 <div class="footer">生成时间: {date.today()}</div>
 </body></html>"""
     return Response(content=html, media_type="text/html; charset=utf-8")
+
+
+@app.get("/api/salary/views")
+def salary_views(db: Session = Depends(get_db), admin: Admin = Depends(get_current_admin)):
+    """工资查看活跃度统计"""
+    # 所有活跃工人
+    workers = db.query(SalaryWorker).filter(SalaryWorker.is_active == 1).all()
+
+    # 每个工人的查看记录
+    result = []
+    for w in workers:
+        views = db.query(SalaryViewLog).filter(SalaryViewLog.worker_name == w.name).all()
+        last_view = max((v.viewed_at for v in views), default=None)
+        result.append({
+            "worker_name": w.name,
+            "job_type": w.job_type or "",
+            "view_count": len(views),
+            "last_view": last_view.strftime("%Y-%m-%d %H:%M") if last_view else None,
+        })
+
+    # 排序：没看过的排前面，然后按最后查看时间从旧到新
+    result.sort(key=lambda x: (x["last_view"] is None, x["last_view"] or ""))
+
+    total = len(result)
+    viewed = sum(1 for r in result if r["view_count"] > 0)
+    not_viewed = total - viewed
+
+    return {
+        "items": result,
+        "summary": {
+            "total_workers": total,
+            "viewed": viewed,
+            "not_viewed": not_viewed,
+            "view_rate": round(viewed / total * 100, 1) if total else 0,
+        }
+    }
 
 
 @app.get("/api/salary/export")
