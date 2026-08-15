@@ -236,9 +236,14 @@ createApp({
     };
 
     const doLogout = async () => {
-      try { await api('/api/auth/logout', {method:'POST'}); } catch(e) {}
+      // 先清本地状态（避免 401 时递归调用 api）
+      const t = token.value;
       token.value = ''; authUser.value = null;
       localStorage.removeItem('wms_token'); localStorage.removeItem('wms_user');
+      // 再通知服务器（用 fetch 直连，失败也不影响，避免 401→doLogout 死循环）
+      if (t) {
+        try { await fetch('/api/auth/logout', {method:'POST', headers:{'Authorization':'Bearer '+t}}); } catch(e) {}
+      }
     };
 
     // === Main app state ===
@@ -608,10 +613,14 @@ createApp({
       if (!wid || !item || !qty || !price) return alert('请填写完整');
       const spec = salItemSpecs.value.find(p=>p.item_name===item)?.spec_name || salFilterSpec.value || '';
       const color = salQuickColor.value || '';
-      await api('/api/salary/records', {method:'POST', body:JSON.stringify({
-        worker_id: wid, month: salMonth.value, spec_name: spec, color_name: color, item_name: item,
-        quantity: qty, unit_price: price, payment_method: method, remark
-      })});
+      try {
+        await api('/api/salary/records', {method:'POST', body:JSON.stringify({
+          worker_id: wid, month: salMonth.value, spec_name: spec, color_name: color, item_name: item,
+          quantity: qty, unit_price: price, payment_method: method, remark
+        })});
+      } catch(e) {
+        return alert(e.message || '录入失败');
+      }
       document.getElementById('salWorkerInput').value = '';
       document.getElementById('salItemInput').value = '';
       document.getElementById('salQty').value = '';
