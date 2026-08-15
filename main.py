@@ -1053,6 +1053,8 @@ def list_adjustments(year: int = 0, month: int = 0, page: int = 1, page_size: in
 @app.get("/api/bills/personal")
 def personal_bill(
     salesperson: str = "",
+    spec: str = "",
+    color: str = "",
     year: int = 0,
     month: int = 0,
     page: int = 1,
@@ -1065,6 +1067,13 @@ def personal_bill(
         if sp: q = q.filter(Transaction.salesperson_id == sp.id)
     if year > 0: q = q.filter(extract("year", Transaction.trans_date) == year)
     if month > 0: q = q.filter(extract("month", Transaction.trans_date) == month)
+    # 规格/颜色筛选（通过 SKU 关联）
+    if spec or color:
+        q = q.join(ProductSku, Transaction.sku_id == ProductSku.id)
+        if spec:
+            q = q.join(ProductSpec, ProductSku.spec_id == ProductSpec.id).filter(ProductSpec.name == spec)
+        if color:
+            q = q.join(Color, ProductSku.color_id == Color.id).filter(Color.name == color)
 
     total = q.count()
     rows = q.order_by(Transaction.id.desc()).offset((page-1)*page_size).limit(page_size).all()
@@ -1074,13 +1083,13 @@ def personal_bill(
     total_qty = 0
     for t in rows:
         sku = db.query(ProductSku).filter(ProductSku.id == t.sku_id).first()
-        spec = db.query(ProductSpec).filter(ProductSpec.id == sku.spec_id).first()
-        color = db.query(Color).filter(Color.id == sku.color_id).first()
+        spec_obj = db.query(ProductSpec).filter(ProductSpec.id == sku.spec_id).first()
+        color_obj = db.query(Color).filter(Color.id == sku.color_id).first()
         sp = db.query(Salesperson).filter(Salesperson.id == t.salesperson_id).first() if t.salesperson_id else None
         items.append({
             "date": t.trans_date.strftime("%Y-%m-%d"),
-            "spec": spec.name if spec else "",
-            "color": color.name if color else "",
+            "spec": spec_obj.name if spec_obj else "",
+            "color": color_obj.name if color_obj else "",
             "quantity": t.quantity,
             "unit_price": float(t.unit_price),
             "amount": float(t.amount),
@@ -1098,18 +1107,25 @@ def personal_bill(
 
 @app.get("/api/bills/inbound")
 def inbound_records(
-    year: int,
-    month: int,
+    year: int = 0,
+    month: int = 0,
+    spec: str = "",
+    color: str = "",
     page: int = 1,
     page_size: int = 30,
     db: Session = Depends(get_db),
 ):
-    """入库记录列表，可按年月筛选"""
-    q = db.query(Transaction).filter(
-        Transaction.trans_type == "入库",
-        extract("year", Transaction.trans_date) == year,
-        extract("month", Transaction.trans_date) == month,
-    )
+    """入库记录列表，可按年月/规格/颜色筛选"""
+    q = db.query(Transaction).filter(Transaction.trans_type == "入库")
+    if year > 0: q = q.filter(extract("year", Transaction.trans_date) == year)
+    if month > 0: q = q.filter(extract("month", Transaction.trans_date) == month)
+    if spec or color:
+        q = q.join(ProductSku, Transaction.sku_id == ProductSku.id)
+        if spec:
+            q = q.join(ProductSpec, ProductSku.spec_id == ProductSpec.id).filter(ProductSpec.name == spec)
+        if color:
+            q = q.join(Color, ProductSku.color_id == Color.id).filter(Color.name == color)
+
     total = q.count()
     rows = q.order_by(Transaction.id.desc()).offset((page-1)*page_size).limit(page_size).all()
 
@@ -1117,13 +1133,13 @@ def inbound_records(
     total_qty = 0
     for t in rows:
         sku = db.query(ProductSku).filter(ProductSku.id == t.sku_id).first()
-        spec = db.query(ProductSpec).filter(ProductSpec.id == sku.spec_id).first()
-        color = db.query(Color).filter(Color.id == sku.color_id).first()
+        spec_obj = db.query(ProductSpec).filter(ProductSpec.id == sku.spec_id).first()
+        color_obj = db.query(Color).filter(Color.id == sku.color_id).first()
         sp = db.query(Salesperson).filter(Salesperson.id == t.salesperson_id).first() if t.salesperson_id else None
         items.append({
             "date": t.trans_date.strftime("%Y-%m-%d"),
-            "spec": spec.name if spec else "",
-            "color": color.name if color else "",
+            "spec": spec_obj.name if spec_obj else "",
+            "color": color_obj.name if color_obj else "",
             "quantity": t.quantity,
             "salesperson": sp.name if sp else "",
             "remark": t.remark,
