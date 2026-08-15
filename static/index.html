@@ -372,7 +372,7 @@ createApp({
     const finYear = ref(new Date().getFullYear());
     const finMonth = ref(new Date().getMonth() + 1);
     const finRecords = ref([]); const finPage = ref(1); const finTotal = ref(0);
-    const finPerson = ref(''); const finCat = ref('');
+    const finPerson = ref(''); const finCat = ref(''); const finType = ref('');
     const finSummary = ref({total_in:0,total_out:0,balance:0});
     const finCategories = ref([]);
     const newFinCat = ref('');
@@ -658,7 +658,7 @@ createApp({
 
     const loadFinance = async () => {
       const [data, summary] = await Promise.all([
-        api(`/api/finance?year=${finYear.value}&month=${finMonth.value}&person=${encodeURIComponent(finPerson.value)}&category=${encodeURIComponent(finCat.value)}&page=${finPage.value}&page_size=30`),
+        api(`/api/finance?year=${finYear.value}&month=${finMonth.value}&person=${encodeURIComponent(finPerson.value)}&category=${encodeURIComponent(finCat.value)}&type=${encodeURIComponent(finType.value)}&page=${finPage.value}&page_size=30`),
         api(`/api/finance/summary?year=${finYear.value}&month=${finMonth.value}`)
       ]);
       finRecords.value = data.items; finTotal.value = data.total; finSummary.value = summary;
@@ -922,7 +922,7 @@ createApp({
       salWorkers, salPrices, salItemSpecs, salRecords, salSummary, salMonth, salPage, salPageSize, salTotal, salKeyword, salDateFrom, salDateTo, salSumDateFrom, salSumDateTo, salFilterSpec, salFilterColor, salQuickSpec, salQuickColor, salQuickWorker, salNewWorker, salNewJobType, salNewItem, salNewPrice, salPriceFilter, salEditPriceId, salEditPriceName, salEditPriceVal, startEditPrice, saveEditPrice,
       loadSalary, saveSalWorker, deleteSalWorker, saveSalPrice, deleteSalPrice, addSalRecord, deleteSalRecord, toggleSalPaid, exportSalary, batchPaid, showSalDropdown,
       salSpecItems, salNewLinkSpec, salNewLinkItem, salEditLinkId, salEditLinkItem, initSpecItems, saveSpecItem, updateSpecItem, deleteSpecItem,
-      finYear, finMonth, finRecords, finPage, finTotal, finPerson, finCat, finSummary, loadFinance, exportFinance, deleteFinance,
+      finYear, finMonth, finRecords, finPage, finTotal, finPerson, finCat, finType, finSummary, loadFinance, exportFinance, deleteFinance,
       obPage, obTotal, inPage, inTotal, finCategories, newFinCat, loadFinCategories, saveFinCat, deleteFinCat,
       analysisYear, analysisMonth, analysisData, loadAnalysis,
       newSpec, newColor, newColorCode, newSP, newSPType, importResult,
@@ -1648,6 +1648,8 @@ createApp({
             h('input',{value:this.finPerson,onInput:e=>this.finPerson=e.target.value,placeholder:'🔍 责任人',style:{width:'80px',fontSize:'12px'},onKeyup:e=>{if(e.key==='Enter'){this.finPage=1;this.loadFinance();}}}),
             h('select',{value:this.finCat,onChange:e=>{this.finCat=e.target.value;this.finPage=1;this.loadFinance();},style:{width:'80px',fontSize:'12px'}},
               [h('option',{value:''},'全部类别'),...this.finCategories.map(c=>h('option',{value:c.name},c.name))]),
+            h('select',{value:this.finType,onChange:e=>{this.finType=e.target.value;this.finPage=1;this.loadFinance();},style:{width:'70px',fontSize:'12px'}},
+              [h('option',{value:''},'全部'),h('option',{value:'收入'},'收入'),h('option',{value:'支出'},'支出')]),
             h('span',{style:{flex:1}}),
             h('button',{class:'btn-success btn-sm',onClick:()=>window.open('/static/report.html','_blank')},'📋 报账链接'),
             h('button',{class:'btn-warning btn-sm',onClick:this.exportFinance},'📥 导出CSV'),
@@ -1690,6 +1692,12 @@ createApp({
             ])),
             h('div',{style:{textAlign:'right',padding:'12px 0',fontWeight:700,fontSize:'14px'}},'余额 ¥'+this.finSummary.balance.toFixed(2)+'  |  收 ¥'+this.finSummary.total_in.toLocaleString()+'  支 ¥'+this.finSummary.total_out.toLocaleString()),
           ]),
+          // 分页
+          this.finTotal > 30 ? h('div',{style:{display:'flex',gap:'8px',alignItems:'center',justifyContent:'center',marginTop:'14px'}},[
+            h('button',{class:'btn-sm',disabled:this.finPage<=1,onClick:()=>{this.finPage--;this.loadFinance();}},'◀ 上一页'),
+            h('span',{style:{fontSize:'13px',color:'#64748b'}},`${this.finPage}/${Math.ceil(this.finTotal/30)} 页(共${this.finTotal}条)`),
+            h('button',{class:'btn-sm',disabled:this.finPage*30>=this.finTotal,onClick:()=>{this.finPage++;this.loadFinance();}},'下一页 ▶'),
+          ]) : null,
         ]),
       ]);
     };
