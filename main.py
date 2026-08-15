@@ -4,6 +4,7 @@
 import hashlib
 import secrets
 import io
+import json
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import List, Optional
@@ -1495,37 +1496,44 @@ async def finance_create(
     receipts: List[UploadFile] = File(None), db: Session = Depends(get_db),
 ):
     """提交财务记录（无需登录，微信可用，支持多张凭证）"""
-    paths = []
-    if receipts:
-        for receipt in receipts:
-            if receipt and receipt.filename:
-                ext = _os.path.splitext(receipt.filename)[1] or ".jpg"
-                filename = f"{_uuid.uuid4().hex}{ext}"
-                filepath = _os.path.join(RECEIPT_DIR, filename)
-                with open(filepath, "wb") as f:
-                    f.write(await receipt.read())
-                paths.append(f"/static/receipts/{filename}")
+    try:
+        paths = []
+        if receipts:
+            for receipt in receipts:
+                if receipt and receipt.filename:
+                    ext = _os.path.splitext(receipt.filename)[1] or ".jpg"
+                    filename = f"{_uuid.uuid4().hex}{ext}"
+                    filepath = _os.path.join(RECEIPT_DIR, filename)
+                    with open(filepath, "wb") as f:
+                        f.write(await receipt.read())
+                    paths.append(f"/static/receipts/{filename}")
 
-    # 防重复报账：同类型+金额+日期+类别+责任人，当天仅可录入一次
-    d = datetime.strptime(date, "%Y-%m-%d").date()
-    dup = db.query(FinanceRecord).filter(
-        FinanceRecord.type == type,
-        FinanceRecord.amount == Decimal(str(amount)),
-        FinanceRecord.date == d,
-        FinanceRecord.category == category,
-        FinanceRecord.person == person,
-    ).first()
-    if dup:
-        raise HTTPException(400, f"今天已录入过相同{type}（金额 ¥{amount}，类别 {category or '无'}，责任人 {person or '无'}），请勿重复操作")
+        # 防重复报账：同类型+金额+日期+类别+责任人，当天仅可录入一次
+        d = datetime.strptime(date, "%Y-%m-%d").date()
+        dup = db.query(FinanceRecord).filter(
+            FinanceRecord.type == type,
+            FinanceRecord.amount == Decimal(str(amount)),
+            FinanceRecord.date == d,
+            FinanceRecord.category == category,
+            FinanceRecord.person == person,
+        ).first()
+        if dup:
+            raise HTTPException(400, f"今天已录入过相同{type}（金额 ¥{amount}，类别 {category or '无'}，责任人 {person or '无'}），请勿重复操作")
 
-    r = FinanceRecord(
-        type=type, date=d,
-        amount=Decimal(str(amount)), category=category, detail=detail,
-        person=person, receipt=",".join(paths),
-    )
-    db.add(r)
-    db.commit()
-    return {"ok": True, "id": r.id}
+        r = FinanceRecord(
+            type=type, date=d,
+            amount=Decimal(str(amount)), category=category, detail=detail,
+            person=person, receipt=",".join(paths),
+        )
+        db.add(r)
+        db.commit()
+        return {"ok": True, "id": r.id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"[finance] 报账提交失败: {e}")
+        return Response(content=json.dumps({"detail": f"提交失败: {str(e)}"}, ensure_ascii=False), media_type="application/json", status_code=500)
 
 
 @app.get("/api/finance/export")

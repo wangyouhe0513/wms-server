@@ -78,7 +78,9 @@ async function submit() {
 
   try {
     const res = await fetch('/api/finance', { method: 'POST', body: fd });
-    const data = await res.json();
+    const text = await res.text();
+    let data = {};
+    try { data = JSON.parse(text); } catch(e) { data = { detail: text || ('服务器错误(' + res.status + ')') }; }
     if (res.ok) {
       msg.className = 'msg msg-ok'; msg.textContent = '✅ 提交成功！';
       document.getElementById('amount').value = '';
@@ -86,10 +88,10 @@ async function submit() {
       document.getElementById('preview').innerHTML = '';
       document.getElementById('receipt').value = '';
     } else {
-      msg.className = 'msg msg-err'; msg.textContent = '❌ ' + (data.detail || '提交失败');
+      msg.className = 'msg msg-err'; msg.textContent = '❌ ' + (data.detail || ('提交失败(' + res.status + ')'));
     }
   } catch(e) {
-    msg.className = 'msg msg-err'; msg.textContent = '❌ 网络错误';
+    msg.className = 'msg msg-err'; msg.textContent = '❌ 网络错误，请检查网络或稍后重试';
   }
 }
 document.getElementById('date').value = new Date().toISOString().slice(0,10);
