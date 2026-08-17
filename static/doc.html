@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>进销存管理系统 — 使用说明</title>
 <style>
-body { font-family: "PingFang SC","Microsoft YaHei",sans-serif; max-width: 720px; margin: 40px auto; padding: 20px; color: #1e293b; line-height: 1.8; }
+body { font-family: "PingFang SC","Microsoft YaHei",sans-serif; max-width: 760px; margin: 40px auto; padding: 20px; color: #1e293b; line-height: 1.8; }
 h1 { text-align: center; font-size: 22px; border-bottom: 2px solid #4f6ef7; padding-bottom: 12px; margin-bottom: 30px; }
 h2 { font-size: 17px; color: #4f6ef7; margin-top: 32px; border-left: 4px solid #4f6ef7; padding-left: 10px; }
 h3 { font-size: 15px; margin-top: 16px; }
@@ -15,6 +15,7 @@ th { background: #f8fafc; font-weight: 600; }
 code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
 li { margin: 4px 0; }
 .tip { background: #fefce8; border-left: 3px solid #f59e0b; padding: 10px 14px; margin: 12px 0; font-size: 14px; border-radius: 0 6px 6px 0; }
+.new { background: #dcfce7; color: #16a34a; font-size: 11px; padding: 1px 6px; border-radius: 10px; font-weight: 600; margin-left: 6px; vertical-align: middle; }
 .footer { text-align: center; color: #94a3b8; font-size: 12px; margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 20px; }
 @media print { body { margin: 20px; } }
 </style>
@@ -25,40 +26,59 @@ li { margin: 4px 0; }
 
 <h2>一、登录与安装</h2>
 <p>打开系统网址，输入用户名和密码。默认管理员：<code>admin</code> / <code>admin123</code></p>
+<p><b>登录有效期</b>：登录状态保持 24 小时，超时自动退出，需重新登录。</p>
 <p><b>手机安装到桌面</b>：安卓浏览器自动弹窗「添加到桌面」；苹果 Safari 打开 → 分享 → 添加到主屏幕。安装后全屏打开就像原生 App。</p>
 <p><b>刷新页面</b>：手机在顶部往下拉即可下拉刷新。</p>
 
-<h2>二、首页仪表盘</h2>
-<p>四张统计卡片：今日出库金额、今日入库数量、本月销售额、低库存预警。点击卡片可跳转对应页面。</p>
-<p>快捷操作按钮可快速跳转到常用功能。</p>
+<h2>二、首页仪表盘<span class="new">新</span></h2>
+<p>八张统计卡片，分上下两排：</p>
+<table>
+<tr><th>卡片</th><th>说明</th></tr>
+<tr><td>📤 今日出库 / 📥 今日入库</td><td>当日出库、入库件数</td></tr>
+<tr><td>💰 今日销售</td><td>当日销售额（金额默认隐藏为 ***，点击才显示）</td></tr>
+<tr><td>🔴 低库存预警</td><td>低于阈值的 SKU 数量</td></tr>
+<tr><td>📤 本月出库 / 📥 本月入库</td><td>本月累计出库、入库件数</td></tr>
+<tr><td>💰 本月销售</td><td>本月累计销售额（同样默认隐藏）</td></tr>
+<tr><td>💵 当前余额</td><td>财务当前余额（默认隐藏）</td></tr>
+</table>
+<p><b>金额隐私</b>：涉及金额的数字默认显示 <code>***</code>，点击卡片即可切换显示/隐藏，防止他人窥屏。</p>
+<p>下方有低库存预警列表（点击跳转库存）、系统信息条（规格/颜色/工人/工序/本月工资金额）。</p>
+<p>页面背景带当前登录用户名的<b>水印</b>，防止截图外泄。</p>
 
 <h2>三、每日录入</h2>
 <h3>快速填写（推荐）</h3>
 <ol>
 <li>选择 <b>出库/入库</b> → 选择 <b>销售人</b> → 点击 <b>规格</b> → 点击 <b>颜色</b> → 自动新增一行</li>
-<li>填写数量和单价 → 点击 <b>✔ 提交录入</b></li>
+<li>填写数量，点击 <b>📋 一键填价</b> 自动按历史价格匹配单价</li>
+<li>点击 <b>✔ 提交录入</b></li>
 </ol>
-<h3>手动添加</h3>
-<p>点击「+ 出库行」或「+ 入库行」，手动输入信息。</p>
+<h3>一键填价规则<span class="new">新</span></h3>
+<p>按以下优先级自动匹配单价：① 该销售人该规格的最近历史价 → ② 该销售人该产品的历史价 → ③ 该规格的最近售价。找不到时留空手动填。</p>
+<h3>防重复录入</h3>
+<p>同一销售人 + 规格 + 颜色 + 数量，当天已录入过则禁止重复提交。</p>
 <h3>撤销误操作</h3>
 <p>下方「今日已录入」表格，点击 <b>✕ 撤销</b> 可删除错误记录并自动恢复库存。</p>
 
-<h2>四、实时库存</h2>
-<p>查看所有规格+颜色的当前库存，搜索框可筛选。</p>
-<p>点击库存数字查看最近变动历史。</p>
-<p>点击 <b>📥 下载快照</b> 导出带水印的库存文件。</p>
+<h2>四、实时库存 + 盘点调整<span class="new">新</span></h2>
+<p>查看所有规格+颜色的当前库存，搜索框可筛选；点击库存数字查看最近变动历史。</p>
+<h3>库存盘点 / 调整</h3>
+<ol>
+<li>在库存表每一行点 <b>🔧 调整</b></li>
+<li>输入<b>实际盘点数量</b>和<b>调整原因</b>（如：月末盘点、录入错误等）</li>
+<li>点 <b>✅ 确认调整</b>，系统自动计算差异（盘盈/盘亏）并记录</li>
+</ol>
+<h3>调整记录</h3>
+<p>库存页下方「📋 调整记录」按年月查看所有调整历史，顶部汇总显示<b>盘盈 / 盘亏 / 净差异</b>件数。</p>
+<p>点 <b>📥 下载快照</b> 导出带水印的库存文件。</p>
 
-<h2>五、出库 / 入库记录</h2>
-<p>按人员/年月查询出库或入库明细，支持导出 Excel。</p>
+<h2>五、出库 / 入库记录<span class="new">新</span></h2>
+<p>按人员、规格、颜色、年月多条件筛选，列表按<b>日期倒序</b>（最新在前）。</p>
+<p>数据超过 30 条自动分页，底部可翻页并显示页码；支持导出 Excel。</p>
 
-<h2>六、预警阈值</h2>
-<p><b>全局默认阈值</b>：低于此值触发低库存预警。</p>
-<p><b>各规格颜色阈值管理</b>：可为每个规格+颜色单独设置阈值。库存低于阈值的行会红色高亮。</p>
-
-<h2>七、销售汇总</h2>
+<h2>六、销售汇总</h2>
 <p>选择年月查询销售额，按人员和品类分别统计，底部显示合计。</p>
 
-<h2>八、数据分析</h2>
+<h2>七、数据分析</h2>
 <p>选择月份查看三个图表：</p>
 <ul>
 <li>📅 每日销售额折线图</li>
@@ -66,38 +86,53 @@ li { margin: 4px 0; }
 <li>📦 产品规格饼图</li>
 </ul>
 
-<h2>九、基础数据</h2>
+<h2>八、工资管理<span class="new">新</span></h2>
+<p>工资管理共五个子栏目：</p>
 <table>
-<tr><th>模块</th><th>功能</th></tr>
-<tr><td>📋 规格管理</td><td>添加/修改/删除产品规格（有库存的不可删）</td></tr>
-<tr><td>🎨 颜色管理</td><td>添加/修改/删除颜色（有库存的不可删）</td></tr>
-<tr><td>👥 销售人员</td><td>添加/删除销售人员</td></tr>
-<tr><td>📥 库存导入</td><td>上传 Excel 批量导入库存</td></tr>
+<tr><th>子栏目</th><th>功能</th></tr>
+<tr><td>📝 录入</td><td>搜工人 → 搜工序自动填单价 → 填数量 → 金额自动算 → 添加。工序可从 Excel 导入</td></tr>
+<tr><td>📋 记录</td><td>按年月查看工资明细，点 ✅/⬜ 切换已付/未付，可筛选、编辑、撤销</td></tr>
+<tr><td>📊 汇总</td><td>按工人统计合计/已付/未付，底部合计；一键分享工资单、批量标记已付</td></tr>
+<tr><td>👷 工人</td><td>增删工人（机工/厂长/辅工）；底部是「👀 工资查看活跃度」统计</td></tr>
+<tr><td>🔗 工序</td><td>工序单价管理 + 规格→工序关联（基础设置），支持搜索、内联编辑、自动匹配</td></tr>
 </table>
 
-<h2>十、财务管理</h2>
+<h3>工人工资二维码<span class="new">新</span></h3>
+<ul>
+<li>每个工人有<b>长期固定二维码</b>，扫码即打开自己的工资页面，<b>无需登录</b>，只显示<b>未付款</b>记录。</li>
+<li>汇总页「分享」可生成<b>当月</b>工资单链接，直接发微信给工人。</li>
+<li>管理员可在服务器生成全部工人二维码压缩包：<code>/static/worker_qrcodes.zip</code>。</li>
+</ul>
+
+<h3>工资查看活跃度<span class="new">新</span></h3>
+<p>统计每个工人是否扫过码查看工资，显示已查看/未查看人数及查看率，方便了解工人对工资的关注度。</p>
+
+<h2>九、财务管理<span class="new">新</span></h2>
 <table>
 <tr><th>功能</th><th>说明</th></tr>
-<tr><td>📋 报账</td><td>访问 <code>/static/report.html</code>，微信可用，支持多图上传</td></tr>
-<tr><td>💰 管理</td><td>查看/筛选/导出Excel/撤销财务记录</td></tr>
+<tr><td>💰 财务记录</td><td>按年月、责任人（下拉）、类别、收入/支出类型筛选，分页查看，导出 Excel，可撤销</td></tr>
+<tr><td>📋 报账</td><td>访问 <code>/static/report.html</code>，微信可用，支持多图上传、选择收入/支出、责任人</td></tr>
 <tr><td>📂 类别</td><td>添加/删除财务类别</td></tr>
 <tr><td>初始余额</td><td>访问 <code>/static/init-balance.html</code>，密钥 <code>上山打老虎</code></td></tr>
 </table>
 <p>余额公式：<b>期初余额 + 收入 − 支出</b></p>
+<p><b>防重复报账</b>：相同支出/收入 + 金额 + 日期 + 类别 + 责任人，当天仅可录入一次。</p>
 
-<h2>十一、工资管理</h2>
+<h2>十、预警阈值</h2>
+<p><b>全局默认阈值</b>：低于此值触发低库存预警。</p>
+<p><b>各规格颜色阈值管理</b>：可为每个规格+颜色单独设置阈值。库存低于阈值的行会红色高亮。</p>
+
+<h2>十一、基础数据</h2>
 <table>
-<tr><th>功能</th><th>说明</th></tr>
-<tr><td>👷 工人管理</td><td>增删工人，支持机工/厂长/辅工</td></tr>
-<tr><td>📏 工序单价</td><td>增删工序及标准单价</td></tr>
-<tr><td>📝 录入工资</td><td>搜工人→搜工序自动填单价→填数量→金额自动算→添加<br>工序可从 Excel 导入</td></tr>
-<tr><td>📊 汇总</td><td>按工人统计合计/已付/未付</td></tr>
-<tr><td>📋 分享</td><td>一键复制工资单链接发微信，长按截图发给厂长</td></tr>
-<tr><td>📥 导出</td><td>按月份导出 Excel 明细+汇总</td></tr>
+<tr><th>模块</th><th>功能</th></tr>
+<tr><td>📋 规格管理</td><td>添加/修改/删除产品规格（有库存的不可删）</td></tr>
+<tr><td>🎨 颜色管理</td><td>添加/修改/删除颜色（有库存的不可删）</td></tr>
+<tr><td>👥 销售人员</td><td>添加/删除销售人员（员工/渠道/电商）</td></tr>
+<tr><td>📥 库存导入</td><td>上传 Excel 批量导入库存，覆盖当前库存</td></tr>
 </table>
 
 <h2>十二、管理员</h2>
-<p>仅超级管理员可见。可添加/删除管理员、重置密码、查看操作日志。</p>
+<p>仅超级管理员可见。可查看操作日志（最近 200 条）、添加/删除管理员、重置密码。</p>
 
 <h2>十三、快捷链接</h2>
 <table>
@@ -105,6 +140,7 @@ li { margin: 4px 0; }
 <tr><td>报账提交</td><td><code>/static/report.html</code></td><td>微信可用，无需登录</td></tr>
 <tr><td>初始化余额</td><td><code>/static/init-balance.html</code></td><td>密钥：上山打老虎</td></tr>
 <tr><td>库存更新</td><td><code>/static/upload.html</code></td><td>密钥：上山打老虎</td></tr>
+<tr><td>工人二维码</td><td><code>/static/worker_qrcodes.zip</code></td><td>全部工人二维码压缩包</td></tr>
 <tr><td>系统说明</td><td><code>/static/doc.html</code></td><td>本页面</td></tr>
 </table>
 
@@ -117,6 +153,9 @@ li { margin: 4px 0; }
 <li>手动备份：<code>./backup.sh</code></li>
 </ul>
 
-<p class="footer">淼伊库服饰有限公司 · 进销存管理系统 · 2026</p>
+<p class="footer">
+淼伊库服饰有限公司 · 进销存管理系统<br>
+文档撰写人：王河 &nbsp;|&nbsp; 更新时间：2026-08-17
+</p>
 </body>
 </html>
