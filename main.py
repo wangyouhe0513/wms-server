@@ -1076,7 +1076,7 @@ def personal_bill(
             q = q.join(Color, ProductSku.color_id == Color.id).filter(Color.name == color)
 
     total = q.count()
-    rows = q.order_by(Transaction.id.desc()).offset((page-1)*page_size).limit(page_size).all()
+    rows = q.order_by(Transaction.created_at.desc(), Transaction.id.desc()).offset((page-1)*page_size).limit(page_size).all()
 
     items = []
     total_amount = Decimal("0")
@@ -1127,7 +1127,7 @@ def inbound_records(
             q = q.join(Color, ProductSku.color_id == Color.id).filter(Color.name == color)
 
     total = q.count()
-    rows = q.order_by(Transaction.id.desc()).offset((page-1)*page_size).limit(page_size).all()
+    rows = q.order_by(Transaction.created_at.desc(), Transaction.id.desc()).offset((page-1)*page_size).limit(page_size).all()
 
     items = []
     total_qty = 0
