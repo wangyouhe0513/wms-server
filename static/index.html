@@ -1639,20 +1639,27 @@ createApp({
         ]),
         // 筛选 + 报账链接
         h('div',{class:'card'},[
-          h('div',{style:{display:'flex',gap:'10px',alignItems:'center',marginBottom:'16px',flexWrap:'wrap'}},[
+          h('div',{style:{display:'flex',gap:'8px',alignItems:'center',marginBottom:'16px',flexWrap:'wrap'}},[
             h('span',{class:'card-title',style:{marginBottom:0}},'💰 财务记录'),
-            h('select',{value:this.finYear,onChange:e=>{this.finYear=parseInt(e.target.value);this.loadFinance();},style:{width:'90px'}},years.map(y=>h('option',{value:y},String(y)))),
-            h('span','年'),
-            h('select',{value:this.finMonth,onChange:e=>{this.finMonth=parseInt(e.target.value);this.loadFinance();},style:{width:'70px'}},Array.from({length:12},(_,i)=>h('option',{value:i+1},String(i+1)+'月'))),
-            h('button',{class:'btn-primary btn-sm',onClick:()=>{this.finPage=1;this.loadFinance();}},'查询'),
-            h('input',{value:this.finPerson,onInput:e=>this.finPerson=e.target.value,placeholder:'🔍 责任人',style:{width:'80px',fontSize:'12px'},onKeyup:e=>{if(e.key==='Enter'){this.finPage=1;this.loadFinance();}}}),
-            h('select',{value:this.finCat,onChange:e=>{this.finCat=e.target.value;this.finPage=1;this.loadFinance();},style:{width:'80px',fontSize:'12px'}},
-              [h('option',{value:''},'全部类别'),...this.finCategories.map(c=>h('option',{value:c.name},c.name))]),
-            h('select',{value:this.finType,onChange:e=>{this.finType=e.target.value;this.finPage=1;this.loadFinance();},style:{width:'70px',fontSize:'12px'}},
-              [h('option',{value:''},'全部'),h('option',{value:'收入'},'收入'),h('option',{value:'支出'},'支出')]),
+            h('select',{value:this.finYear,onChange:e=>{this.finYear=parseInt(e.target.value);this.finPage=1;this.loadFinance();},style:{width:'82px',fontSize:'12px'}},years.map(y=>h('option',{value:y},String(y)+'年'))),
+            h('select',{value:this.finMonth,onChange:e=>{this.finMonth=parseInt(e.target.value);this.finPage=1;this.loadFinance();},style:{width:'78px',fontSize:'12px'}},Array.from({length:12},(_,i)=>h('option',{value:i+1},String(i+1)+'月'))),
+            h('select',{value:this.finPerson,onChange:e=>{this.finPerson=e.target.value;this.finPage=1;this.loadFinance();},style:{width:'100px',fontSize:'12px'}},[
+              h('option',{value:''},'全部人员'),
+              ...this.salespersons.map(s=>h('option',{value:s.name},s.name))
+            ]),
+            h('select',{value:this.finCat,onChange:e=>{this.finCat=e.target.value;this.finPage=1;this.loadFinance();},style:{width:'90px',fontSize:'12px'}},[
+              h('option',{value:''},'全部类别'),
+              ...this.finCategories.map(c=>h('option',{value:c.name},c.name))
+            ]),
+            h('select',{value:this.finType,onChange:e=>{this.finType=e.target.value;this.finPage=1;this.loadFinance();},style:{width:'80px',fontSize:'12px'}},[
+              h('option',{value:''},'全部类型'),
+              h('option',{value:'收入'},'收入'),
+              h('option',{value:'支出'},'支出')
+            ]),
             h('span',{style:{flex:1}}),
+            h('button',{class:'btn-primary btn-sm',onClick:()=>{this.finPage=1;this.loadFinance();}},'🔍 查询'),
             h('button',{class:'btn-success btn-sm',onClick:()=>window.open('/static/report.html','_blank')},'📋 报账链接'),
-            h('button',{class:'btn-warning btn-sm',onClick:this.exportFinance},'📥 导出CSV'),
+            h('button',{class:'btn-warning btn-sm',onClick:this.exportFinance},'📥 导出Excel'),
           ]),
           // Desktop table
           h('div',{class:'fin-desktop-only table-wrap'},h('table',[
